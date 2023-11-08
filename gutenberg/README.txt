@@ -1,0 +1,3 @@
+1. Download Gutenberg metadata `./get-metadata.sh`
+2. Build the Public Domain index `python build-index.py`
+3. ...
