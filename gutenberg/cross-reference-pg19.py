@@ -14,7 +14,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument("--data", default="data/books.json")
 
 
-def parse_id(name):
+def parse_pg19_id(name):
     if m := re.match("^(?:train|validation|test)/(\d+).txt$", name):
         return m.groups(1)[0]
     return None
@@ -33,12 +33,6 @@ WHERE {
 """
 
 
-# 1546 Listed as Copyright but older than 1919 (in PG19)
-# 3189 No plaintext version
-# 378 Listed as Copyright but older than 1919 (in PG19)
-# 38718 No plaintext version
-
-
 def main(args):
     with open(args.data) as f:
         our_index = {x["id"] for x in json.load(f)}
@@ -51,7 +45,7 @@ def main(args):
         for blob in tqdm.tqdm(
             client.list_blobs("deepmind-gutenberg", prefix=f"{prefix}/")
         ):
-            id = parse_id(blob.name)
+            id = parse_pg19_id(blob.name)
             if id and id not in our_index:
                 missing[prefix].add(id)
 

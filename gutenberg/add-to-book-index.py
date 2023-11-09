@@ -1,26 +1,22 @@
-"""Build index of PD books."""
+#!/usr/bin/env python3
 
 import argparse
-import glob
+import itertools
 import json
 import os
 import urllib.parse
-import tqdm
 from rdflib import Graph
 from utils import parse_id, file_type
 
 
-parser = argparse.ArgumentParser(description="Build an index of PD books.")
-parser.add_argument("--data", default="data/cache/epub/**/*.rdf")
-parser.add_argument("--format", default="xml")
-parser.add_argument("--output", default="data/books.json")
+parser = argparse.ArgumentParser(description="Add specific books to the main index.")
+parser.add_argument("books", nargs="+")
+parser.add_argument("--data", default="data/cache/epub")
+parser.add_argument("--index", default="data/books.json")
 
 QUERY = """
 SELECT DISTINCT ?id ?title ?file ?format
 WHERE {
-  ?p dcterms:rights ?rights .
-    FILTER regex(?rights, "^Public domain", "i") .
-
   ?p dcterms:language ?l .
   ?l rdf:value "en"^^<http://purl.org/dc/terms/RFC4646> .
   ?l rdf:value ?lang .
@@ -45,22 +41,23 @@ WHERE {
 
 
 def main(args):
+    print("Parsing metadata.")
     results = []
-
-    print("Parsing metadata")
-    for i, filename in enumerate(tqdm.tqdm(glob.iglob(args.data))):
+    for book in args.books:
         g = Graph()
-        g.parse(source=filename, format=args.format)
+        g.parse(source=os.path.join(args.data, book, f"pg{book}.rdf"), format="xml")
         results.extend(file_type(g.query(QUERY)))
 
-    print(f"There are {len(results)} english public-domain books.")
-    print(f"Writing index to {args.output}")
-
     results = map(lambda x: x.asdict(), results)
-    results = map(parse_id, results)
+    results = list(map(parse_id, results))
+    print(f"Built {len(results)} extra metadata entries.")
 
-    with open(args.output, "w") as wf:
-        json.dump(list(results), wf)
+    print("Adding new metadata to the index.")
+    with open(args.index) as f:
+        og_results = json.load(f)
+
+    with open(args.index, "w") as wf:
+        json.dump(list(itertools.chain(og_results, results)), wf)
 
 
 if __name__ == "__main__":
