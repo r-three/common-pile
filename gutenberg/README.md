@@ -7,10 +7,11 @@ A collection of public domain books from www.gutenberg.org.
 
 1. Download Gutenberg metadata `./get-metadata.sh`
 2. Build the Public Domain index `python build-index.py`
-3. Get PG19 Special cases `python get-pg19-books.py 28520 30360 57479 57486 38200 3189`
+3. Get PG19 Special cases `python get-pg19-books.py 28520 30360 57479 57486 38200 3189 26568 51155`
 4. Add PG10 Special cases to the book index `python add-to-book-index.py 1546 378`
-5. Download and preprocess books `python get-books.py`
-6. Split into train/validation/test following PG19
+5. Download the books `python get-books.py`
+6. Preprocess the books `python process-books.py`
+6. Split into train/validation/test following PG19 `python split-books.py`
 
 ## Data Stats
 
@@ -36,16 +37,18 @@ We can get a copy from PG19
 We can get a copy from PG19
 
 * `38200` _Like Another Helen_, published 1900
-* ~~`57983` _Mother, Nurse and Infant_~~~ included as id `57979`
+* ~~`57983` _Mother, Nurse and Infant_~~ included as id `57979`
 
 ### Missing plaintext version on PG
 
 We can get a copy from PG19
 
 * `3189` _Sketches New and Old_ by Mark Twain.
+* `26568` _Seventh Annual Report of the Bureau of Ethnology_ by John Wesley Powell
+*  `51155` _Complete Dictonary of Synonyms and Antonyms_ by Samuel Fallows
 
 ```python
-python get-pg19-books.py 28520 30360 57479 57486 38200 3189
+python get-pg19-books.py 28520 30360 57479 57486 38200 3189 26568 51155
 ```
 
 There are also several other non-english books included in PG19 that we skip.
@@ -59,7 +62,7 @@ There are also several other non-english books included in PG19 that we skip.
 python add-to-book-index.py 1546 378
 ```
 
-## Possibliy Missing
+## Possibly Missing
 
 * Books marked as Copyrighted, but are published before 1923, i.e., they are older than 100 years and have passed into public domain.
 * Books that lack a plaintext version.

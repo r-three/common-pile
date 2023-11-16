@@ -2,3 +2,4 @@ tqdm
 rdflib
 pre-commit
 google-cloud-storage
+gutenbergpy

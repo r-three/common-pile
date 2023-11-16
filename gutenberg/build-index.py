@@ -15,6 +15,7 @@ parser.add_argument("--data", default="data/cache/epub/**/*.rdf")
 parser.add_argument("--format", default="xml")
 parser.add_argument("--output", default="data/books.json")
 
+# TODO Update query to prefer zip files for faster dl?
 QUERY = """
 SELECT DISTINCT ?id ?title ?file ?format
 WHERE {
