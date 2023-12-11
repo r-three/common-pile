@@ -11,19 +11,21 @@ from utils import parse_id, file_type
 
 
 parser = argparse.ArgumentParser(description="Build an index of PD books.")
-parser.add_argument("--data", default="data/cache/epub/**/*.rdf")
-parser.add_argument("--format", default="xml")
-parser.add_argument("--output", default="data/books.json")
+parser.add_argument("--data", default="data/cache/epub/**/*.rdf", help="Glob pattern that matches all metadata files.")
+parser.add_argument("--format", default="xml", help="The format of the rdf metadata.")
+parser.add_argument("--output", default="data/books.json", help="Path to save the book index to.")
+
+# Add this line to the language part of the query to filter to English only.
+# ?l rdf:value "en"^^<http://purl.org/dc/terms/RFC4646> .
 
 # TODO Update query to prefer zip files for faster dl?
 QUERY = """
-SELECT DISTINCT ?id ?title ?file ?format
+SELECT DISTINCT ?id ?title ?file ?format ?lang
 WHERE {
   ?p dcterms:rights ?rights .
     FILTER regex(?rights, "^Public domain", "i") .
 
   ?p dcterms:language ?l .
-  ?l rdf:value "en"^^<http://purl.org/dc/terms/RFC4646> .
   ?l rdf:value ?lang .
 
   ?p dcterms:hasFormat ?file .
@@ -54,7 +56,7 @@ def main(args):
         g.parse(source=filename, format=args.format)
         results.extend(file_type(g.query(QUERY)))
 
-    print(f"There are {len(results)} english public-domain books.")
+    print(f"There are {len(results)} public-domain books.")
     print(f"Writing index to {args.output}")
 
     results = map(lambda x: x.asdict(), results)

@@ -3,3 +3,5 @@ rdflib
 pre-commit
 google-cloud-storage
 gutenbergpy
+dolma
+smart_open

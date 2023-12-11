@@ -10,15 +10,15 @@ from utils import parse_id, file_type
 
 
 parser = argparse.ArgumentParser(description="Add specific books to the main index.")
-parser.add_argument("books", nargs="+")
-parser.add_argument("--data", default="data/cache/epub")
-parser.add_argument("--index", default="data/books.json")
+parser.add_argument("books", nargs="+", help="Ids of the books to add to the index.")
+parser.add_argument("--data", default="data/cache/epub", help="Path to the directory of rdf metadata.")
+parser.add_argument("--index", default="data/books.json", help="Path to the book index we are updating.")
+parser.add_argument("--format", default="xml", help="The format of the rdf metadata.")
 
 QUERY = """
-SELECT DISTINCT ?id ?title ?file ?format
+SELECT DISTINCT ?id ?title ?file ?format ?lang
 WHERE {
   ?p dcterms:language ?l .
-  ?l rdf:value "en"^^<http://purl.org/dc/terms/RFC4646> .
   ?l rdf:value ?lang .
 
   ?p dcterms:hasFormat ?file .
@@ -45,7 +45,7 @@ def main(args):
     results = []
     for book in args.books:
         g = Graph()
-        g.parse(source=os.path.join(args.data, book, f"pg{book}.rdf"), format="xml")
+        g.parse(source=os.path.join(args.data, book, f"pg{book}.rdf"), format=args.format)
         results.extend(file_type(g.query(QUERY)))
 
     results = map(lambda x: x.asdict(), results)
@@ -56,6 +56,7 @@ def main(args):
     with open(args.index) as f:
         og_results = json.load(f)
 
+    # TODO: Add safety with some sort of shadow page and file rename?
     with open(args.index, "w") as wf:
         json.dump(list(itertools.chain(og_results, results)), wf)
 
