@@ -5,15 +5,30 @@ import glob
 import json
 import os
 import urllib.parse
+
 import tqdm
 from rdflib import Graph
-from utils import parse_id, file_type
+from utils import file_type, parse_id
+
+# These books are not good data for Language Modeling, they are boilerplate
+# descriptions for data formats for recorded music and how PG books were
+# distributed on disk. We skip adding these to the index these.
+SKIP = (5627, 5634, 5635, 4949, 4950, 4951, 4749, 4750, 4751, 10802, 11220)
 
 
 parser = argparse.ArgumentParser(description="Build an index of PD books.")
-parser.add_argument("--data", default="data/cache/epub/**/*.rdf", help="Glob pattern that matches all metadata files.")
+parser.add_argument(
+    "--data",
+    default="data/cache/epub/**/*.rdf",
+    help="Glob pattern that matches all metadata files.",
+)
 parser.add_argument("--format", default="xml", help="The format of the rdf metadata.")
-parser.add_argument("--output", default="data/books.json", help="Path to save the book index to.")
+parser.add_argument(
+    "--output", default="data/books.json", help="Path to save the book index to."
+)
+parser.add_argument(
+    "--skip", default=SKIP, nargs="+", help="Known bad book ids to skip."
+)
 
 # Add this line to the language part of the query to filter to English only.
 # ?l rdf:value "en"^^<http://purl.org/dc/terms/RFC4646> .
@@ -31,6 +46,7 @@ WHERE {
   ?p dcterms:hasFormat ?file .
   ?file dcterms:format ?format_ .
     FILTER (!regex(str(?file), ".zip$", "i")) .
+    FILTER (!regex(str(?file), "README", "i")) .
 
   {?format_ rdf:value "text/plain"^^<http://purl.org/dc/terms/IMT> }
   UNION
@@ -49,9 +65,13 @@ WHERE {
 
 def main(args):
     results = []
+    skip = set(args.skip)
 
     print("Parsing metadata")
     for i, filename in enumerate(tqdm.tqdm(glob.iglob(args.data))):
+        id = os.path.basename(os.path.dirname(filename))
+        if id in skip:
+            continue
         g = Graph()
         g.parse(source=filename, format=args.format)
         results.extend(file_type(g.query(QUERY)))

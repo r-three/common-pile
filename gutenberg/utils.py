@@ -18,6 +18,7 @@ FILE_ORDERING = {
 
 
 def file_type(results):
+    """Sort the possible filetypes by their encoding."""
     if results:
         results = sorted(results, key=lambda x: FILE_ORDERING[str(x["format"])])
         return results[0:1]

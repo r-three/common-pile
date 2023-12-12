@@ -1,18 +1,21 @@
 """Check for books that are included in PG19 but not in our metadata dump."""
 
 import argparse
+import glob
 import json
 import re
+from typing import Dict, Set
+
 import tqdm
-import glob
 from google.cloud import storage
 from rdflib import Graph
-from typing import Set, Dict
 
 parser = argparse.ArgumentParser(
     description="Check if pg19 has any books that we don't."
 )
-parser.add_argument("--data", default="data/books.json")
+parser.add_argument(
+    "--data", default="data/books.json", help="The path to out index of books."
+)
 
 
 def parse_pg19_id(name):

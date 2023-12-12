@@ -1,4 +1,8 @@
-"""Download PG books."""
+"""Download PG books.
+
+Note that we don't download in parallel as PG requests that people wait between
+bulk downloads.
+"""
 
 import argparse
 import json
@@ -6,14 +10,32 @@ import operator as op
 import os
 import time
 import urllib.request
+
 import tqdm
 
+# This books is missing on PG, we will get it later from pg19, so skip for now.
+SKIP = (51155,)
+
 parser = argparse.ArgumentParser(description="Download PG books.")
-parser.add_argument("--index", default="data/books.json", help="Path to our index file.")
-parser.add_argument("--output_dir", default="data/raw_books", help="Path to output directory where raw books are downloaded.")
-parser.add_argument("--overwrite", action="store_true", help="Should we overwrite previously downloaded copies?")
-parser.add_argument("--wait", default=2, type=int, help="Time to wait between requests (seconds).")
-parser.add_argument("--skip", nargs="+", help="Book ids to skip downloading.")
+parser.add_argument(
+    "--index", default="data/books.json", help="Path to our index file."
+)
+parser.add_argument(
+    "--output_dir",
+    default="data/raw_books",
+    help="Path to output directory where raw books are downloaded.",
+)
+parser.add_argument(
+    "--overwrite",
+    action="store_true",
+    help="Should we overwrite previously downloaded copies?",
+)
+parser.add_argument(
+    "--wait", default=2, type=int, help="Time to wait between requests (seconds)."
+)
+parser.add_argument(
+    "--skip", default=SKIP, nargs="+", help="Book ids to skip downloading."
+)
 
 
 def main(args):

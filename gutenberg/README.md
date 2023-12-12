@@ -7,9 +7,9 @@ A collection of public domain books from www.gutenberg.org.
 
 1. Download Gutenberg metadata `./get-metadata.sh`
 2. Build the Public Domain index `python build-index.py`
-3. Add PG19 Special cases to the book index `python add-to-book-index.py 1546 378`
-4. Download the books `python get-books.py --skip 51155`
-5. Get PG19 Special cases `python get-pg19-books.py 28520 30360 57479 57486 38200 3189 26568 51155 38718`
+3. Add PG19 Special cases to the book index `python add-to-book-index.py`
+4. Download the books `python get-books.py`
+5. Get PG19 Special cases `python get-pg19-books.py`
 6. Convert Books to the Dolma format. `python to-dolma.py`
 7. Preprocess the books `python preprocess-books.py`
 
@@ -19,7 +19,7 @@ Raw text will live in `./data/project-gutenberg/raw` and processed books in `./d
 
 | # Books | # Tokens |
 |--------:|---------:|
-|         |          |
+|  70,853 |          |
 
 ## Special Cases:
 
@@ -66,6 +66,14 @@ python get-pg19-books.py 28520 30360 57479 57486 38200 3189 26568 51155 38718
 ```python
 python add-to-book-index.py 1546 378
 ```
+
+### PG Information
+
+Both book `10802` and `11220` include information describing the format of data on the Project Gutenberg CD's. These do not seem good for language modeling.
+
+### Music
+
+`5627`, `5634`,  `5635`, `4949`, `4950`, `4951`, `4749`, `4750`, `4751`, are text describing the files with music from classical composers, these say to not remove the headers/footers and do not seem to be useful for language modeling.
 
 ## Possibly Missing
 
