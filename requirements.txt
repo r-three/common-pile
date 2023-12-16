@@ -2,6 +2,6 @@ tqdm
 rdflib
 pre-commit
 google-cloud-storage
-gutenbergpy
 dolma
 smart_open
+markdown-it-py

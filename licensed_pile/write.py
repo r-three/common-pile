@@ -32,6 +32,7 @@ def to_dolma(
     quiet: bool = False,
 ):
     """Write `examples` to `path` in the dolma format with `shard_size`GB shards."""
+    os.makedirs(path, exist_ok=True)
     shard_idx = 0
     size = 0
     # Gigabytes, not Gibibytes
@@ -56,7 +57,7 @@ def to_dolma(
             wf.write(data + "\n")
 
 
-class FileParallelProcessor(BaseParallelProcessor):
+class ShardParallelProcessor(BaseParallelProcessor):
     """Handle read/writes to jsonl.gz so our processor code only needs to processing a single example."""
 
     @classmethod
@@ -106,7 +107,17 @@ class FileParallelProcessor(BaseParallelProcessor):
 
                     if debug:
                         og = copy.deepcopy(data["text"])
-                    processed = cls.process_example(data)
+
+                    processed = cls.process_example(data, **kwargs)
+
+                    if processed is None:
+                        logger.warning(
+                            "Preprocessing has reduced %s:%s to nothing, skipping",
+                            source_path,
+                            i,
+                        )
+                        continue
+
                     if debug and og == processed["text"]:
                         logger.warning(
                             "Text unchanged for example %s:%s", source_path, i
