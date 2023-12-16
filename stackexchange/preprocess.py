@@ -229,6 +229,11 @@ def main(args):
 
         print("Building Lookup from post id -> authors")
         history_xml = parse_document(os.path.join(args.input, "PostHistory.xml"))
+        # It would probably be better/faster to use a database to store these
+        # intermediate lookups instead of a shelve (which requires multiple
+        # pickle serialization/deserialization) but I didn't want to implement
+        # a database based key-value store that supports list values, set values
+        # and scalar values.
         if args.shelve:
             post_authors = shelve.open(os.path.join(args.output, "authors.shelve"))
         else:
