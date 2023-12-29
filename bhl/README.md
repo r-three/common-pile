@@ -1,8 +1,18 @@
-# Processing scripts for Biodiversity Heritage Library
+# Biodiversity Heritage Library
 
-The [Biodiversity Heritage Library](https://www.biodiversitylibrary.org) is a digital library for biodiversity literature. The steps for reproducing text data from this source are as follows:
+A collection of public domain books from the [Biodiversity Heritage Library](https://www.biodiversitylibrary.org), a digital library for biodiversity literature.
 
-1. Download the metadata for all BHL titles with `curl -L -O https://www.biodiversitylibrary.org/data/bhltitle.mods.xml.zip`. Unzip the downloaded file.
-2. Download the full BHL collection of OCR'd text with `curl -L -O https://smithsonian.figshare.com/ndownloader/files/43189896`. The downloaded file is a bzip2 compressed tar archive. Newer versions of this file published in the future may be found on the [BHL data exports page](https://about.biodiversitylibrary.org/tools-and-services/developer-and-data-tools/#x--TXT)
-3. Run `python build-index.py --metadata-file <metadata file> --output-dir <output directory>`. This creates a file called `index.json` in the output directory that maps each license in the BHL collection to a list of URLs for items in the BHL collection with that license.
-4. Run `python extract-files.py --index-file <index file> --whitelist-file <license whitelist file> --content-file <bhl content file> --output-dir <output directory>`. The content file is the output of step 2, the index file is the output of step 3, and the whitelist file is a JSON file containing a list of license strings that we want to filter the collection down to. Note that there are a number of license strings in the BHL collection metadata that all indicate that a work is in the public domain. You can find a manually curated list of these strings in `license_whitelist.json`. This step extracts all works with licenses matching entries in the whitelist file from the compressed/tarred BHL collection. 
+# Data Download and Processing
+1. Download metadata for all BHL titles with `bhl/get-metadata.sh`
+2. Download the BHL content with `bhl/get-data.sh`. Note that newer versions of the BHL collection may be published in teh future and can be found on the [BHL data exports page](https://about.biodiversitylibrary.org/tools-and-services/developer-and-data-tools/#x--TXT)
+3. Build an index of public domain titles with `python bhl/build-index.py`
+4. Extract only the public domain titles from the collection with `python bhl/extract-files.py`
+5. Convert collection to Dolma format with `python bhl/to-dolma.py`
+
+Raw text and metadata will live in `data/biodiversity-heritage-library/raw` and processed text will live in `data/biodiversity-heritage-library/v0`
+
+## Data Stats
+
+| # Pages   | # Tokens |
+|----------:|---------:|
+|  42418499 |          |

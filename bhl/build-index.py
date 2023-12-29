@@ -13,10 +13,13 @@ from tqdm.auto import tqdm
 logging.basicConfig(level=logging.INFO, format="build-index: [%(asctime)s] [%(funcName)s] %(levelname)s - %(message)s")
 
 
+SOURCE_NAME = "biodiversity-heritage-library"
+
+
 def parse_args():
     parser = argparse.ArgumentParser("Biodiversity Heritage Library index builder")
-    parser.add_argument("--metadata-file", default="raw_data/bhlitem.mods.xml", help="Path to XML metadata file")
-    parser.add_argument("--output-dir", default="./", help="Path to output directory")
+    parser.add_argument("--metadata-file", default=f"data/{SOURCE_NAME}/raw/metadata/bhlitem.mods.xml", help="Path to XML metadata file")
+    parser.add_argument("--output-dir", default=f"data/{SOURCE_NAME}/raw/", help="Path to output directory")
     return parser.parse_args()
 
 

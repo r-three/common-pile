@@ -10,15 +10,17 @@ from collections import defaultdict
 from tqdm.auto import tqdm
 
 
-logging.basicConfig(level=logging.INFO, format="build-index: [%(asctime)s] [%(funcName)s] %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.INFO, format="extract-files: [%(asctime)s] [%(funcName)s] %(levelname)s - %(message)s")
 
+
+SOURCE_NAME = "biodiversity-heritage-library"
 
 def parse_args():
     parser = argparse.ArgumentParser("Biodiversity Heritage Library file extractor")
-    parser.add_argument("--index-file", default="./index.json", help="Path to JSON index")
-    parser.add_argument("--whitelist-file", default="./license_whitelist.json", help="Path to JSON file of whitelisted license strings")
-    parser.add_argument("--content-file", default="raw_data/bhl-ocr-20230823.tar.bz2", help="Path to tar-ed and bz2 compressed content file")
-    parser.add_argument("--output-dir", default="./extracted_data", help="Path to output directory")
+    parser.add_argument("--index-file", default=f"data/{SOURCE_NAME}/raw/index.json", help="Path to JSON index")
+    parser.add_argument("--whitelist-file", default="bhl/license_whitelist.json", help="Path to JSON file of whitelisted license strings")
+    parser.add_argument("--content-file", default=f"data/{SOURCE_NAME}/raw/data/bhl-ocr-20230823.tar.bz2", help="Path to tar-ed and bz2 compressed content file")
+    parser.add_argument("--output-dir", default=f"data/{SOURCE_NAME}/raw/extracted_data", help="Path to output directory")
     return parser.parse_args()
 
 
