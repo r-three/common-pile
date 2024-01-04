@@ -2,9 +2,11 @@
 
 ## Finding Data Sources
 
+The goal of this project is to collect high-quality and diverse public domain or permissively licensed text. We track potential data sources in the repo's [Issues](https://github.com/r-three/licensed-pile/issues). If you find a new source of public domain or permissively licensed text that is not currently listed, feel free to add an Issue.
+
 ### Allowable Licenses
 
-Our current list of the permissive licenses allowed by this project is below and can also be found in `licensed-pile/licensed_pile/licenses.py`:
+The current list of the permissive licenses allowed by this project is below and can also be found in `licensed-pile/licensed_pile/licenses.py`:
 
 - [Public Domain](https://en.wikipedia.org/wiki/Public_domain_in_the_United_States)
 - [Creative Commons Zero](https://creativecommons.org/publicdomain/zero/1.0/)
@@ -17,17 +19,17 @@ Our current list of the permissive licenses allowed by this project is below and
 - [MIT License](https://opensource.org/license/mit/)
 - [BSD License](https://opensource.org/license/bsd-2-clause/)
 
-This list contains many of the common permissive licenses that cover most large data sources, but we intend to expand this list as we continue to collect data. If you come across a source with a license that you believe should be on this list, feel free to comment in our [Allowable License Meta-Issue](https://github.com/r-three/licensed-pile/issues/34). 
+This list contains some of the common permissive licenses that cover many large data sources, but we intend to expand this list as we continue to collect data. If you come across a source with a license that you believe should be on this list, feel free to comment in our [Allowable License Meta-Issue](https://github.com/r-three/licensed-pile/issues/34). 
 
 ### Finding License Information
 
-License information can sometimes be difficult to find for certain text sources. Below are a couple common patterns you can use to search for whether a source is permissively licensed or in the public domain:
+License information can sometimes be difficult to find for certain text sources on the Internet. Below are a couple common patterns you can use to search for whether a source is permissively licensed or in the public domain:
 
 1. A website's Terms of Service
 
 > For example, Section 6 of the the [StackExchange Terms of Service](https://stackoverflow.com/legal/terms-of-service/public#licensing) state that their content is under a CC-BY-SA.
 
-2. A license statement at the bottom of a webpage
+2. A license statement sometimes located at the bottom of a webpage
 
 > For example, the [Pokemon Fandom Wiki](https://pokemon.fandom.com/wiki/Pokémon_Wiki) states near the bottom of their homepage *"Community content is available under CC-BY-SA unless otherwise noted"*
 
@@ -40,9 +42,6 @@ License information can sometimes be difficult to find for certain text sources.
 > Certain types of content are automatically in the public domain by U.S. law. Some examples are works published over 100 years ago whose copyright has expired (e.g., many of the books on [Project Gutenberg](https://www.gutenberg.org)) and works authored by the U.S. Federal Government.
 
 
-This project tracks potential sources in the repo's [Issues](https://github.com/r-three/licensed-pile/issues). If you find a new source of permissively licensed or public domain text, feel free to add an Issue.
-
-
 ## Contributing Data Collection Code 
 
 Once you have selected a source from the list of [Issues](https://github.com/r-three/licensed-pile/issues) and assigned the issue to yourself, you can follow these guidelines for how to get started with contributing to the repo:
@@ -51,8 +50,6 @@ Once you have selected a source from the list of [Issues](https://github.com/r-t
 
 2. Run `pip install -r requirements.txt`
     
-> This will install common dependencies as well as utilities from this repo that are useful for data collection and storage.
-
 3. Create a subdirectory for your data source (e.g., the `licensed-pile/gutenberg` directory for the Project Gutenberg data source).
 
 4. Identify the best way to collect the raw data
