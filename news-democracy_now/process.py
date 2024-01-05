@@ -68,7 +68,7 @@ def main(args):
     if args.index_file:
         page_index = args.index_file
     else:
-        page_index = utils.build_url_index(args.url, keyword="article")
+        page_index = utils.build_url_index(args.url)
 
     page_index = [(idx, page) for idx, page in enumerate(page_index)]
     
@@ -83,7 +83,7 @@ def main(args):
     # Do clean up process
 
     # Cleaned Version
-    cleaned_output_dir = os.path.join(args.output_dir, f"v{version}")
+    cleaned_output_dir = os.path.join(args.output_dir, f"v{args.version}")
     to_dolma(page_data, cleaned_output_dir, args.filename, args.shard_size)
     return 0
 
