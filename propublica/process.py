@@ -14,8 +14,14 @@ parser.add_argument(
 )
 parser.add_argument(
     "--output_dir",
-    default="data/propublica/raw/",
+    default="data/propublica/",
     help="Path to output directory where raw pages are downloaded.",
+)
+parser.add_argument(
+    "--version",
+    type=int,
+    default=1,
+    help="Version of the subset",
 )
 parser.add_argument(
     "--index_file",
@@ -69,7 +75,15 @@ def main(args):
     with mp.Pool(num_workers) as p:
         page_data = list(p.map(partial(get_record, date=date), tqdm(page_index)))
 
-    to_dolma(page_data, args.output_dir, args.filename, args.shard_size)
+    # Raw Version
+    raw_output_dir = os.path.join(args.output_dir, "raw")
+    # Save to SOURCE/Raw/
+
+    # Do clean up process
+
+    # Cleaned Version
+    cleaned_output_dir = os.path.join(args.output_dir, f"v{version}")
+    to_dolma(page_data, cleaned_output_dir, args.filename, args.shard_size)
     return 0
 
 
