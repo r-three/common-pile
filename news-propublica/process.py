@@ -14,7 +14,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--output_dir",
-    default="data/propublica/",
+    default="data/news-propublica/",
     help="Path to output directory where raw pages are downloaded.",
 )
 parser.add_argument(
