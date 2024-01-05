@@ -1,6 +1,7 @@
 import argparse
 
 from datetime import datetime
+from tqdm.contrib.concurrent import process_map
 
 import utils
 from licensed_pile.write import to_dolma
@@ -31,22 +32,23 @@ def main(args):
     current_datetime = datetime.now()
     date = f"{current_datetime.year}-{current_datetime.month}-{current_datetime.day}"
 
-    page_url_index = build_url_index(args.url, keyword_list="article")
+    page_url_index = utils.build_url_index(args.url, keyword="article")
 
     def get_record(page_url):
-        idx, page_text = "\n".join(get_text_from_page(page_url))
+        idx, url = page_url
+        page_text = "\n".join(utils.get_text_from_page(url))
 
         return {
             "id": idx,
             "text": page_text,
-            "source": page_url,
+            "source": url,
             "added": date,
             "metadata": {
                 "license": "Creative Commons License (CC BY-NC-ND 3.0)",
             }
         }
 
-    page_data = map(get_record, page_url_index)
+    page_data = process_map(get_record, page_url_index, max_workers=10)
     to_dolma(list(page_data), args.output_dir, args.filename, args.shard_size)
 
 
