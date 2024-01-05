@@ -1,7 +1,9 @@
 import argparse
+import multiprocessing as mp
 
+from tqdm import tqdm
+from functools import partial
 from datetime import datetime
-from tqdm.contrib.concurrent import process_map
 
 import utils
 from licensed_pile.write import to_dolma
@@ -16,6 +18,11 @@ parser.add_argument(
     help="Path to output directory where raw pages are downloaded.",
 )
 parser.add_argument(
+    "--index_file",
+    default=None,
+    help="File that list of all pages",
+)
+parser.add_argument(
     "--overwrite",
     action="store_true",
     help="Should we overwrite previously downloaded copies?",
@@ -26,30 +33,44 @@ parser.add_argument(
 parser.add_argument(
     "--shard_size", type=int, default=1, help="Size, in GB, for each shard."
 )
+parser.add_argument(
+    "--num_workers",
+    default=None,
+    help="Number of workers",
+)
+
+def get_record(page_url, date=None):
+    idx, url = page_url
+    page_text = utils.get_text_from_page(url)
+
+    return {
+        "id": idx,
+        "text": page_text,
+        "source": url,
+        "added": date,
+        "metadata": {
+            "license": "Creative Commons License (CC BY-NC-ND 3.0)",
+        }
+    }
 
 def main(args):
 
     current_datetime = datetime.now()
     date = f"{current_datetime.year}-{current_datetime.month}-{current_datetime.day}"
 
-    page_url_index = utils.build_url_index(args.url, keyword="article")
+    if args.index_file:
+        page_index = args.index_file
+    else:
+        page_index = utils.build_url_index(args.url, keyword="article")
 
-    def get_record(page_url):
-        idx, url = page_url
-        page_text = "\n".join(utils.get_text_from_page(url))
+    page_index = [(idx, page) for idx, page in enumerate(page_index)]
+    
+    num_workers = mp.cpu_count() if args.num_workers is None else args.num_workers
+    with mp.Pool(num_workers) as p:
+        page_data = list(p.map(partial(get_record, date=date), tqdm(page_index)))
 
-        return {
-            "id": idx,
-            "text": page_text,
-            "source": url,
-            "added": date,
-            "metadata": {
-                "license": "Creative Commons License (CC BY-NC-ND 3.0)",
-            }
-        }
-
-    page_data = process_map(get_record, page_url_index, max_workers=10)
-    to_dolma(list(page_data), args.output_dir, args.filename, args.shard_size)
+    to_dolma(page_data, args.output_dir, args.filename, args.shard_size)
+    return 0
 
 
 if __name__ == "__main__":

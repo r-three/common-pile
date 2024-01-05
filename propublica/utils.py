@@ -10,7 +10,7 @@ def build_url_index(base_url, keyword=None):
         keyword = [keyword]
 
     tree = sitemap_tree_for_homepage(base_url)
-    page_index = [(idx, page.url) for key in keyword for idx, page in enumerate(tree.all_pages()) if key in page.url]
+    page_index = [page.url for key in keyword for idx, page in enumerate(tree.all_pages()) if key in page.url]
     return page_index
 
 
