@@ -86,6 +86,10 @@ Once you have selected a source from the list of [Issues](https://github.com/r-t
 
 For some sources, significant compute may be required to collect all of the data. For these, it is fine to test code on a subset of the data. Ultimately, we plan on re-running the code for all data sources all at once after all the code has been written in order to get the freshest version of each source.
 
+## Global Data Formatting Guidelines
+
+1. All mathematics should be formatted as compilable LaTeX. This doesn't necessarily aply to individual numbers, but once something is an equation or requires special formatting to make it appear correctly write it in LaTeX. Note that for some sources (notably wikipedia) this means we need to convert their mathematics syntax to LaTeX.
+
 ## Examples
 
 For some examples of completed data sources check out any of the following:
