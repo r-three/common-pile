@@ -1,6 +1,6 @@
 import re
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, NavigableString
 from usp.tree import sitemap_tree_for_homepage
 
 def build_url_index(base_url, keyword=None):
@@ -13,21 +13,6 @@ def build_url_index(base_url, keyword=None):
     tree = sitemap_tree_for_homepage(base_url)
     page_index = [page.url for key in keyword for idx, page in enumerate(tree.all_pages()) if key in page.url]
     return page_index
-
-
-ignore = "ProPublica is a nonprofit newsroom that investigates abuses of power. Sign up to receive"
-
-# Democracy Now
-# article = soup.find_all("div", attrs={"class": "text"})
-
-# Mongabay
-# article = soup.find_all("div", attrs={"id":"main"})
-
-# Tasnim Agency
-# article = soup.find_all("div", attrs={"class":"row"})
-
-# The Conversation
-# article = soup.find_all("article", attrs={"id":"article"})
 
 
 def get_text_from_page(url=None, html_path=None, tag="article", attrs=None):
@@ -49,8 +34,6 @@ def get_text_from_page(url=None, html_path=None, tag="article", attrs=None):
     elif dateline := soup.find("li", class_="time"):
         text.append(dateline.getText(strip=True))
 
-    # article = soup.find_all("div", attrs={"class": "article-body"})
-    # article = soup.find_all("div", attrs={"class": "text"})
     article = soup.find_all(tag, attrs=attrs)
     for a in article:
 
