@@ -30,7 +30,7 @@ ignore = "ProPublica is a nonprofit newsroom that investigates abuses of power. 
 # article = soup.find_all("article", attrs={"id":"article"})
 
 
-def get_text_from_page(url=None, html_path=None, tag="article", attrs={"class": "article center"}):
+def get_text_from_page(url=None, html_path=None, tag="article", attrs=None):
 
     assert bool(url is not None) != bool(html_path is not None)
 
