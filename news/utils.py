@@ -29,13 +29,16 @@ ignore = "ProPublica is a nonprofit newsroom that investigates abuses of power. 
 # article = soup.find_all("article", attrs={"id":"article"})
 
 
-def get_text_from_page(url, tag="article", attrs={"class": "article center"}, other_attrs=None):
+def get_text_from_page(url=None, html_path=None, tag="article", attrs={"class": "article center"}):
 
-    page = requests.get(url)
-    soup = BeautifulSoup(page.content, "html.parser")
+    assert bool(url is not None) != bool(html_path is not None)
 
-    # with open(url) as fp:
-    #     soup = BeautifulSoup(fp, "html.parser")
+    if url is not None:
+        page = requests.get(url)
+        soup = BeautifulSoup(page.content, "html.parser")
+    elif html_path is not None:
+        with open(url) as fp:
+            soup = BeautifulSoup(fp, "html.parser")
 
     text = [soup.title.getText() if soup.title else ""]
 
