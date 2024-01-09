@@ -43,7 +43,10 @@ parser.add_argument(
     "--shard_size", type=int, default=1, help="Size, in GB, for each shard."
 )
 parser.add_argument(
-    "--attr", type=json.loads, default=None, help="dict of attributes"
+    "--tag", type=str, default="div", help="Tag for the article or content"
+)
+parser.add_argument(
+    "--attrs", type=json.loads, default=None, help="dict of attributes"
 )
 parser.add_argument(
     "--num_workers",
@@ -51,19 +54,26 @@ parser.add_argument(
     help="Number of workers",
 )
 
-def get_record(html_path, url, idx, date=None):
+def get_record(page_index, output_dir=None, date=None, tag="div", attrs=None):
+    idx = page_index["idx"]
+    url = page_index["url"]
+    filename = page_index["filename"]
 
-    page_text = utils.get_text_from_page(html_path=html_path)
+    html_path = os.path.join(output_dir, filename)
+    if os.path.exists(html_path):
+        page_text = utils.get_text_from_page(html_path=html_path, tag=tag, attrs=attrs)
 
-    return {
-        "id": idx,
-        "text": page_text,
-        "source": url,
-        "added": date,
-        "metadata": {
-            "license": "Creative Commons License (CC BY-NC-ND 3.0)",
+        return {
+            "id": idx,
+            "text": page_text,
+            "source": url,
+            "added": date,
+            "metadata": {
+                "license": "Creative Commons License (CC BY-NC-ND 3.0)",
+            }
         }
-    }
+    else:
+        return None
 
 def main(args):
 
@@ -86,12 +96,17 @@ def main(args):
     
     # TODO Save HTML files
     # Then process/extract
+    get_record_fn = partial(get_record, output_dir=raw_output_dir, date=date, tag=args.tag, attrs=args.attrs)
     num_workers = mp.cpu_count() if args.num_workers is None else args.num_workers
     if num_workers == 1:
-        page_data = list(map(partial(get_record, date=date), tqdm(page_index)))
+        page_data = list(map(get_record_fn, tqdm(page_index)))
     else:
         with mp.Pool(num_workers) as p:
-            page_data = list(p.map(partial(get_record, date=date), tqdm(page_index)))
+            page_data = []
+            for data in tqdm(p.imap_unordered(get_record_fn, page_index), total=len(page_index)):
+                page_data.append(data)
+
+    page_data = [page for page in page_data if page is not None]
 
     # Cleaned Version
     cleaned_output_dir = os.path.join(args.output_dir, f"v{args.version}")
