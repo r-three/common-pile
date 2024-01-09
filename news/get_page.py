@@ -8,10 +8,8 @@ import multiprocessing as mp
 from tqdm import tqdm
 from pathlib import Path
 from functools import partial
-from datetime import datetime
 
 import utils
-from licensed_pile.write import to_dolma
 
 parser = argparse.ArgumentParser(description="Download News Sites")
 parser.add_argument(
@@ -23,49 +21,15 @@ parser.add_argument(
     help="Path to output directory where raw pages are downloaded.",
 )
 parser.add_argument(
-    "--version",
-    type=int,
-    default=1,
-    help="Version of the subset",
-)
-parser.add_argument(
-    "--index_path",
-    default=None,
-    help="File that list of all pages",
-)
-parser.add_argument(
     "--overwrite",
     action="store_true",
     help="Should we overwrite previously downloaded copies?",
-)
-parser.add_argument(
-    "--filename", default="pro.jsonl.gz", help="The base filename for our data."
-)
-parser.add_argument(
-    "--shard_size", type=int, default=1, help="Size, in GB, for each shard."
-)
-parser.add_argument(
-    "--keywords", nargs='+', default=None, help="List of keywords to aid indexing"
 )
 parser.add_argument(
     "--num_workers",
     default=None,
     help="Number of workers",
 )
-
-def get_record(html_path, url, idx, date=None):
-
-    page_text = utils.get_text_from_page(url)
-
-    return {
-        "id": idx,
-        "text": page_text,
-        "source": url,
-        "added": date,
-        "metadata": {
-            "license": "Creative Commons License (CC BY-NC-ND 3.0)",
-        }
-    }
 
 def get_pages(page_index, output_path):
     idx = page_index["idx"]
@@ -89,9 +53,6 @@ def main(args):
     Path(raw_output_dir).mkdir(parents=True, exist_ok=True)
     cleaned_output_dir = os.path.join(args.output_dir, f"v{args.version}")
     Path(cleaned_output_dir).mkdir(parents=True, exist_ok=True)
-
-    current_datetime = datetime.now()
-    date = f"{current_datetime.year}-{current_datetime.month}-{current_datetime.day}"
 
     if args.index_path:
         with jsonlines.open(args.index_path) as reader:
@@ -119,25 +80,6 @@ def main(args):
     failedlist_path = os.path.join(raw_output_dir, "failedlist.jsonl")
     with jsonlines.open(failedlist_path, mode="w") as writer:
         writer.write_all([{"idx": idx, "url": pages} for idx, pages in enumerate(failed_pages)])
-
-    # # TODO Save HTML files
-    # # Then process/extract
-    # num_workers = mp.cpu_count() if args.num_workers is None else args.num_workers
-    # if num_workers == 1:
-    #     page_data = list(map(partial(get_record, date=date), tqdm(page_index)))
-    # else:
-    #     with mp.Pool(num_workers) as p:
-    #         page_data = list(p.map(partial(get_record, date=date), tqdm(page_index)))
-
-    # # Raw Version
-    
-    # # Save to SOURCE/Raw/
-
-    # # Do clean up process
-
-    # # Cleaned Version
-    # cleaned_output_dir = os.path.join(args.output_dir, f"v{args.version}")
-    # to_dolma(page_data, cleaned_output_dir, args.filename, args.shard_size)
 
     return 0
 
