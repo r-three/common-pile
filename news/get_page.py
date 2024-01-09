@@ -32,7 +32,8 @@ parser.add_argument(
 )
 parser.add_argument(
     "--num_workers",
-    default=None,
+    type=int,
+    default=1,
     help="Number of workers",
 )
 parser.add_argument(
@@ -53,17 +54,18 @@ def get_pages(page_index, output_path):
     filename = page_index["filename"]
 
     page_file_path = os.path.join(output_path, filename)
+    # try:
+    #     wget.download(url, out=page_file_path)
+    #     return (url, 0)
+    # except:
+    # print("WGET Error", url)
     try:
-        wget.download(url, out=page_file_path)
-        return 0
-    except:
-        try:
-            page = requests.get(url)  
-            with open(page_file_path, 'wb') as fp:
-                fp.write(page.content)
-            return 0
-        except Exception as err:
-            return (url, err)
+        page = requests.get(url)  
+        with open(page_file_path, 'wb') as fp:
+            fp.write(page.content)
+        return (url, 0)
+    except Exception as err:
+        return (url, str(err))
 
 def main(args):
 
