@@ -77,6 +77,13 @@ def get_text_from_page(url, tag="article", attrs={"class": "article center"}, ot
                 elif child.name == "br":
                     split_p.append("".join(text_pieces))
                     text_pieces = []
+                elif child.name == "em":
+                    text_pieces.extend(child.getText())
+                elif child.name == "a":
+                    text_pieces.extend(child.getText())
+                elif child.name == "strong":
+                    text_pieces.extend(child.getText())
+
             # Remaining pieces
             if text_pieces:
                 split_p.append("".join(text_pieces))
@@ -88,3 +95,18 @@ def get_text_from_page(url, tag="article", attrs={"class": "article center"}, ot
             text.extend(text_article)
 
     return "\n".join(text)
+
+def is_valid(text: str) -> bool:
+    """
+    Simple check to eliminate and filter obviously bad text in paragraph tags.
+    """
+    text = text.strip()
+    text = " ".join(text.split())
+    if not text:
+        return False
+    elif text.startswith("Attention Required! | Cloudflare"):
+        return False
+    elif text.startswith("403 Forbidden"):
+        return False
+    else:
+        return True
