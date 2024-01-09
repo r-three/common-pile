@@ -19,14 +19,30 @@ ignore = "ProPublica is a nonprofit newsroom that investigates abuses of power. 
 # Democracy Now
 # article = soup.find_all("div", attrs={"class": "text"})
 
+# Mongabay
+# article = soup.find_all("div", attrs={"id":"main"})
+
+# Tasnim Agency
+# article = soup.find_all("div", attrs={"class":"row"})
+
+# The Conversation
+# article = soup.find_all("article", attrs={"id":"article"})
+
+
 def get_text_from_page(url, tag="article", attrs={"class": "article center"}, other_attrs=None):
+
     page = requests.get(url)
     soup = BeautifulSoup(page.content, "html.parser")
+
+    # with open(url) as fp:
+    #     soup = BeautifulSoup(fp, "html.parser")
 
     text = [soup.title.getText() if soup.title else ""]
 
     # Search for dateline
     if dateline := soup.find("span", class_="date"):
+        text.append(dateline.getText(strip=True))
+    elif dateline := soup.find("li", class_="time"):
         text.append(dateline.getText(strip=True))
 
     # article = soup.find_all("div", attrs={"class": "article-body"})
@@ -34,11 +50,19 @@ def get_text_from_page(url, tag="article", attrs={"class": "article center"}, ot
     article = soup.find_all(tag, attrs=attrs)
     for a in article:
 
-        if (dateline is None) and (dateline := a.find("time", class_="timestamp")):
-            text.append(dateline.getText(strip=True))
+        if dateline is None:
+            if dateline := a.find("time", class_="timestamp"):
+                text.append(dateline.getText(strip=True))
+            elif dateline := a.find("div", class_="timestamps"):
+                text.append(dateline.getText(strip=True))    
 
         if byline := a.find("span", class_="article-meta-1__byline"):
             text.append(byline.getText().strip())
+        # elif byline := a.find("a", attrs{"itemprop": "author"}):
+        #     text.append(byline.getText().strip())
+
+        if lead_text := a.find("h3", class_="lead"):
+            text.append(lead_text.getText().strip())
 
         # Adapted from 
         # https://github.com/bltlab/mot/blob/63ef942f2a4cc7fff5823b4cdefbccc5c7464b5f/extraction/extracttext.py#L540-L558
