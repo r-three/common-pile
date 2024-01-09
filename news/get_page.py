@@ -36,14 +36,15 @@ parser.add_argument(
     help="Number of workers",
 )
 parser.add_argument(
-    "--test",
-    action="store_true",
-    help="Process only a small portion",
+    "--limit",
+    type=int,
+    default=None,
+    help="Set number of pages",
 )
 parser.add_argument(
-    "--download_pages",
+    "--dl",
     action="store_true",
-    help="Download all pages",
+    help="Download pages",
 )
 
 def get_pages(page_index, output_path):
@@ -61,8 +62,8 @@ def get_pages(page_index, output_path):
             with open(page_file_path, 'wb') as fp:
                 fp.write(page.content)
             return 0
-        except:
-            return url
+        except Exception as err:
+            return (url, err)
 
 def main(args):
 
@@ -79,14 +80,15 @@ def main(args):
                 page_index = [line for line in reader]
         else:
             page_list = utils.build_url_index(args.url)
+
+            if args.limit is not None:
+                page_list = page_list[:args.limit]
+
             page_index = [{"idx": idx, "url": url, "filename": f"{utils.sanitize_url(url)}.html"} for idx, url in enumerate(page_list)]
             with jsonlines.open(pagelist_path, mode="w") as writer:
                 writer.write_all(page_index)
     
-    if args.test:
-        page_index = page_index[:250]
-
-    if args.download_pages:
+    if args.dl:
         # Download all pages
         download_fn = partial(get_pages, output_path=raw_output_dir)
         num_workers = mp.cpu_count() if args.num_workers is None else args.num_workers
@@ -100,7 +102,7 @@ def main(args):
 
         failedlist_path = os.path.join(raw_output_dir, "failedlist.jsonl")
         with jsonlines.open(failedlist_path, mode="w") as writer:
-            writer.write_all([{"idx": idx, "url": pages} for idx, pages in enumerate(failed_pages)])
+            writer.write_all([{"idx": idx, "url": url, "error": err} for idx, (url, err) in enumerate(failed_pages)])
 
     return 0
 
