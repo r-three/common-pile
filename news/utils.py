@@ -1,3 +1,4 @@
+import re
 import requests
 from bs4 import BeautifulSoup
 from usp.tree import sitemap_tree_for_homepage
@@ -37,7 +38,7 @@ def get_text_from_page(url=None, html_path=None, tag="article", attrs={"class": 
         page = requests.get(url)
         soup = BeautifulSoup(page.content, "html.parser")
     elif html_path is not None:
-        with open(url) as fp:
+        with open(html_path, "rb") as fp:
             soup = BeautifulSoup(fp, "html.parser")
 
     text = [soup.title.getText() if soup.title else ""]
@@ -61,8 +62,8 @@ def get_text_from_page(url=None, html_path=None, tag="article", attrs={"class": 
 
         if byline := a.find("span", class_="article-meta-1__byline"):
             text.append(byline.getText().strip())
-        # elif byline := a.find("a", attrs{"itemprop": "author"}):
-        #     text.append(byline.getText().strip())
+        elif byline := a.find("p", class_="byline"):
+            text.append(byline.getText().strip())
 
         if lead_text := a.find("h3", class_="lead"):
             text.append(lead_text.getText().strip())
@@ -113,3 +114,16 @@ def is_valid(text: str) -> bool:
         return False
     else:
         return True
+
+def sanitize_url(url: str) -> str:
+    """Remove parts of url string we don't want or can't use as a filename"""
+    base = (
+        url.replace("?", "_")
+        .replace(",", "_")
+        .replace("=", "_")
+        .replace("https://www.", "")
+        .replace("http://www.", "")
+        .replace("https://", "")
+        .replace("/", "_")
+    )
+    return re.sub(r"\s+", "_", base)
