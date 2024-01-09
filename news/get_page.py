@@ -49,8 +49,9 @@ parser.add_argument(
 def get_pages(page_index, output_path):
     idx = page_index["idx"]
     url = page_index["url"]
+    filename = page_index["filename"]
 
-    page_file_path = os.path.join(output_path, f"{utils.sanitize_url(url)}.html")
+    page_file_path = os.path.join(output_path, filename)
     try:
         wget.download(url, out=page_file_path)
         return 0
@@ -78,7 +79,7 @@ def main(args):
                 page_index = [line for line in reader]
         else:
             page_list = utils.build_url_index(args.url)
-            page_index = [{"idx": idx, "url": url} for idx, url in enumerate(page_list)]
+            page_index = [{"idx": idx, "url": url, "filename": f"{utils.sanitize_url(url)}.html"} for idx, url in enumerate(page_list)]
             with jsonlines.open(pagelist_path, mode="w") as writer:
                 writer.write_all(page_index)
     
