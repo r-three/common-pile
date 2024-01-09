@@ -16,6 +16,11 @@ parser.add_argument(
     "--url", default="https://www.propublica.org/", help="Base URL"
 )
 parser.add_argument(
+    "--index_path",
+    default=None,
+    help="File that list of all pages",
+)
+parser.add_argument(
     "--output_dir",
     default="data/news-propublica/",
     help="Path to output directory where raw pages are downloaded.",
@@ -30,11 +35,22 @@ parser.add_argument(
     default=None,
     help="Number of workers",
 )
+parser.add_argument(
+    "--test",
+    action="store_true",
+    help="Process only a small portion",
+)
+parser.add_argument(
+    "--download_pages",
+    action="store_true",
+    help="Download all pages",
+)
 
 def get_pages(page_index, output_path):
     idx = page_index["idx"]
     url = page_index["url"]
-    page_file_path = os.path.join(output_path, f"{idx}.html")
+
+    page_file_path = os.path.join(output_path, f"{utils.sanitize_url(url)}.html")
     try:
         wget.download(url, out=page_file_path)
         return 0
@@ -51,8 +67,6 @@ def main(args):
 
     raw_output_dir = os.path.join(args.output_dir, "raw")
     Path(raw_output_dir).mkdir(parents=True, exist_ok=True)
-    cleaned_output_dir = os.path.join(args.output_dir, f"v{args.version}")
-    Path(cleaned_output_dir).mkdir(parents=True, exist_ok=True)
 
     if args.index_path:
         with jsonlines.open(args.index_path) as reader:
@@ -68,18 +82,24 @@ def main(args):
             with jsonlines.open(pagelist_path, mode="w") as writer:
                 writer.write_all(page_index)
     
-    # Download all pages
-    download_fn = partial(get_pages, output_path=raw_output_dir)
-    num_workers = mp.cpu_count() if args.num_workers is None else args.num_workers
-    if num_workers == 1:
-        failed_pages = list(map(download_fn, tqdm(page_index)))
-    else:
-        with mp.Pool(num_workers) as p:
-            failed_pages = list(p.map(download_fn, tqdm(page_index)))
+    if args.test:
+        page_index = page_index[:250]
 
-    failedlist_path = os.path.join(raw_output_dir, "failedlist.jsonl")
-    with jsonlines.open(failedlist_path, mode="w") as writer:
-        writer.write_all([{"idx": idx, "url": pages} for idx, pages in enumerate(failed_pages)])
+    if args.download_pages:
+        # Download all pages
+        download_fn = partial(get_pages, output_path=raw_output_dir)
+        num_workers = mp.cpu_count() if args.num_workers is None else args.num_workers
+        if num_workers == 1:
+            failed_pages = list(map(download_fn, tqdm(page_index)))
+        else:
+            with mp.Pool(num_workers) as p:
+                failed_pages = []
+                for page in tqdm(p.imap_unordered(download_fn, page_index), total=len(page_index)):
+                    failed_pages.append(page)
+
+        failedlist_path = os.path.join(raw_output_dir, "failedlist.jsonl")
+        with jsonlines.open(failedlist_path, mode="w") as writer:
+            writer.write_all([{"idx": idx, "url": pages} for idx, pages in enumerate(failed_pages)])
 
     return 0
 
