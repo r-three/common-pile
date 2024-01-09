@@ -1,5 +1,6 @@
 import os
 import argparse
+import jsonlines
 import multiprocessing as mp
 
 from tqdm import tqdm
@@ -65,6 +66,9 @@ def get_record(page_url, date=None):
 
 def main(args):
 
+    raw_output_dir = os.path.join(args.output_dir, "raw")
+    cleaned_output_dir = os.path.join(args.output_dir, f"v{args.version}")
+
     current_datetime = datetime.now()
     date = f"{current_datetime.year}-{current_datetime.month}-{current_datetime.day}"
 
@@ -72,15 +76,20 @@ def main(args):
         page_index = args.index_file
     else:
         page_index = utils.build_url_index(args.url, keyword=args.keywords)
+        with jsonlines.open(os.path.join(raw_output_dir, "pagelist.jsonl"), mode="w") as writer:
+            writer.write_all(page_data)
 
     page_index = [(idx, page) for idx, page in enumerate(page_index)]
     
     num_workers = mp.cpu_count() if args.num_workers is None else args.num_workers
-    with mp.Pool(num_workers) as p:
-        page_data = list(p.map(partial(get_record, date=date), tqdm(page_index)))
+    if num_workers == 1:
+        page_data = list(map(partial(get_record, date=date), tqdm(page_index)))
+    else:
+        with mp.Pool(num_workers) as p:
+            page_data = list(p.map(partial(get_record, date=date), tqdm(page_index)))
 
     # Raw Version
-    raw_output_dir = os.path.join(args.output_dir, "raw")
+    
     # Save to SOURCE/Raw/
 
     # Do clean up process
