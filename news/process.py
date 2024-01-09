@@ -116,6 +116,10 @@ def main(args):
         with mp.Pool(num_workers) as p:
             failed_pages = list(p.map(download_fn, tqdm(page_index)))
 
+    failedlist_path = os.path.join(raw_output_dir, "failedlist.jsonl")
+    with jsonlines.open(failedlist_path, mode="w") as writer:
+        writer.write_all([{"idx": idx, "url": pages} for idx, pages in enumerate(failed_pages)])
+
     # # TODO Save HTML files
     # # Then process/extract
     # num_workers = mp.cpu_count() if args.num_workers is None else args.num_workers
