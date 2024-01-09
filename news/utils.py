@@ -14,8 +14,53 @@ def build_url_index(base_url, keyword=None):
     return page_index
 
 
-def get_text_from_page(url, tag="p"):
-    page = requests.get(url)
-    soup = BeautifulSoup(page.content)
+ignore = "ProPublica is a nonprofit newsroom that investigates abuses of power. Sign up to receive"
 
-    return "\n".join([element.text for element in soup.find_all(tag)])
+# Democracy Now
+# article = soup.find_all("div", attrs={"class": "text"})
+
+def get_text_from_page(url, tag="article", attrs={"class": "article center"}, other_attrs=None):
+    page = requests.get(url)
+    soup = BeautifulSoup(page.content, "html.parser")
+
+    text = [soup.title.getText() if soup.title else ""]
+
+    # Search for dateline
+    if dateline := soup.find("span", class_="date"):
+        text.append(dateline.getText(strip=True))
+
+    # article = soup.find_all("div", attrs={"class": "article-body"})
+    # article = soup.find_all("div", attrs={"class": "text"})
+    article = soup.find_all(tag, attrs=attrs)
+    for a in article:
+
+        if (dateline is None) and (dateline := a.find("time", class_="timestamp")):
+            text.append(dateline.getText(strip=True))
+
+        if byline := a.find("span", class_="article-meta-1__byline"):
+            text.append(byline.getText().strip())
+
+        # Adapted from 
+        # https://github.com/bltlab/mot/blob/63ef942f2a4cc7fff5823b4cdefbccc5c7464b5f/extraction/extracttext.py#L540-L558
+        p_tag = a.find_all("p")
+        for p in p_tag:
+            # split_p = p.getText().split("\n")
+            split_p = []
+            text_pieces = []
+            for child in p.children:
+                if type(child) is NavigableString:
+                    text_pieces.extend(child.split("\n"))
+                elif child.name == "br":
+                    split_p.append("".join(text_pieces))
+                    text_pieces = []
+            # Remaining pieces
+            if text_pieces:
+                split_p.append("".join(text_pieces))
+            text_article = [
+                article_paragraph
+                for s in split_p
+                if is_valid(article_paragraph := s.strip()) and s.strip()
+            ]
+            text.extend(text_article)
+
+    return "\n".join(text)
