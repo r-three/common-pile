@@ -6,3 +6,5 @@ dolma
 smart_open
 markdown-it-py
 ultimate-sitemap-parser
+jsonlines
+wget
