@@ -101,7 +101,7 @@ def main(args):
     
     # TODO Save HTML files
     # Then process/extract
-    get_record_fn = partial(get_record, output_dir=input_dir, date=date, tag=args.tag, attrs=args.attrs)
+    get_record_fn = partial(get_record, input_dir=input_dir, date=date, tag=args.tag, attrs=args.attrs)
     num_workers = mp.cpu_count() if args.num_workers is None else args.num_workers
     if num_workers == 1:
         page_data = list(map(get_record_fn, tqdm(page_index)))
