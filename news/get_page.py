@@ -64,11 +64,11 @@ def get_pages(page_index, output_path):
     try:
         page = requests.get(
             url,
-            headers=headers,
-            verify=False,
-            allow_redirects=False,
-            stream=True,
-            timeout=10
+            # headers=headers,
+            # verify=False,
+            # allow_redirects=False,
+            # stream=True,
+            # timeout=10
         )
         with open(page_file_path, 'wb') as fp:
             fp.write(page.content)
@@ -92,15 +92,15 @@ def main(args):
         else:
             page_list = utils.build_url_index(args.url)
 
-            if args.limit is not None:
-                page_list = page_list[:args.limit]
-
             # Remove duplicates
             page_list = list(dict.fromkeys(page_list))
             page_index = [{"idx": idx, "url": url, "filename": f"{utils.sanitize_url(url)}.html"} for idx, url in enumerate(page_list)]
             with jsonlines.open(pagelist_path, mode="w") as writer:
                 writer.write_all(page_index)
-    
+
+    if args.limit is not None:
+        page_index = page_index[:args.limit]
+
     if args.dl:
         # Download all pages
         download_fn = partial(get_pages, output_path=output_dir)
@@ -110,7 +110,8 @@ def main(args):
         else:
             with mp.Pool(num_workers) as p:
                 failed_pages = []
-                for page in tqdm(p.map(download_fn, page_index), total=len(page_index)):
+                # for page in tqdm(p.map(download_fn, page_index), total=len(page_index)):
+                for page in p.map(download_fn, tqdm(page_index)):
                     failed_pages.append(page)
 
         failedlist_path = os.path.join(output_dir, "failedlist.jsonl")
