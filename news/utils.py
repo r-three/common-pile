@@ -68,6 +68,8 @@ def get_text_from_page(url=None, html_path=None, tag="article", attrs=None):
                     text_pieces.extend(child.getText())
                 elif child.name == "a":
                     text_pieces.extend(child.getText())
+                elif child.name == "i":
+                    text_pieces.extend(child.getText())
                 elif child.name == "strong":
                     text_pieces.extend(child.getText())
 
