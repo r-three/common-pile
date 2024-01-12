@@ -16,9 +16,14 @@ from licensed_pile.write import to_dolma
 
 parser = argparse.ArgumentParser(description="Download News Sites")
 parser.add_argument(
-    "--output_dir",
+    "--input_dir",
     default="data/news-propublica/",
     help="Path to output directory where raw pages are downloaded.",
+)
+parser.add_argument(
+    "--output_dir",
+    default="data/news-propublica/",
+    help="Path to output directory for processed data.",
 )
 parser.add_argument(
     "--version",
@@ -54,12 +59,12 @@ parser.add_argument(
     help="Number of workers",
 )
 
-def get_record(page_index, output_dir=None, date=None, tag="div", attrs=None):
+def get_record(page_index, input_dir=None, date=None, tag="div", attrs=None):
     idx = page_index["idx"]
     url = page_index["url"]
     filename = page_index["filename"]
 
-    html_path = os.path.join(output_dir, filename)
+    html_path = os.path.join(input_dir, filename)
     if os.path.exists(html_path):
         page_text = utils.get_text_from_page(html_path=html_path, tag=tag, attrs=attrs)
 
@@ -77,10 +82,10 @@ def get_record(page_index, output_dir=None, date=None, tag="div", attrs=None):
 
 def main(args):
 
-    raw_output_dir = os.path.join(args.output_dir, "raw")
-    Path(raw_output_dir).mkdir(parents=True, exist_ok=True)
-    cleaned_output_dir = os.path.join(args.output_dir, f"v{args.version}")
-    Path(cleaned_output_dir).mkdir(parents=True, exist_ok=True)
+    input_dir = os.path.join(args.input_dir, "raw")
+    Path(input_dir).mkdir(parents=True, exist_ok=True)
+    output_dir = os.path.join(args.output_dir, f"v{args.version}")
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
 
     current_datetime = datetime.now()
     date = f"{current_datetime.year}-{current_datetime.month}-{current_datetime.day}"
@@ -89,14 +94,14 @@ def main(args):
         with jsonlines.open(args.index_path) as reader:
             page_index = [line for line in reader]
     else:
-        pagelist_path = os.path.join(raw_output_dir, "pagelist.jsonl")
+        pagelist_path = os.path.join(input_dir, "pagelist.jsonl")
         if os.path.isfile(pagelist_path) and args.overwrite is False:
             with jsonlines.open(pagelist_path) as reader:
                 page_index = [line for line in reader]
     
     # TODO Save HTML files
     # Then process/extract
-    get_record_fn = partial(get_record, output_dir=raw_output_dir, date=date, tag=args.tag, attrs=args.attrs)
+    get_record_fn = partial(get_record, output_dir=input_dir, date=date, tag=args.tag, attrs=args.attrs)
     num_workers = mp.cpu_count() if args.num_workers is None else args.num_workers
     if num_workers == 1:
         page_data = list(map(get_record_fn, tqdm(page_index)))
@@ -109,8 +114,8 @@ def main(args):
     page_data = [page for page in page_data if page is not None]
 
     # Cleaned Version
-    cleaned_output_dir = os.path.join(args.output_dir, f"v{args.version}")
-    to_dolma(page_data, cleaned_output_dir, args.filename, args.shard_size)
+    output_dir = os.path.join(args.output_dir, f"v{args.version}")
+    to_dolma(page_data, output_dir, args.filename, args.shard_size)
 
     return 0
 
