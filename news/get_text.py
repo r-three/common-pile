@@ -82,7 +82,7 @@ def get_record(page_index, input_dir=None, date=None, tag="div", attrs=None):
 
 def main(args):
 
-    input_dir = os.path.join(args.input_dir, "raw")
+    input_dir = os.path.join(args.input_dir)
     Path(input_dir).mkdir(parents=True, exist_ok=True)
     output_dir = os.path.join(args.output_dir, f"v{args.version}")
     Path(output_dir).mkdir(parents=True, exist_ok=True)
@@ -108,7 +108,7 @@ def main(args):
     else:
         with mp.Pool(num_workers) as p:
             page_data = []
-            for data in tqdm(p.imap_unordered(get_record_fn, page_index), total=len(page_index)):
+            for data in p.map(get_record_fn, tqdm(page_index)):
                 page_data.append(data)
 
     page_data = [page for page in page_data if page is not None]
