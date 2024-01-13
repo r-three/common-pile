@@ -14,12 +14,12 @@ import shelve
 import urllib.parse
 from dataclasses import dataclass
 from typing import List
-from xml.etree import ElementTree as ET
 
 import bs4
 import tqdm
 from markdown_it import MarkdownIt
 
+import licensed_pile.xml as xml
 from licensed_pile.licenses import PermissiveLicenses
 from licensed_pile.write import to_dolma
 
@@ -74,21 +74,6 @@ class Question(Post):
     comments: List[Comment]
     license: PermissiveLicenses
     answers: List[Answer] = dataclasses.field(default_factory=list)
-
-
-def parse_document(path: str):
-    """Iterable version of xml parsing, lets us not load the whole thing at once.
-
-    See https://web.archive.org/web/20201111201837/http://effbot.org/zone/element-iterparse.htm
-    form more details on what it is doing.
-    """
-    context = ET.iterparse(path, events=("start", "end"))
-    context = iter(context)
-    event, root = next(context)
-    for event, elem in context:
-        if event == "end" and elem.tag == "row":
-            yield elem
-            root.clear()
 
 
 def get_attr(xml_obj, key):
@@ -275,7 +260,7 @@ def main(args):
     # the program will hang.
     with mp.Pool(processes=args.processes) as pool:
         print("Building Lookup from user id -> user names")
-        user_xml = parse_document(os.path.join(args.input, "Users.xml"))
+        user_xml = xml.iterate_xml(os.path.join(args.input, "Users.xml"), "row")
         # This table is fairly small so we don't need to create a shelve for it.
         author_display = collections.defaultdict(set)
         for user_id, user_names in pool.imap_unordered(
@@ -286,7 +271,9 @@ def main(args):
             author_display[user_id].update(user_names)
 
         print("Building Lookup from post id -> authors")
-        history_xml = parse_document(os.path.join(args.input, "PostHistory.xml"))
+        history_xml = xml.iterate_xml(
+            os.path.join(args.input, "PostHistory.xml"), "row"
+        )
         # It would probably be better/faster to use a database to store these
         # intermediate lookups instead of a shelve (which requires multiple
         # pickle serialization/deserialization) but I didn't want to implement
@@ -311,7 +298,7 @@ def main(args):
             comments = shelve.open(os.path.join(args.output, "comments.shelve"))
         else:
             comments = {}
-        comment_xml = parse_document(os.path.join(args.input, "Comments.xml"))
+        comment_xml = xml.iterate_xml(os.path.join(args.input, "Comments.xml"), "row")
         for post_id, user_id, text, date in pool.imap_unordered(
             process_comment, comment_xml, chunksize=100
         ):
@@ -342,7 +329,7 @@ def main(args):
         # Questions are the "document" level for this dataset, therefore we do
         # no need to sort them.
         print("Parsing Questions")
-        post_xml = parse_document(os.path.join(args.input, "Posts.xml"))
+        post_xml = xml.iterate_xml(os.path.join(args.input, "Posts.xml"), "row")
         for post_id, text, date, license in pool.imap_unordered(
             process_question, post_xml, chunksize=100
         ):
@@ -362,7 +349,7 @@ def main(args):
         # Reinitialize the iterator over the Posts as it was consumed when
         # looking for questions. We do this as a second pass so we know that
         # there will always be a question we can attach this answer to.
-        post_xml = parse_document(os.path.join(args.input, "Posts.xml"))
+        post_xml = xml.iterate_xml(os.path.join(args.input, "Posts.xml"), "row")
         for question_id, answer_id, answer, date in pool.imap_unordered(
             process_answer, post_xml, chunksize=100
         ):
