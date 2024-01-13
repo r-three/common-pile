@@ -33,7 +33,7 @@ parser.add_argument(
 parser.add_argument(
     "--num_workers",
     type=int,
-    default=1,
+    default=5,
     help="Number of workers",
 )
 parser.add_argument(
@@ -105,14 +105,8 @@ def main(args):
         # Download all pages
         download_fn = partial(get_pages, output_path=output_dir)
         num_workers = mp.cpu_count() if args.num_workers is None else args.num_workers
-        if num_workers == 1:
-            failed_pages = list(map(download_fn, tqdm(page_index)))
-        else:
-            with mp.Pool(num_workers) as p:
-                failed_pages = []
-                # for page in tqdm(p.map(download_fn, page_index), total=len(page_index)):
-                for page in p.map(download_fn, tqdm(page_index)):
-                    failed_pages.append(page)
+        with mp.Pool(num_workers) as p:
+            failed_pages = p.map(download_fn, tqdm(page_index))
 
         failedlist_path = os.path.join(output_dir, "failedlist.jsonl")
         with jsonlines.open(failedlist_path, mode="w") as writer:
