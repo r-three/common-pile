@@ -55,7 +55,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--num_workers",
-    default=None,
+    default=5,
     help="Number of workers",
 )
 
@@ -103,13 +103,8 @@ def main(args):
     # Then process/extract
     get_record_fn = partial(get_record, input_dir=input_dir, date=date, tag=args.tag, attrs=args.attrs)
     num_workers = mp.cpu_count() if args.num_workers is None else args.num_workers
-    if num_workers == 1:
-        page_data = list(map(get_record_fn, tqdm(page_index)))
-    else:
-        with mp.Pool(num_workers) as p:
-            page_data = []
-            for data in p.map(get_record_fn, tqdm(page_index)):
-                page_data.append(data)
+    with mp.Pool(num_workers) as p:
+        page_data = p.map(get_record_fn, tqdm(page_index))
 
     page_data = [page for page in page_data if page is not None]
 
