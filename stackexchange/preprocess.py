@@ -8,16 +8,15 @@ import functools
 import itertools
 import logging
 import multiprocessing as mp
+import operator as op
 import os
 import shelve
 import urllib.parse
 from dataclasses import dataclass
 from typing import List
-from xml.dom import minidom
 from xml.etree import ElementTree as ET
 
 import bs4
-import commonmark
 import tqdm
 from markdown_it import MarkdownIt
 
@@ -34,15 +33,27 @@ parser.add_argument(
     default=mp.cpu_count(),
     help="The number of multicore processors to use.",
 )
-parser.add_argument("--shelve", action="store_true", help="...")
+parser.add_argument(
+    "--shelve",
+    action="store_true",
+    help="Save lookup tables as shelves so we don't need to keep them all in memory.",
+)
 
 # Use over commonmark library as that is deprecated and has errors parsing stack overflow.
 MD = MarkdownIt("commonmark", {"breaks": True, "html": True})
 
 
+LICENSES = {
+    "CC BY-SA 2.5": PermissiveLicenses.CC_BY_SA_2_5,
+    "CC BY-SA 3.0": PermissiveLicenses.CC_BY_SA_3,
+    "CC BY-SA 4.0": PermissiveLicenses.CC_BY_SA,
+}
+
+
 @dataclass
 class Post:
     text: str
+    date: datetime.datetime
 
 
 @dataclass
@@ -61,7 +72,7 @@ class Question(Post):
     id: str
     authors: List[str]
     comments: List[Comment]
-    date: datetime.datetime
+    license: PermissiveLicenses
     answers: List[Answer] = dataclasses.field(default_factory=list)
 
 
@@ -97,10 +108,17 @@ def get_body_text(xml_obj):
 
 def get_markdown_text(xml_obj):
     return get_html_text(MD.render(get_attr(xml_obj, "Text")))
+    # The original commonmark library used is not maintained anymore and has
+    # issues with some of the data.
     # return get_html_text(commonmark.commonmark(get_attr(xml_obj, "Text")))
 
 
 def process_user(user, site):
+    """Extract user information from xml.
+
+    Returns:
+      The url to the user's page on stack exchange, the username.
+    """
     user_id = get_attr(user, "Id")
     if user_id == -1:
         return None, None
@@ -111,6 +129,11 @@ def process_user(user, site):
 
 
 def process_revision(revision):
+    """Extract post revision information from xml.
+
+    Returns:
+      The id of the post and the id of the user who made the post.
+    """
     user_id = get_attr(revision, "Id")
     if user_id in (-1, None):
         return None, None
@@ -118,42 +141,76 @@ def process_revision(revision):
 
 
 def process_comment(comment):
+    """Extract comment information from xml.
+
+    Returns:
+      The id for the comment
+      The id for the user who made the comment
+      The text of the comment
+      The date the comment as created
+    """
     return (
         get_attr(comment, "PostId"),
         get_attr(comment, "UserId"),
         get_markdown_text(comment),
+        get_date(get_attr(comment, "CreationDate")),
     )
+
+
+def get_date(ts: str) -> datetime.datetime:
+    # TODO: Add better error handling?
+    return datetime.datetime.fromisoformat(ts.split(".")[0])
 
 
 def process_question(question):
+    """Extract question information from xml.
+
+    Returns:
+      The id of the question
+      The text of the question (title + content)
+      The date the question was posted
+      The license that applies to the question
+    """
     if get_attr(question, "PostTypeId") != "1":
-        return None, None, None
+        return None, None, None, None
     post_id = get_attr(question, "Id")
     text = f"{get_attr(question, 'Title')}\n{get_body_text(question)}"
-    date = datetime.datetime.fromisoformat(
-        get_attr(question, "CreationDate").split(".")[0]
-    )
-    return post_id, text, date
+    date = get_date(get_attr(question, "CreationDate"))
+    license = stackexchange_license(get_attr(question, "ContentLicense"))
+    return post_id, text, date, license
 
 
 def process_answer(answer):
+    """Extract answer information from xml.
+
+    Returns:
+      The id of the question this answer is for
+      The id of the answer
+      The text of the answer
+      The date the answer was given
+    """
     if get_attr(answer, "PostTypeId") != "2":
-        return None, None, None
+        return None, None, None, None
     question_id = get_attr(answer, "ParentId")
     answer_id = get_attr(answer, "Id")
     text = get_body_text(answer)
-    return question_id, answer_id, text
+    date = get_date(get_attr(answer, "CreationDate"))
+    return question_id, answer_id, text, date
 
 
-def stackexchange_license(date):
-    """See https://stackoverflow.com/help/licensing"""
-    # Use datetime instead of date so we can do a comparison.
-    if date < datetime.datetime(2011, 4, 8, 0, 0, 0):
-        # Update to 2.5
-        return PermissiveLicenses.CC_BY_SA_3
-    if date < datetime.datetime(2018, 5, 2, 0, 0, 0):
-        return PermissiveLicenses.CC_BY_SA_3
-    return PermissiveLicenses.CC_BY_SA
+def stackexchange_license(license):
+    """For a rough idea of date based licenses see
+       https://stackoverflow.com/help/licensing.
+
+    Note:
+      Each comment, answer, and question have an attached ContentLicense,
+      but we are currently just using the Question License for the document
+      license.
+
+    TODO: Add filtering based on license type (do any answer/comment/question
+      have licenses that aren't permissive?)
+    """
+    return LICENSES.get(license, license)
 
 
 def stackexchange_url(site, id, collection: str = "questions"):
@@ -195,7 +252,7 @@ def format_dolma(question, site):
         "added": datetime.datetime.utcnow().isoformat(),
         "created": question.date.isoformat(),
         "metadata": {
-            "license": str(stackexchange_license(question.date)),
+            "license": str(question.license),
             "site": site,
             "url": stackexchange_url(site, question.id),
             "authors": sorted(all_authors),
@@ -207,7 +264,7 @@ def main(args):
     # Note: The Stack Exchage data doesn't lend itself to being shared into the
     # dolma format before the preprocessing is done, therefore we manually use
     # multiprocessing as we go to generate examples in parallel which are
-    # eventually stored in the shared format.
+    # eventually stored in the dolma format.
     site = os.path.basename(args.input)
     os.makedirs(args.output, exist_ok=True)
     # TODO: Does setting the start method to `spawn` help reduce memory usage?
@@ -219,8 +276,9 @@ def main(args):
     with mp.Pool(processes=args.processes) as pool:
         print("Building Lookup from user id -> user names")
         user_xml = parse_document(os.path.join(args.input, "Users.xml"))
+        # This table is fairly small so we don't need to create a shelve for it.
         author_display = collections.defaultdict(set)
-        for user_id, user_names in pool.imap(
+        for user_id, user_names in pool.imap_unordered(
             functools.partial(process_user, site=site), user_xml, chunksize=100
         ):
             if user_id is None:
@@ -238,7 +296,9 @@ def main(args):
             post_authors = shelve.open(os.path.join(args.output, "authors.shelve"))
         else:
             post_authors = {}
-        for post_id, user_id in pool.imap(process_revision, history_xml, chunksize=100):
+        for post_id, user_id in pool.imap_unordered(
+            process_revision, history_xml, chunksize=100
+        ):
             if post_id is None:
                 continue
             authors = post_authors.get(post_id, set())
@@ -252,7 +312,7 @@ def main(args):
         else:
             comments = {}
         comment_xml = parse_document(os.path.join(args.input, "Comments.xml"))
-        for post_id, user_id, text in pool.imap(
+        for post_id, user_id, text, date in pool.imap_unordered(
             process_comment, comment_xml, chunksize=100
         ):
             if post_id is None:
@@ -262,32 +322,48 @@ def main(args):
                 Comment(
                     text=text,
                     author=author_display[user_id],
+                    date=date,
                 )
             )
             # Get and assign so that values are written back to the shelve.
             comments[post_id] = comment
+        # Sort comments based on creation date, then when we add them to the text
+        # we know that they will be in the correct order, even if they are out
+        # of order in the dump/from multiprocessing.
+        # Explicit loop instead of a comprehension because it might be a shelve :(
+        for cid, cs in comments.items():
+            comments[cid] = sorted(cs, key=op.attrgetter("date"))
 
         if args.shelve:
             parsed_dump = shelve.open(os.path.join(args.output, "questions.shelve"))
         else:
             parsed_dump = {}
+
+        # Questions are the "document" level for this dataset, therefore we do
+        # no need to sort them.
         print("Parsing Questions")
         post_xml = parse_document(os.path.join(args.input, "Posts.xml"))
-        for post_id, text, date in pool.imap(process_question, post_xml, chunksize=100):
+        for post_id, text, date, license in pool.imap_unordered(
+            process_question, post_xml, chunksize=100
+        ):
             if post_id is None:
                 continue
             parsed_dump[post_id] = Question(
                 text=text,
                 id=post_id,
                 authors=post_authors[post_id],
+                # Comments are sorted in chronological order.
                 comments=comments.get(post_id, []),
                 date=date,
+                license=license,
             )
 
         print("Parsing Answers")
-        # Reinitialize the iterator over the Posts
+        # Reinitialize the iterator over the Posts as it was consumed when
+        # looking for questions. We do this as a second pass so we know that
+        # there will always be a question we can attach this answer to.
         post_xml = parse_document(os.path.join(args.input, "Posts.xml"))
-        for question_id, answer_id, answer in pool.imap(
+        for question_id, answer_id, answer, date in pool.imap_unordered(
             process_answer, post_xml, chunksize=100
         ):
             if question_id is None:
@@ -297,13 +373,28 @@ def main(args):
                 Answer(
                     text=answer,
                     authors=post_authors[answer_id],
+                    # Comments are sorted in chronological order.
                     comments=comments.get(answer_id, []),
+                    date=date,
                 )
             )
             # Get and assign so that values are written back to the shelve.
             parsed_dump[question_id] = question
 
-        print("Formatting Questions")
+        # Sort answers to questions based on creation date, when when they are
+        # added to the question text we know they will be in the correct order,
+        # even if they are out of order in the dump/from multiprocessing.
+        # Explicit loop instead of a compreshension because it might be a shelve :(
+        for qid, q in parsed_dump.items():
+            q.answers = sorted(q.answers, key=op.attrgetter("date"))
+            parsed_dump[qid] = q
+
+        # Use iterators so we don't need to have the full dataset loaded at once.
+        print("Formatting Questions as Dolma Documents")
+        # Even on rather large datasets, such as askubuntu.com, it faster to
+        # do the comment/answer sorting and run format dolma in the main process
+        # I assume the cost to serialize and decerialize the question is large
+        # and especially when the main process is the only writer.
         examples = map(functools.partial(format_dolma, site=site), parsed_dump.values())
         to_dolma(examples, os.path.join(args.output, "documents"), "se.jsonl.gz")
 
