@@ -20,6 +20,7 @@ class PermissiveLicenses(StringEnum):
     )
     CC_BY_SA = "Creative Commons - Attribution Share-Alike - https://creativecommons.org/licenses/by-sa/4.0/"
     CC_BY_SA_3 = "Creative Commons - Attribution Share-Alike - https://creativecommons.org/licenses/by-sa/3.0/"
+    CC_BY_SA_2_5 = "Creative Commons - Attribution Share-Alike - https://creativecommons.org/licenses/by-sa/2.5/"
     GFDL = "GNU Free Documentation License"
     APACHE_2 = "Apache 2 License - https://www.apache.org/licenses/LICENSE-2.0"
     MIT = "MIT License"

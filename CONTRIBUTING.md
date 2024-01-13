@@ -1,5 +1,9 @@
 # How to Contribute
 
+## Discord channel
+
+Coordination of this project is done primarily in the #licensed-pile channel in the [Eleuther AI Discord](https://discord.gg/eleutherai).
+
 ## Finding Data Sources
 
 The goal of this project is to collect high-quality and diverse public domain or permissively licensed text. We track potential data sources in the repo's [Issues](https://github.com/r-three/licensed-pile/issues). If you find a new source of public domain or permissively licensed text that is not currently listed, feel free to add an Issue.
@@ -23,7 +27,7 @@ This list contains some of the common permissive licenses that cover many large 
 
 ### Finding License Information
 
-License information can sometimes be difficult to find for certain text sources on the Internet. Below are a couple common patterns you can use to search for whether a source is permissively licensed or in the public domain:
+License information can sometimes be difficult to find for certain text sources on the Internet. If you are having trouble identifying the license or status of a data source, feel free to ask in the Discord channel. Below are a couple common patterns you can use to search for whether a source is permissively licensed or in the public domain:
 
 1. A website's Terms of Service
 
@@ -41,10 +45,11 @@ License information can sometimes be difficult to find for certain text sources 
 
 > Certain types of content are automatically in the public domain by U.S. law. Some examples are works published over 100 years ago whose copyright has expired (e.g., many of the books on [Project Gutenberg](https://www.gutenberg.org)) and works authored by the U.S. Federal Government.
 
+5. An "about" page can include licensing information for the website as a whole.
 
 ## Contributing Data Collection Code 
 
-Once you have selected a source from the list of [Issues](https://github.com/r-three/licensed-pile/issues) and assigned the issue to yourself, you can follow these guidelines for how to get started with contributing to the repo:
+Once you have selected a source from the list of [Issues](https://github.com/r-three/licensed-pile/issues), add a comment that you plan to work on it and an adim will assign the issue to you. Then, you can follow these guidelines for how to get started with contributing to the repo:
 
 1. Clone the repo
 
@@ -60,9 +65,9 @@ Once you have selected a source from the list of [Issues](https://github.com/r-t
 
 > The convention used in this repository is that scripts are run from the top-level `licensed-pile/` directory using `python -m {SOURCE}/{SCRIPT_NAME}`. Thus, your script should write to the relative path `./data/{SOURCE}/raw`.
 
-5. If necessary, filter the downloaded items down to only those with appropriate licenses
+5. If necessary, write code to filter the downloaded items down to only those with appropriate licenses.
 
-6. Write the resulting data to `licensed-pile/data/{SOURCE}/v0` 
+6. Write code that outputs the resulting data to `licensed-pile/data/{SOURCE}/v0` 
 
 > The data format used in this project is [Dolma](https://github.com/allenai/dolma). To write out the resulting data as a Dolma dataset, convert each record in the dataset to a python dictionary and use the utilities in `licensed-pile/licensed_pile/write.py` to convert the list of dictionaries to a Dolma dataset. In cases where the dataset is very large, it is better to define a record generator rather than a list and pass the generator to the Dolma utility functions.
 
@@ -80,6 +85,10 @@ Once you have selected a source from the list of [Issues](https://github.com/r-t
 ```
 
 For some sources, significant compute may be required to collect all of the data. For these, it is fine to test code on a subset of the data. Ultimately, we plan on re-running the code for all data sources all at once after all the code has been written in order to get the freshest version of each source.
+
+## Global Data Formatting Guidelines
+
+1. All mathematics should be formatted as compilable LaTeX. This doesn't necessarily aply to individual numbers, but once something is an equation or requires special formatting to make it appear correctly write it in LaTeX. Note that for some sources (notably wikipedia) this means we need to convert their mathematics syntax to LaTeX.
 
 ## Examples
 
