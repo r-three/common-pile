@@ -3,7 +3,7 @@
 Repo to hold code and track issues for the collection of permissively licensed data
 
 
-# Tips
+## Tips
 
 You can look at Dolma formatted data via commandline tools like so.
 

@@ -4,7 +4,10 @@ import argparse
 import glob
 import multiprocessing as mp
 import os
+import re
 from tempfile import TemporaryDirectory
+
+import pylatexenc.latex2text
 
 from licensed_pile.write import ShardParallelProcessor
 
@@ -13,12 +16,12 @@ parser = argparse.ArgumentParser(
 )
 parser.add_argument(
     "--input",
-    default="data/ubuntu-chat/raw",
+    default="data/arxiv/raw",
     help="The input version, this directory should be where the `documents` dir lives.",
 )
 parser.add_argument(
     "--output",
-    default="data/ubuntu-chat/v0",
+    default="data/arxiv/v0",
     help="The output version, this directory should be where the `documents` dir will live.",
 )
 # TODO: Respect this flag
@@ -40,9 +43,43 @@ parser.add_argument(
 )
 
 
+l2t_db = pylatexenc.latex2text.get_default_latex_context_db()
+l2t_db.add_context_category(
+    "overrides",
+    prepend=True,
+    macros=[
+        pylatexenc.latex2text.MacroTextSpec("includegraphics"),
+        pylatexenc.latex2text.MacroTextSpec("maketitle"),
+    ],
+    environments=[
+        pylatexenc.latex2text.EnvironmentTextSpec("array"),
+        pylatexenc.latex2text.EnvironmentTextSpec("pmatrix"),
+        pylatexenc.latex2text.EnvironmentTextSpec("bmatrix"),
+        pylatexenc.latex2text.EnvironmentTextSpec("smallmatrix"),
+    ],
+)
+
+
 class ArxivParallel(ShardParallelProcessor):
     @classmethod
-    def precess_example(cls, example, **kwargs):
+    def process_example(cls, example, **kwargs):
+        latex = example["text"]
+        document = latex.split(r"\begin{document}")[1]
+        # TODO: Add better processing for citations and section references.
+        try:
+            text = pylatexenc.latex2text.LatexNodes2Text(
+                math_mode="verbatim", latex_context=l2t_db
+            ).latex_to_text(document)
+        except Exception as e:
+            logger = cls.get_logger()
+            logger.warning(f"Failed to parse latex for document {example['id']}")
+            return None
+        lines = [l.strip() for l in text.splitlines()]
+        text = "\n".join(
+            l for l in lines if l == "" or l.startswith("\\") or len(l.split()) > 1
+        )
+        text = re.sub("\n\n+", "\n\n", text)
+        example["text"] = text
         return example
 
 
