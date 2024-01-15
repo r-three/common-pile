@@ -30,33 +30,31 @@ def get_text_from_page(url=None, html_path=None, tag="article", attrs=None):
     text = [soup.title.getText() if soup.title else ""]
 
     # Search for dateline
-    if dateline := soup.find("time", class_=re.compile("title")):
+    if dateline := soup.find("span", class_=re.compile("date")):
         text.append(dateline.getText().strip())
-    elif dateline := soup.find("span", class_=re.compile("date")):
-        text.append(dateline.getText().strip())
-    elif dateline := soup.find("span", class_=re.compile("on")):
+    elif dateline := soup.find("span", class_=re.compile("posted-on")):
         text.append(dateline.getText().strip())
     elif dateline := soup.find("li", class_=re.compile("time")):
         text.append(dateline.getText().strip())
+    elif dateline := soup.find("div", class_="timestamps"):
+        text.append(dateline.getText().strip())
+    elif dateline := soup.find("time", class_=re.compile("title")):
+        text.append(dateline.getText().strip())
+    elif dateline := soup.find("time", class_="timestamp"):
+        text.append(dateline.getText().strip())
+    elif dateline := soup.find("time"):
+        text.append(dateline.getText().strip())
 
-    if byline := soup.find(class_=re.compile("authors")):
+    if byline := soup.find(class_=re.compile("author")):
         text.append(byline.getText().strip())
     elif byline := soup.find(class_=re.compile("byline")):
         text.append(byline.getText().strip())
-    elif dateline := soup.find(class_=re.compile("by")):
+    elif dateline := soup.find(class_=re.compile("posted-by")):
         text.append(dateline.getText().strip())
 
     # article = soup.find_all(tag, attrs=attrs)
     article = soup.find_all(tag, attrs={k:re.compile(v) for k,v in attrs.items()})
     for a in article:
-
-        if dateline is None:
-            if dateline := a.find("time", class_="timestamp"):
-                text.append(dateline.getText(strip=True))
-            elif dateline := a.find("div", class_="timestamps"):
-                text.append(dateline.getText(strip=True))    
-            elif dateline := a.find("time"):
-                text.append(dateline.getText(strip=True))
 
         # Adapted from 
         # https://github.com/bltlab/mot/blob/63ef942f2a4cc7fff5823b4cdefbccc5c7464b5f/extraction/extracttext.py#L540-L558
