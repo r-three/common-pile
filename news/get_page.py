@@ -53,8 +53,8 @@ def get_pages(page_index, output_path):
     url = page_index["url"]
     filename = page_index["filename"]
 
-    headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
-
+    # headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
+    headers = {'User-Agent': 'My User Agent 1.0'}
     page_file_path = os.path.join(output_path, filename)
     # try:
     #     wget.download(url, out=page_file_path)
