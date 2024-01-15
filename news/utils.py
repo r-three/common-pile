@@ -20,7 +20,8 @@ def get_text_from_page(url=None, html_path=None, tag="article", attrs=None):
     assert bool(url is not None) != bool(html_path is not None)
 
     if url is not None:
-        page = requests.get(url)
+        headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
+        page = requests.get(url, headers=headers)
         soup = BeautifulSoup(page.content, "html.parser")
     elif html_path is not None:
         with open(html_path, "rb") as fp:
@@ -29,17 +30,21 @@ def get_text_from_page(url=None, html_path=None, tag="article", attrs=None):
     text = [soup.title.getText() if soup.title else ""]
 
     # Search for dateline
-    if dateline := soup.find("time"):
-        text.append(dateline.getText(strip=True))
+    if dateline := soup.find("time", class_=re.compile("title")):
+        text.append(dateline.getText().strip())
     elif dateline := soup.find("span", class_=re.compile("date")):
-        text.append(dateline.getText(strip=True))
+        text.append(dateline.getText().strip())
+    elif dateline := soup.find("span", class_=re.compile("on")):
+        text.append(dateline.getText().strip())
     elif dateline := soup.find("li", class_=re.compile("time")):
-        text.append(dateline.getText(strip=True))
+        text.append(dateline.getText().strip())
 
     if byline := soup.find(class_=re.compile("authors")):
         text.append(byline.getText().strip())
     elif byline := soup.find(class_=re.compile("byline")):
         text.append(byline.getText().strip())
+    elif dateline := soup.find(class_=re.compile("by")):
+        text.append(dateline.getText().strip())
 
     article = soup.findAll(tag, attrs=attrs)
     for a in article:
