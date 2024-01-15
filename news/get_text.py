@@ -48,6 +48,9 @@ parser.add_argument(
     "--shard_size", type=int, default=1, help="Size, in GB, for each shard."
 )
 parser.add_argument(
+    "--license", type=str, default="CC-BY", help="Type of license"
+)
+parser.add_argument(
     "--tag", type=str, default="div", help="Tag for the article or content"
 )
 parser.add_argument(
@@ -59,7 +62,7 @@ parser.add_argument(
     help="Number of workers",
 )
 
-def get_record(page_index, input_dir=None, date=None, tag="div", attrs=None):
+def get_record(page_index, input_dir=None, date=None, license_type=None, tag="div", attrs=None):
     idx = page_index["idx"]
     url = page_index["url"]
     filename = page_index["filename"]
@@ -74,7 +77,7 @@ def get_record(page_index, input_dir=None, date=None, tag="div", attrs=None):
             "source": url,
             "added": date,
             "metadata": {
-                "license": "Creative Commons License (CC BY-NC-ND 3.0)",
+                "license": license_type,
             }
         }
     else:
@@ -101,7 +104,7 @@ def main(args):
     
     # TODO Save HTML files
     # Then process/extract
-    get_record_fn = partial(get_record, input_dir=input_dir, date=date, tag=args.tag, attrs=args.attrs)
+    get_record_fn = partial(get_record, input_dir=input_dir, date=date, license_type=args.license, tag=args.tag, attrs=args.attrs)
     num_workers = mp.cpu_count() if args.num_workers is None else args.num_workers
     with mp.Pool(num_workers) as p:
         page_data = p.map(get_record_fn, tqdm(page_index))
