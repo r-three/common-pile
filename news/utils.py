@@ -37,6 +37,8 @@ def get_text_from_page(url=None, html_path=None, tag="article", attrs=None):
         text.append(byline.get_text().strip())
     elif byline := soup.find(class_=re.compile("posted-by")):
         text.append(byline.get_text().strip())
+    elif byline := soup.find(class_=re.compile("article__source")):
+        text.append(byline.get_text().strip())
     elif byline := soup.find(class_=re.compile("author")):
         text.append(byline.get_text().strip())
 
@@ -60,6 +62,8 @@ def get_text_from_page(url=None, html_path=None, tag="article", attrs=None):
     elif dateline := soup.find("span", class_=re.compile("date")):
         text.append(dateline.get_text().strip())
     elif dateline := soup.find("span", class_=re.compile("posted-on")):
+        text.append(dateline.get_text().strip())
+    elif dateline := soup.find(class_=re.compile("article__date")):
         text.append(dateline.get_text().strip())
     elif dateline := soup.find("time"):
         text.append(dateline.get_text().strip())

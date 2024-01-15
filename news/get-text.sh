@@ -14,7 +14,6 @@ python news/get_text.py --license CC BY --input_dir data/news/raw/mekongeye/ --f
 python news/get_text.py --license CC BY --input_dir data/news/raw/milwaukeenns/ --filename news-milwaukeenns.jsonl.gz --output_dir data/news/ --tag div --attrs '{"class": "entry-content"}'
 python news/get_text.py --license CC BY --input_dir data/news/raw/minorityafrica/ --filename news-minorityafrica.jsonl.gz --output_dir data/news/ --tag div --attrs '{"class": "post-content-container"}'
 python news/get_text.py --license CC BY --input_dir data/news/raw/newcanadianmedia/ --filename news-newcanadianmedia.jsonl.gz --output_dir data/news/ --tag div --attrs '{"class": "content-main"}'
-# python news/get_text.py --license CC BY --input_dir data/news/raw/projectmultatuli/ --filename news-projectmultatuli.jsonl.gz --output_dir data/news/ --tag div --attrs '{"class": "elementor-widget-container"}'
 python news/get_text.py --license CC BY --input_dir data/news/raw/scidev/ --filename news-scidev.jsonl.gz --output_dir data/news/ --tag div --attrs '{"class": "fl-col-content fl-node-content"}'
 python news/get_text.py --license CC BY --input_dir data/news/raw/solutionsjournalism/ --filename news-solutionsjournalism.jsonl.gz --output_dir data/news/ --tag div --attrs '{"class": "sqs-html-content"}'
 python news/get_text.py --license CC BY --input_dir data/news/raw/tasnimnews/ --filename news-tasnimnews.jsonl.gz --output_dir data/news/ --tag div --attrs '{"class": "story"}'
@@ -22,10 +21,13 @@ python news/get_text.py --license CC BY --input_dir data/news/raw/zimfact/ --fil
 
 # CC BY-SA
 python news/get_text.py --license CC BY-SA --input_dir data/news/raw/educeleb/ --filename news-educeleb.jsonl.gz --output_dir data/news/
-python news/get_text.py --license CC BY-SA --input_dir data/news/raw/libertytvradio/ --filename news-libertytvradio.jsonl.gz --output_dir data/news/
-python news/get_text.py --license CC BY-SA --input_dir data/news/raw/oxpeckers/ --filename news-oxpeckers.jsonl.gz --output_dir data/news/
-python news/get_text.py --license CC BY-SA --input_dir data/news/raw/propastop/ --filename news-propastop.jsonl.gz --output_dir data/news/
-python news/get_text.py --license CC BY-SA --input_dir data/news/raw/thepublicrecord/ --filename news-thepublicrecord.jsonl.gz --output_dir data/news/
+python news/get_text.py --license CC BY-SA --input_dir data/news/raw/libertytvradio/ --filename news-libertytvradio.jsonl.gz --output_dir data/news/ --tag div --attrs '{"class": "td-post-content"}'
+python news/get_text.py --license CC BY-SA --input_dir data/news/raw/oxpeckers/ --filename news-oxpeckers.jsonl.gz --output_dir data/news/ --tag div --attrs '{"class": "post_text_inner"}' 
+python news/get_text.py --license CC BY-SA --input_dir data/news/raw/propastop/ --filename news-propastop.jsonl.gz --output_dir data/news/ --tag div --attrs '{"class": "post-wrap"}'
+python news/get_text.py --license CC BY-SA --input_dir data/news/raw/thepublicrecord/ --filename news-thepublicrecord.jsonl.gz --output_dir data/news/ --tag div --attrs '{"class": "entry-content"}'
 
 # Public Domain
-python news/get_text.py --license Public Domain --input_dir data/news/raw/caravanserai/ --filename news-caravanserai.jsonl.gz --output_dir data/news/
+python news/get_text.py --license Public Domain --input_dir data/news/raw/caravanserai/ --filename news-caravanserai.jsonl.gz --output_dir data/news/ --tag div --attrs '{"class": "article__content"}'
+
+# CC NC ND
+# python news/get_text.py --license CC NC ND --input_dir data/news/raw/projectmultatuli/ --filename news-projectmultatuli.jsonl.gz --output_dir data/news/ --tag div --attrs '{"class": "elementor-widget-container"}'
