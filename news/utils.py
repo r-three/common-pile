@@ -30,6 +30,16 @@ def get_text_from_page(url=None, html_path=None, tag="article", attrs=None):
 
     text = [soup.title.get_text() if soup.title else ""]
 
+    # Search for author
+    if byline := soup.find(class_=re.compile("byline")):
+        text.append(byline.get_text().strip())
+    elif byline := soup.find(class_=re.compile("post-author")):
+        text.append(byline.get_text().strip())
+    elif byline := soup.find(class_=re.compile("posted-by")):
+        text.append(byline.get_text().strip())
+    elif byline := soup.find(class_=re.compile("author")):
+        text.append(byline.get_text().strip())
+
     # Search for dateline
     if dateline := soup.find("time", class_=re.compile("title")):
         text.append(dateline.get_text().strip())
@@ -53,17 +63,6 @@ def get_text_from_page(url=None, html_path=None, tag="article", attrs=None):
         text.append(dateline.get_text().strip())
     elif dateline := soup.find("time"):
         text.append(dateline.get_text().strip())
-    # elif dateline := soup.find("li", class_=re.compile("time")):
-    #     text.append(dateline.get_text().strip())
-
-    if byline := soup.find(class_=re.compile("post-author")):
-        text.append(byline.get_text().strip())
-    elif byline := soup.find(class_=re.compile("author")):
-        text.append(byline.get_text().strip())
-    elif byline := soup.find(class_=re.compile("byline")):
-        text.append(byline.get_text().strip())
-    elif byline := soup.find(class_=re.compile("posted-by")):
-        text.append(byline.get_text().strip())
 
     # article = soup.find_all(tag, attrs=attrs)
     article = soup.find_all(tag, attrs={k:re.compile(v) for k,v in attrs.items()})
