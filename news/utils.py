@@ -29,12 +29,19 @@ def get_text_from_page(url=None, html_path=None, tag="article", attrs=None):
     text = [soup.title.getText() if soup.title else ""]
 
     # Search for dateline
-    if dateline := soup.find("span", class_="date"):
+    if dateline := soup.find("time"):
         text.append(dateline.getText(strip=True))
-    elif dateline := soup.find("li", class_="time"):
+    elif dateline := soup.find("span", class_=re.compile("date")):
+        text.append(dateline.getText(strip=True))
+    elif dateline := soup.find("li", class_=re.compile("time")):
         text.append(dateline.getText(strip=True))
 
-    article = soup.find_all(tag, attrs=attrs)
+    if byline := soup.find(class_=re.compile("authors")):
+        text.append(byline.getText().strip())
+    elif byline := soup.find(class_=re.compile("byline")):
+        text.append(byline.getText().strip())
+
+    article = soup.findAll(tag, attrs=attrs)
     for a in article:
 
         if dateline is None:
@@ -42,18 +49,12 @@ def get_text_from_page(url=None, html_path=None, tag="article", attrs=None):
                 text.append(dateline.getText(strip=True))
             elif dateline := a.find("div", class_="timestamps"):
                 text.append(dateline.getText(strip=True))    
-
-        if byline := a.find("span", class_="article-meta-1__byline"):
-            text.append(byline.getText().strip())
-        elif byline := a.find("p", class_="byline"):
-            text.append(byline.getText().strip())
-
-        if lead_text := a.find("h3", class_="lead"):
-            text.append(lead_text.getText().strip())
+            elif dateline := a.find("time"):
+                text.append(dateline.getText(strip=True))
 
         # Adapted from 
         # https://github.com/bltlab/mot/blob/63ef942f2a4cc7fff5823b4cdefbccc5c7464b5f/extraction/extracttext.py#L540-L558
-        p_tag = a.find_all("p")
+        p_tag = a.findAll("p")
         for p in p_tag:
             # split_p = p.getText().split("\n")
             split_p = []
@@ -71,6 +72,8 @@ def get_text_from_page(url=None, html_path=None, tag="article", attrs=None):
                 elif child.name == "i":
                     text_pieces.extend(child.getText())
                 elif child.name == "strong":
+                    text_pieces.extend(child.getText())
+                elif child.name == "span":
                     text_pieces.extend(child.getText())
 
             # Remaining pieces
