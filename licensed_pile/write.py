@@ -3,12 +3,14 @@
 import abc
 import copy
 import json
+import logging
 import multiprocessing as mp
 import os
 from contextlib import ExitStack
 from queue import Queue
 from typing import Dict, Iterator
 
+import contextual_logger
 import smart_open
 import tqdm
 from dolma.core.parallel import BaseParallelProcessor
@@ -55,6 +57,20 @@ def to_dolma(
             wf.write(data + "\n")
 
 
+def smart_open_exists(path):
+    try:
+        with smart_open.open(path):
+            return True
+    except:
+        return False
+
+
+def create_shadow(path):
+    h, t = os.path.split(path)
+    # Add shadow at the start to not break any filename inference from smart_open
+    return os.path.join(h, f"shadow.{t}")
+
+
 class ShardParallelProcessor(BaseParallelProcessor):
     """Handle read/writes to jsonl.gz so our processor code only needs to processing a single example."""
 
@@ -74,6 +90,10 @@ class ShardParallelProcessor(BaseParallelProcessor):
         """Code to process a single example in the dolma format, not the whole file."""
 
     @classmethod
+    def get_logger(cls):
+        return get_logger()
+
+    @classmethod
     def process_single(
         cls,
         source_path: str,
@@ -82,55 +102,72 @@ class ShardParallelProcessor(BaseParallelProcessor):
         **kwargs,
     ):
         logger = cls.get_logger()
-        logger.debug("Processing %s into %s", source_path, destination_path)
-        with smart_open.open(source_path) as f, smart_open.open(
-            destination_path, "w"
-        ) as wf:
-            document_count = 0
-            update_interval = kwargs.pop("update_interval", 1)
-            debug = kwargs.pop("debug", False)
-
-            try:
-                for i, line in enumerate(f):
-                    try:
-                        data = json.loads(line)
-                    except json.JSONDecodeError as e:
-                        logger.warning(
-                            "Failed to parse %s:%s `%s...`: %s",
-                            source_path,
-                            i,
-                            line[:80],
-                            e,
-                        )
-                        continue
-
-                    if debug:
-                        og = copy.deepcopy(data["text"])
-
-                    processed = cls.process_example(data, **kwargs)
-
-                    if processed is None:
-                        logger.warning(
-                            "Preprocessing has reduced %s:%s to nothing, skipping",
-                            source_path,
-                            i,
-                        )
-                        continue
-
-                    if debug and og == processed["text"]:
-                        logger.warning(
-                            "Text unchanged for example %s:%s", source_path, i
-                        )
-
-                    wf.write(json.dumps(processed) + "\n")
-                    document_count += 1
-
-                    if document_count % update_interval == 0:
-                        cls.increment_progressbar(queue, documents=document_count)
-                        if queue.qsize() >= mp.cpu_count():
-                            update_interval *= 2
-                        document_count = 0
-            except Exception as e:
-                logger.warning("Failed to process %s: %s", source_path, e)
+        overwrite = kwargs.pop("overwrite", False)
+        shadow = kwargs.pop("shadow", True)
+        with logger(file=source_path):
+            logger.debug("Processing %s into %s", source_path, destination_path)
+            if not overwrite and smart_open_exists(destination_path):
+                logger.info("%s already exists, skipping", destination_path)
+                cls.increment_progressbar(queue, shards=1)
                 return
-            cls.increment_progressbar(queue, shards=1, documents=document_count)
+            output_path = (
+                create_shadow(destination_path) if shadow else destination_path
+            )
+            with smart_open.open(source_path) as f, smart_open.open(
+                output_path, "w"
+            ) as wf:
+                document_count = 0
+                update_interval = kwargs.pop("update_interval", 1)
+                debug = kwargs.pop("debug", False)
+
+                for i, line in enumerate(f):
+                    with logger(line=i):
+                        try:
+                            try:
+                                data = json.loads(line)
+                            except json.JSONDecodeError as e:
+                                logger.warning(
+                                    "Failed to parse JSON from `%s...`",
+                                    line[:80],
+                                    exc_info=True,
+                                )
+                                continue
+
+                            og = copy.deepcopy(data["text"]) if debug else None
+                            processed = cls.process_example(
+                                data, source_file=source_path, line_number=i, **kwargs
+                            )
+                            if processed is None:
+                                logger.warning(
+                                    "Preprocessing has reduced example to nothing, skipping"
+                                )
+                                document_count += 1
+                                continue
+
+                            if debug and og == processed["text"]:
+                                logger.warning("Text unchanged for example.")
+
+                            wf.write(json.dumps(processed) + "\n")
+                            document_count += 1
+
+                            if document_count % update_interval == 0:
+                                cls.increment_progressbar(
+                                    queue, documents=document_count
+                                )
+                                if queue.qsize() >= mp.cpu_count():
+                                    update_interval *= 2
+                                document_count = 0
+                        except Exception as e:
+                            e.add_note(
+                                f"Exception occured while processing {source_path}:{i}"
+                            )
+                            logger.warning(
+                                "Exception occured while processing example",
+                                exc_info=True,
+                            )
+                            raise
+                # Cloud Storage generally doesn't have a cheap way to rename files. So
+                # shadow paging should generally only be used for local data.
+                if shadow:
+                    os.rename(output_path, destination_path)
+                cls.increment_progressbar(queue, shards=1, documents=document_count)

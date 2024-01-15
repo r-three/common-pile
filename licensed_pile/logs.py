@@ -5,6 +5,7 @@ import logging
 import sys
 from typing import Protocol, Sequence
 
+import contextual_logger
 from logging_json import JSONFormatter
 
 

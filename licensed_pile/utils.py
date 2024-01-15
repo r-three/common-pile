@@ -2,6 +2,10 @@
 
 import glob
 import os
+import re
+from contextlib import contextmanager
+from tempfile import TemporaryDirectory
+from typing import Optional
 
 
 # We don't use snake case as the string methods added in PIP616 are named like this.
@@ -25,7 +29,7 @@ def dolma_input(input_path: str, filepattern: str = "*.jsonl.gz") -> str:
     # If the input is directly to a file, or it is a glob that returns matches,
     # use as is.
     if (os.path.exists(input_path) and os.path.isfile(input_path)) or glob.glob(
-        input_path
+        input_path, recursive=True
     ):
         return input_path
     # Otherwise it is probably meant as a directory, so add the ../documents/${filepattern}
@@ -39,6 +43,15 @@ def dolma_input(input_path: str, filepattern: str = "*.jsonl.gz") -> str:
 
 def dolma_output(output_path: str):
     # Make sure the output ends in .../documents, many people forget this.
-    if os.path.basename(output_path) != "documents":
-        return os.path.join(output_path, "documents")
-    return output_path
+    if re.match(".*/documents/?$", output_path):
+        return output_path
+    return os.path.join(output_path, "documents")
+
+
+@contextmanager
+def maybe_temp_dir(path: Optional[str] = None):
+    if path is not None:
+        yield path
+    else:
+        with TemporaryDirectory() as tmpdir:
+            yield tmpdir
