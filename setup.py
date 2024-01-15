@@ -62,6 +62,7 @@ setup(
         "logging_json",
         "requests>=2.13",
         "tenacity",
+        "lxml",
     ],
     entry_points={
         "console_scripts": ["size-stats-dolma = licensed_pile.scripts.stats:main"]

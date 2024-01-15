@@ -1,6 +1,8 @@
 """Tools to help with xml parsing."""
 
-from xml.etree import ElementTree as ET
+from typing import List
+
+import lxml.etree as ET
 
 
 def iterate_xml(path: str, tag: str):
@@ -17,6 +19,14 @@ def iterate_xml(path: str, tag: str):
     context = iter(context)
     event, root = next(context)
     for event, elem in context:
-        if event == "end" and elem.tag == tag:
+        # This `.localname` only exists for lxml. Include this or so you can
+        # still do a full namespace match if you need too.
+        if event == "end" and (ET.QName(elem.tag).localname == tag or elem.tag == tag):
             yield elem
             root.clear()
+
+
+def iterate_xmls(paths: List[str], tag: str):
+    """Iterable version of parsing multiple xml files with the same structure as a single iterator."""
+    for path in paths:
+        yield from iterate_xml(path, tag)
