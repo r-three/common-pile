@@ -2,11 +2,11 @@
 
 # CC BY
 python news/get_text.py --license CC BY --input_dir data/news/raw/360info/ --filename news-360info.jsonl.gz --output_dir data/news/ --tag div --attrs '{"class": "copy main-copy"}'
-python news/get_text.py --license CC BY --input_dir data/news/raw/africasacountry/ --filename news-africasacountry.jsonl.gz --output_dir data/news/
-python news/get_text.py --license CC BY --input_dir data/news/raw/altnews/ --filename news-altnews.jsonl.gz --output_dir data/news/
-python news/get_text.py --license CC BY --input_dir data/news/raw/balkandiskurs/ --filename news-balkandiskurs.jsonl.gz --output_dir data/news/
-python news/get_text.py --license CC BY --input_dir data/news/raw/factly/ --filename news-factly.jsonl.gz --output_dir data/news/
-python news/get_text.py --license CC BY --input_dir data/news/raw/fides/ --filename news-fides.jsonl.gz --output_dir data/news/
+python news/get_text.py --license CC BY --input_dir data/news/raw/africasacountry/ --filename news-africasacountry.jsonl.gz --output_dir data/news/ --tag article --attrs '{"class": "po__article"}'
+python news/get_text.py --license CC BY --input_dir data/news/raw/altnews/ --filename news-altnews.jsonl.gz --output_dir data/news/ --tag div --attrs '{"id": "primary"}'
+python news/get_text.py --license CC BY --input_dir data/news/raw/balkandiskurs/ --filename news-balkandiskurs.jsonl.gz --output_dir data/news/ --tag div --attrs '{"class": "entry-content"}'
+python news/get_text.py --license CC BY --input_dir data/news/raw/factly/ --filename news-factly.jsonl.gz --output_dir data/news/ --tag div --attrs '{"class": "post-content-right"}'
+python news/get_text.py --license CC BY --input_dir data/news/raw/fides/ --filename news-fides.jsonl.gz --output_dir data/news/ --tag div --attrs '{"id": "news"}'
 python news/get_text.py --license CC BY --input_dir data/news/raw/freedom/ --filename news-freedom.jsonl.gz --output_dir data/news/
 python news/get_text.py --license CC BY --input_dir data/news/raw/globalvoices/ --filename news-globalvoices.jsonl.gz --output_dir data/news/
 python news/get_text.py --license CC BY --input_dir data/news/raw/meduza/ --filename news-meduza.jsonl.gz --output_dir data/news/

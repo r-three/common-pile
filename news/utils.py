@@ -46,7 +46,8 @@ def get_text_from_page(url=None, html_path=None, tag="article", attrs=None):
     elif dateline := soup.find(class_=re.compile("by")):
         text.append(dateline.getText().strip())
 
-    article = soup.findAll(tag, attrs=attrs)
+    # article = soup.find_all(tag, attrs=attrs)
+    article = soup.find_all(tag, attrs={k:re.compile(v) for k,v in attrs.items()})
     for a in article:
 
         if dateline is None:
@@ -59,7 +60,7 @@ def get_text_from_page(url=None, html_path=None, tag="article", attrs=None):
 
         # Adapted from 
         # https://github.com/bltlab/mot/blob/63ef942f2a4cc7fff5823b4cdefbccc5c7464b5f/extraction/extracttext.py#L540-L558
-        p_tag = a.findAll("p")
+        p_tag = a.find_all("p")
         for p in p_tag:
             # split_p = p.getText().split("\n")
             split_p = []
@@ -89,6 +90,7 @@ def get_text_from_page(url=None, html_path=None, tag="article", attrs=None):
                 for s in split_p
                 if is_valid(article_paragraph := s.strip()) and s.strip()
             ]
+            # text_article = [text_string for text_string in text_article if text_string not in text]
             text.extend(text_article)
 
     return "\n".join(text)
