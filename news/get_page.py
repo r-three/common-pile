@@ -64,7 +64,7 @@ def get_pages(page_index, output_path):
     try:
         page = requests.get(
             url,
-            # headers=headers,
+            headers=headers,
             # verify=False,
             # allow_redirects=False,
             # stream=True,
