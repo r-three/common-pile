@@ -9,12 +9,12 @@ python news/get_page.py --url https://factly.in/ --output_dir data/news/raw/fact
 python news/get_page.py --url https://www.fides.org/en --output_dir data/news/raw/fides/
 python news/get_page.py --url https://freedom.press/ --output_dir data/news/raw/freedom/
 python news/get_page.py --url https://globalvoices.org/ --output_dir data/news/raw/globalvoices/
-python news/get_page.py --url https://meduza.io/ --output_dir data/news/raw/meduza/
+python news/get_page.py --url https://meduza.io/en --output_dir data/news/raw/meduza/
 python news/get_page.py --url https://www.mekongeye.com/ --output_dir data/news/raw/mekongeye/
 python news/get_page.py --url https://milwaukeenns.org/ --output_dir data/news/raw/milwaukeenns/
 python news/get_page.py --url https://minorityafrica.org/ --output_dir data/news/raw/minorityafrica/
 python news/get_page.py --url https://www.newcanadianmedia.ca/ --output_dir data/news/raw/newcanadianmedia/
-python news/get_page.py --url https://projectmultatuli.org/en/ --output_dir data/news/raw/projectmultatuli/
+# python news/get_page.py --url https://projectmultatuli.org/en/ --output_dir data/news/raw/projectmultatuli/
 python news/get_page.py --url http://scidev.net/ --output_dir data/news/raw/scidev/
 python news/get_page.py --url https://sojoexchange.solutionsjournalism.org/ --output_dir data/news/raw/solutionsjournalism/
 python news/get_page.py --url https://www.tasnimnews.com/en --output_dir data/news/raw/tasnimnews/

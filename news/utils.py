@@ -31,9 +31,15 @@ def get_text_from_page(url=None, html_path=None, tag="article", attrs=None):
     text = [soup.title.get_text() if soup.title else ""]
 
     # Search for dateline
-    if dateline := soup.find("span", class_=re.compile("date")):
+    if dateline := soup.find("time", class_=re.compile("title")):
         text.append(dateline.get_text().strip())
-    elif dateline := soup.find("span", class_=re.compile("posted-on")):
+    elif dateline := soup.find("time", class_=re.compile("entry-date")):
+        text.append(dateline.get_text().strip())
+    elif dateline := soup.find("time", class_=re.compile("date")):
+        text.append(dateline.get_text().strip())
+    elif dateline := soup.find("time", class_="timestamp"):
+        text.append(dateline.get_text().strip())
+    elif dateline := soup.find("time", class_=re.compile("time")):
         text.append(dateline.get_text().strip())
     elif dateline := soup.find("div", class_="timestamps"):
         text.append(dateline.get_text().strip())
@@ -41,11 +47,9 @@ def get_text_from_page(url=None, html_path=None, tag="article", attrs=None):
         text.append(dateline.get_text().strip())
     elif dateline := soup.find("div", class_="date"):
         text.append(dateline.get_text().strip())
-    elif dateline := soup.find("time", class_=re.compile("title")):
+    elif dateline := soup.find("span", class_=re.compile("date")):
         text.append(dateline.get_text().strip())
-    elif dateline := soup.find("time", class_="timestamp"):
-        text.append(dateline.get_text().strip())
-    elif dateline := soup.find("time", class_=re.compile("time")):
+    elif dateline := soup.find("span", class_=re.compile("posted-on")):
         text.append(dateline.get_text().strip())
     elif dateline := soup.find("time"):
         text.append(dateline.get_text().strip())
