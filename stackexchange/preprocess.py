@@ -13,7 +13,7 @@ import os
 import shelve
 import urllib.parse
 from dataclasses import dataclass
-from typing import List
+from typing import Dict, List, Sequence
 
 import bs4
 import tqdm
@@ -22,6 +22,11 @@ from markdown_it import MarkdownIt
 import licensed_pile.xml as xml
 from licensed_pile.licenses import PermissiveLicenses
 from licensed_pile.write import to_dolma
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="StackExchange Processing: [%(asctime)s] %(levelname)s - %(message)s",
+)
 
 parser = argparse.ArgumentParser(description="Parse a stack exchange dump.")
 parser.add_argument("--input", help="Path to the dump, data/dump/${site}")
@@ -37,6 +42,18 @@ parser.add_argument(
     "--shelve",
     action="store_true",
     help="Save lookup tables as shelves so we don't need to keep them all in memory.",
+)
+parser.add_argument(
+    "--skip_comments",
+    action="store_false",
+    dest="include_comments",
+    help="Should we skip including the comments in the text?",
+)
+parser.add_argument(
+    "--sort",
+    choices=("time", "votes"),
+    default="votes",
+    help="How should answers be sorted?",
 )
 
 # Use over commonmark library as that is deprecated and has errors parsing stack overflow.
@@ -54,6 +71,7 @@ LICENSES = {
 class Post:
     text: str
     date: datetime.datetime
+    license: PermissiveLicenses
 
 
 @dataclass
@@ -65,6 +83,8 @@ class Comment(Post):
 class Answer(Post):
     authors: List[str]
     comments: List[Comment]
+    score: int
+    accepted: bool
 
 
 @dataclass
@@ -72,7 +92,7 @@ class Question(Post):
     id: str
     authors: List[str]
     comments: List[Comment]
-    license: PermissiveLicenses
+    accepted_answer: int
     answers: List[Answer] = dataclasses.field(default_factory=list)
 
 
@@ -133,12 +153,14 @@ def process_comment(comment):
       The id for the user who made the comment
       The text of the comment
       The date the comment as created
+      The license that applies to the comment
     """
     return (
         get_attr(comment, "PostId"),
         get_attr(comment, "UserId"),
         get_markdown_text(comment),
         get_date(get_attr(comment, "CreationDate")),
+        stackexchange_license(get_attr(comment, "ContentLicense")),
     )
 
 
@@ -155,14 +177,16 @@ def process_question(question):
       The text of the question (title + content)
       The date the question was posted
       The license that applies to the question
+      The id of the accepted answer
     """
     if get_attr(question, "PostTypeId") != "1":
-        return None, None, None, None
+        return None, None, None, None, None
     post_id = get_attr(question, "Id")
     text = f"{get_attr(question, 'Title')}\n{get_body_text(question)}"
     date = get_date(get_attr(question, "CreationDate"))
     license = stackexchange_license(get_attr(question, "ContentLicense"))
-    return post_id, text, date, license
+    accepted = get_attr(question, "AcceptedAnswerId")
+    return post_id, text, date, license, accepted
 
 
 def process_answer(answer):
@@ -173,14 +197,19 @@ def process_answer(answer):
       The id of the answer
       The text of the answer
       The date the answer was given
+      The score the answer got
+      The license the applies to the Answer.
     """
     if get_attr(answer, "PostTypeId") != "2":
-        return None, None, None, None
+        return None, None, None, None, None, None
     question_id = get_attr(answer, "ParentId")
     answer_id = get_attr(answer, "Id")
     text = get_body_text(answer)
     date = get_date(get_attr(answer, "CreationDate"))
-    return question_id, answer_id, text, date
+    # TODO: Is it possible to have a score that isn't an int (e.g. None)?
+    score = int(get_attr(answer, "Score"))
+    license = stackexchange_license(get_attr(answer, "ContentLicense"))
+    return question_id, answer_id, text, date, score, license
 
 
 def stackexchange_license(license):
@@ -202,7 +231,7 @@ def stackexchange_url(site, id, collection: str = "questions"):
     return urllib.parse.quote(f"https://{site}/{collection}/{id}", safe=":/")
 
 
-def format_dolma(question, site):
+def format_dolma(question, site, extra_metadata: Dict[str, str]):
     all_authors = set(
         itertools.chain(
             # Authors of the questions
@@ -214,6 +243,14 @@ def format_dolma(question, site):
             # Authors for each comment on answers for the questions
             *(c.author for a in question.answers for c in a.comments),
         )
+    )
+    all_licenses = itertools.chain(
+        (question.license,),
+        (c.license for c in question.comments),
+        *(
+            itertools.chain((a.license,), (c.license for c in a.comments))
+            for a in question.answers
+        ),
     )
     text = "\n".join(
         itertools.chain(
@@ -241,8 +278,27 @@ def format_dolma(question, site):
             "site": site,
             "url": stackexchange_url(site, question.id),
             "authors": sorted(all_authors),
+            "all_licenses": sorted(map(str, set(all_licenses))),
+            **extra_metadata,
         },
     }
+
+
+def vote_sort(answers: Sequence[Answer]) -> List[Answer]:
+    """Sort based on votes.
+
+    Note: Not a stable sort.
+    """
+
+    def _cmp_answers(a, b):
+        # If one of the answers is accepted, that should go first.
+        if a.accepted:
+            return -1
+        if b.accepted:
+            return 1
+        return b.score - a.score
+
+    return sorted(answers, key=functools.cmp_to_key(_cmp_answers))
 
 
 def main(args):
@@ -252,6 +308,17 @@ def main(args):
     # eventually stored in the dolma format.
     site = os.path.basename(args.input)
     os.makedirs(args.output, exist_ok=True)
+
+    date_sort = functools.partial(sorted, key=op.attrgetter("date"))
+    # Comments are always sorted by date
+    sort_comments = date_sort
+    if args.sort == "time":
+        logging.info("Answers will be sorted based on the date.")
+        sort_answers = date_sort
+    else:
+        logging.info("Aanswers will be sorted based on votes (accepted answer first).")
+        sort_answers = vote_sort
+
     # TODO: Does setting the start method to `spawn` help reduce memory usage?
     # Note: We use iterables through out this to reduce memory usage, however,
     # we need to be sure that we *consume* the iterable output of the
@@ -259,7 +326,7 @@ def main(args):
     # pool will be "finalized" (deleted) before all the data is processed and
     # the program will hang.
     with mp.Pool(processes=args.processes) as pool:
-        print("Building Lookup from user id -> user names")
+        logging.info("Building Lookup from user id -> user names")
         user_xml = xml.iterate_xml(os.path.join(args.input, "Users.xml"), "row")
         # This table is fairly small so we don't need to create a shelve for it.
         author_display = collections.defaultdict(set)
@@ -270,7 +337,7 @@ def main(args):
                 continue
             author_display[user_id].update(user_names)
 
-        print("Building Lookup from post id -> authors")
+        logging.info("Building Lookup from post id -> authors")
         history_xml = xml.iterate_xml(
             os.path.join(args.input, "PostHistory.xml"), "row"
         )
@@ -293,33 +360,45 @@ def main(args):
             # Get and assign so that values are written back to the shelve.
             post_authors[post_id] = authors
 
-        print("Building Lookup from post/answer id -> comments")
+        # Even if we are going to skip including the comments in the output, we
+        # still create the comment lookup date. Accesses to it later have
+        # default values of empty lists so an empty look up table will result
+        # in no comments being included. Even though we make the lookup table,
+        # we do skip filling it with processed comments if they are going to be
+        # skipped later.
         if args.shelve:
             comments = shelve.open(os.path.join(args.output, "comments.shelve"))
         else:
             comments = {}
-        comment_xml = xml.iterate_xml(os.path.join(args.input, "Comments.xml"), "row")
-        for post_id, user_id, text, date in pool.imap_unordered(
-            process_comment, comment_xml, chunksize=100
-        ):
-            if post_id is None:
-                continue
-            comment = comments.get(post_id, [])
-            comment.append(
-                Comment(
-                    text=text,
-                    author=author_display[user_id],
-                    date=date,
-                )
+        if args.include_comments:
+            logging.info("Building Lookup from post/answer id -> comments")
+            comment_xml = xml.iterate_xml(
+                os.path.join(args.input, "Comments.xml"), "row"
             )
-            # Get and assign so that values are written back to the shelve.
-            comments[post_id] = comment
-        # Sort comments based on creation date, then when we add them to the text
-        # we know that they will be in the correct order, even if they are out
-        # of order in the dump/from multiprocessing.
-        # Explicit loop instead of a comprehension because it might be a shelve :(
-        for cid, cs in comments.items():
-            comments[cid] = sorted(cs, key=op.attrgetter("date"))
+            for post_id, user_id, text, date, license in pool.imap_unordered(
+                process_comment, comment_xml, chunksize=100
+            ):
+                if post_id is None:
+                    continue
+                comment = comments.get(post_id, [])
+                comment.append(
+                    Comment(
+                        text=text,
+                        author=author_display[user_id],
+                        date=date,
+                        license=license,
+                    )
+                )
+                # Get and assign so that values are written back to the shelve.
+                comments[post_id] = comment
+            # Sort comments based on creation date, then when we add them to the text
+            # we know that they will be in the correct order, even if they are out
+            # of order in the dump/from multiprocessing.
+            # Explicit loop instead of a comprehension because it might be a shelve :(
+            for cid, cs in comments.items():
+                comments[cid] = sort_comments(cs)
+        else:
+            logging.info("Comments will not be included in the text output.")
 
         if args.shelve:
             parsed_dump = shelve.open(os.path.join(args.output, "questions.shelve"))
@@ -328,9 +407,9 @@ def main(args):
 
         # Questions are the "document" level for this dataset, therefore we do
         # no need to sort them.
-        print("Parsing Questions")
+        logging.info("Parsing Questions")
         post_xml = xml.iterate_xml(os.path.join(args.input, "Posts.xml"), "row")
-        for post_id, text, date, license in pool.imap_unordered(
+        for post_id, text, date, license, accepted_id in pool.imap_unordered(
             process_question, post_xml, chunksize=100
         ):
             if post_id is None:
@@ -343,14 +422,15 @@ def main(args):
                 comments=comments.get(post_id, []),
                 date=date,
                 license=license,
+                accepted_answer=accepted_id,
             )
 
-        print("Parsing Answers")
+        logging.info("Parsing Answers")
         # Reinitialize the iterator over the Posts as it was consumed when
         # looking for questions. We do this as a second pass so we know that
         # there will always be a question we can attach this answer to.
         post_xml = xml.iterate_xml(os.path.join(args.input, "Posts.xml"), "row")
-        for question_id, answer_id, answer, date in pool.imap_unordered(
+        for question_id, answer_id, answer, date, score, license in pool.imap_unordered(
             process_answer, post_xml, chunksize=100
         ):
             if question_id is None:
@@ -363,6 +443,9 @@ def main(args):
                     # Comments are sorted in chronological order.
                     comments=comments.get(answer_id, []),
                     date=date,
+                    license=license,
+                    score=score,
+                    accepted=question.accepted_answer == answer_id,
                 )
             )
             # Get and assign so that values are written back to the shelve.
@@ -373,16 +456,27 @@ def main(args):
         # even if they are out of order in the dump/from multiprocessing.
         # Explicit loop instead of a compreshension because it might be a shelve :(
         for qid, q in parsed_dump.items():
-            q.answers = sorted(q.answers, key=op.attrgetter("date"))
+            q.answers = sort_answers(q.answers)
             parsed_dump[qid] = q
 
         # Use iterators so we don't need to have the full dataset loaded at once.
-        print("Formatting Questions as Dolma Documents")
-        # Even on rather large datasets, such as askubuntu.com, it faster to
-        # do the comment/answer sorting and run format dolma in the main process
-        # I assume the cost to serialize and decerialize the question is large
-        # and especially when the main process is the only writer.
-        examples = map(functools.partial(format_dolma, site=site), parsed_dump.values())
+        logging.info("Formatting Questions as Dolma Documents")
+        # Even on rather large datasets, such as askubuntu.com, and shelves it
+        # was faster to do the comment/answer sorting and run format dolma in
+        # the main process. I assume the cost to serialize and decerialize the
+        # question is large and especially when the main process is the only
+        # writer.
+        examples = map(
+            functools.partial(
+                format_dolma,
+                site=site,
+                extra_metadata={
+                    "sort": args.sort,
+                    "include_comments": args.include_comments,
+                },
+            ),
+            parsed_dump.values(),
+        )
         to_dolma(examples, os.path.join(args.output, "documents"), "se.jsonl.gz")
 
 
