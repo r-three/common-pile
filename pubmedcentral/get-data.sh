@@ -4,7 +4,7 @@ NONPERMISSIVE_LICENSES="CC BY-NC\|CC BY-ND\|CC BY-NC-ND\|CC BY-NC-NA"
 BASE_URL="https://ftp.ncbi.nlm.nih.gov/pub/pmc/oa_bulk/oa_comm/xml"
 
 # get all the pubmed-central dumps
-for i in {00..01}; do
+for i in {00..10}; do
 
     # Vars for text files
     # BASE_URL="https://ftp.ncbi.nlm.nih.gov/pub/pmc/oa_bulk/oa_comm/txt"
