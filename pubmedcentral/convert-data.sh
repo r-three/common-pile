@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
 # check if individual filelists need to be aggregated
-if test -f data/oa_comm_xml.PMC0*xxxxxx.baseline.2023-12-18.permissive_filelist.txt; then
+if ls data/oa_comm_xml.PMC0*xxxxxx.baseline.2023-12-18.permissive_filelist.txt > /dev/null 2>&1; then
     # combine file lists
     # 'FNR>1' skips the first line of each file
     awk 'FNR>1' data/oa_comm_xml.PMC0*xxxxxx.baseline.2023-12-18.permissive_filelist.txt > data/oa_comm_xml.permissive_filelist.txt
@@ -14,4 +14,4 @@ if test -f data/oa_comm_xml.PMC0*xxxxxx.baseline.2023-12-18.permissive_filelist.
 fi
 
 # convert files to markdown
-python3 convert_to_md.py --filelist data/oa_comm_xml.permissive_filelist.txt
+# python3 convert_to_md.py --filelist data/oa_comm_xml.permissive_filelist.txt
