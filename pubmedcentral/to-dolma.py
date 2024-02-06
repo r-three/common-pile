@@ -35,10 +35,8 @@ SOURCE_NAME = "PubMed Central"
 
 
 def format_dolma(example: str, data_dir: str, source_name: str = SOURCE_NAME):
-    file, citation, accessionID, last_updated, PMID, lic, retracted = example.split(
-        "\t"
-    )
-    file = file.split("/")[-1].replace("xml", "md")
+    file, citation, accessionID, PMID, lic = example.split("\t")
+    file = file.split("/")[-1].replace("tar.gz", "md")
     with open(os.path.join(data_dir, file)) as f:
         text = f.read()
 
@@ -60,6 +58,12 @@ def main(args):
 
     with open(args.filelist) as f:
         examples = f.read().split("\n")
+
+    # Remove the header
+    examples = examples[1:]
+
+    for example in examples:
+        print(example)
 
     examples = map(functools.partial(format_dolma, data_dir=args.data_dir), examples)
     to_dolma(examples, args.output_dir, args.filename, args.shard_size)
