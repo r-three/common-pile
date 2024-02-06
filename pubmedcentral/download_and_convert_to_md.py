@@ -13,6 +13,7 @@ parser.add_argument("--filelist", help="The path to the filelist.txt file.")
 parser.add_argument(
     "--output_dir", default="data/raw/", help="Where the markdown files go."
 )
+parser.add_argument("--total_docs", default=0, type=int, help="Total number of documents to convert, for debugging.")
 
 BASE_URL = "https://ftp.ncbi.nlm.nih.gov/pub/pmc/"
 
@@ -20,7 +21,8 @@ BASE_URL = "https://ftp.ncbi.nlm.nih.gov/pub/pmc/"
 def download(f_url: str, output_dir: str):
     # download file from f_url to output_dir
     try:
-        os.system(f"wget -nc {f_url} -P {output_dir}")
+        # -nc: no clobber, -q: quiet
+        os.system(f"wget -nc -q {f_url} -P {output_dir}")
     except:
         print(f"Error downloading {f_url}")
         import traceback
@@ -45,7 +47,7 @@ def extract_and_convert_tarball(t: str, output_dir: str):
 
         # convert nxml to markdown
         pmcid = nxml.split("/")[0]
-        os.system(f"pandoc -f jats {nxml} -o {pmcid}.md --wrap=none")
+        os.system(f"pandoc --quiet -f jats {nxml} -o {pmcid}.md --wrap=none")
 
         # remove extracted files
         os.system(f"mv {pmcid}.md {output_dir} && rm -r {nxml.split('/')[0]}")
@@ -63,9 +65,6 @@ def extract_and_convert_tarball(t: str, output_dir: str):
 def download_and_convert(line: str, output_dir: str):
     # split line into parts
     partial_path, journal, PMCID, PMID, license = line.split("\t")
-    print(
-        f"Partial path: {partial_path}\tjournal: {journal}\tPMCID: {PMCID}\tPMID: {PMID}\tlicense: {license}"
-    )
 
     # create paths for the url and the destination of the markdown file
     f_url = os.path.join(BASE_URL, partial_path)
@@ -90,16 +89,19 @@ def main(args):
     with open(filelist) as fh:
         lines = fh.read().split("\n")
 
+    # ignore the header
+    lines = lines[1:]
+
+    if args.total_docs > 0:
+        lines = lines[:args.total_docs]
+
     p = mp.Pool(64)
-    list(
-        tqdm(
-            p.imap(
-                functools.partial(download_and_convert, output_dir=output_dir),
-                lines[1:],
-            ),
-            total=len(lines),
-        )
-    )
+
+    pbar = tqdm(total=len(lines))
+    for _ in p.imap(
+        functools.partial(download_and_convert, output_dir=output_dir), lines
+    ):
+        pbar.update(1)
 
 
 if __name__ == "__main__":
