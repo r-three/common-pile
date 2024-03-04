@@ -58,5 +58,5 @@ setup(
     packages=find_packages(),
     python_requires=">=3.8",
     license="MIT",
-    install_requires=[],
+    install_requires=["logging_json"],
 )

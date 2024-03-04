@@ -9,6 +9,7 @@ import urllib.parse
 from charset_normalizer import from_bytes
 
 from licensed_pile.licenses import PermissiveLicenses
+from licensed_pile.logs import configure_logging, get_logger
 from licensed_pile.write import to_dolma
 
 SOURCE_NAME = "ubuntu-chat"
@@ -37,6 +38,8 @@ def format_dolma(chat: str, source_name: str = SOURCE_NAME, base_url: str = BASE
     # Manually split because os.path.split only give (head, tail)
     *_, year, month, day, channel = os.path.splitext(chat)[0].split(os.path.sep)
     created = datetime.date(int(year), int(month), int(day))
+    logger = get_logger()
+    logger.debug("Reading chat log from %s", chat)
     with open(chat, "rb") as f:
         # There is some encoding weirdness that this seems to fix.
         text = str(from_bytes(f.read()).best())
@@ -61,6 +64,13 @@ def format_dolma(chat: str, source_name: str = SOURCE_NAME, base_url: str = BASE
 
 
 def main(args):
+    l = configure_logging()
+    l.info(
+        "Converting Chats from %s to the dolma format (at %s%s)",
+        args.data,
+        args.output_dir,
+        args.filename,
+    )
     # Use iterators so we don't have to load the whole dataset in memory.
     #                                                    year  month day   channel
     chats = map(
