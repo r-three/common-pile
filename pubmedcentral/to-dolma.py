@@ -13,7 +13,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--output_dir",
-    default="data/dolma/",
+    default="data/pubmedcentral/",
     help="Where the dolma formatted data goes.",
 )
 parser.add_argument(
@@ -34,8 +34,13 @@ LICENSE_MAP = {
 SOURCE_NAME = "PubMed Central"
 
 
-def format_dolma(example: str, data_dir: str, source_name: str = SOURCE_NAME):
-    file, citation, accessionID, PMID, lic = example.split("\t")
+def format_dolma(
+    file: str,
+    data_dir: str,
+    source_name: str = SOURCE_NAME,
+    base_url: str = "https://www.ncbi.nlm.nih.gov/pmc/articles",
+):
+    file, journal, accessionID, _, lic = file.split("\t")
     file = file.split("/")[-1].replace("tar.gz", "md")
     with open(os.path.join(data_dir, file)) as f:
         text = f.read()
@@ -47,8 +52,8 @@ def format_dolma(example: str, data_dir: str, source_name: str = SOURCE_NAME):
         "added": datetime.datetime.utcnow().isoformat(),
         "metadata": {
             "license": str(LICENSE_MAP[lic]),
-            "url": f"https://www.ncbi.nlm.nih.gov/pmc/articles/{accessionID}/",
-            "journal": citation,
+            "url": f"{base_url}/{accessionID}/",
+            "journal": journal,
         },
     }
 
@@ -57,13 +62,13 @@ def main(args):
     os.makedirs(args.output_dir, exist_ok=True)
 
     with open(args.filelist) as f:
-        examples = f.read().split("\n")
+        files = f.read().split("\n")
 
     # Remove the header
-    examples = examples[1:]
+    files = files[1:]
 
-    examples = map(functools.partial(format_dolma, data_dir=args.data_dir), examples)
-    to_dolma(examples, args.output_dir, args.filename, args.shard_size)
+    files = map(functools.partial(format_dolma, data_dir=args.data_dir), files)
+    to_dolma(files, args.output_dir, args.filename, args.shard_size)
 
 
 if __name__ == "__main__":
