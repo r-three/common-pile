@@ -11,9 +11,14 @@ cur_dir = os.getcwd()
 parser = argparse.ArgumentParser(description="Convert xml documents to markdown.")
 parser.add_argument("--filelist", help="The path to the filelist.txt file.")
 parser.add_argument(
-    "--output_dir", default="data/raw/", help="Where the markdown files go."
+    "--output_dir", default="data/md/", help="Where the markdown files go."
 )
-parser.add_argument("--total_docs", default=0, type=int, help="Total number of documents to convert, for debugging.")
+parser.add_argument(
+    "--total_docs",
+    default=0,
+    type=int,
+    help="Total number of documents to convert, for debugging.",
+)
 
 BASE_URL = "https://ftp.ncbi.nlm.nih.gov/pub/pmc/"
 
@@ -93,7 +98,7 @@ def main(args):
     lines = lines[1:]
 
     if args.total_docs > 0:
-        lines = lines[:args.total_docs]
+        lines = lines[: args.total_docs]
 
     p = mp.Pool(64)
 

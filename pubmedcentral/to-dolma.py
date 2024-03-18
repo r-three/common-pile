@@ -9,7 +9,7 @@ from licensed_pile.write import to_dolma
 parser = argparse.ArgumentParser(description="Collect PubMedCentral into Dolma format.")
 parser.add_argument("--filelist", help="The path to the filelist.txt file.")
 parser.add_argument(
-    "--data_dir", default="data/raw/", help="Path to the directory of markdown files."
+    "--data_dir", default="data/md/", help="Path to the directory of markdown files."
 )
 parser.add_argument(
     "--output_dir",
@@ -61,9 +61,6 @@ def main(args):
 
     # Remove the header
     examples = examples[1:]
-
-    for example in examples:
-        print(example)
 
     examples = map(functools.partial(format_dolma, data_dir=args.data_dir), examples)
     to_dolma(examples, args.output_dir, args.filename, args.shard_size)
