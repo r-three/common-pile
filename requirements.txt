@@ -7,3 +7,4 @@ smart_open
 markdown-it-py
 charset_normalizer
 logging_json
+pandas
