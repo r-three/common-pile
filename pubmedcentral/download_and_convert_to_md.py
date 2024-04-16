@@ -23,6 +23,12 @@ parser.add_argument(
     type=int,
     help="Total number of documents to convert, for debugging.",
 )
+parser.add_argument(
+    "--processes",
+    default=mp.cpu_count(),
+    type=int,
+    help="Number of processes to use for conversion.",
+)
 
 
 def download(f_url: str, output_dir: str):
@@ -109,26 +115,28 @@ def download_and_convert(
 
 
 def main(args):
-    filelist = args.filelist
-    output_dir = args.output_dir
-    os.makedirs(output_dir, exist_ok=True)
+    os.makedirs(args.output_dir, exist_ok=True)
 
-    with open(filelist) as fh:
-        lines = fh.read().split("\n")
+    with open(args.filelist) as fh:
+        files = fh.read().split("\n")
 
     # ignore the header
-    lines = lines[1:]
+    files = files[1:]
 
     if args.total_docs > 0:
-        lines = lines[: args.total_docs]
+        files = files[: args.total_docs]
 
-    p = mp.Pool(64)
-
-    pbar = tqdm(total=len(lines))
-    for _ in p.imap(
-        functools.partial(download_and_convert, output_dir=output_dir), lines
-    ):
-        pbar.update(1)
+    with mp.Pool(args.processes) as p:
+        # use list to force the execution of the imap iterable within the context of the multiprocessing pool
+        _ = list(
+            tqdm(
+                p.imap(
+                    functools.partial(download_and_convert, output_dir=args.output_dir),
+                    files,
+                ),
+                total=len(files),
+            )
+        )
 
 
 if __name__ == "__main__":
