@@ -3,8 +3,11 @@ import functools
 import multiprocessing as mp
 import os
 import tarfile
+import traceback
 
 from tqdm import tqdm
+
+from licensed_pile import logs
 
 cur_dir = os.getcwd()
 
@@ -29,10 +32,9 @@ def download(f_url: str, output_dir: str):
         # -nc: no clobber, -q: quiet
         os.system(f"wget -nc -q {f_url} -P {output_dir}")
     except:
-        print(f"Error downloading {f_url}")
-        import traceback
-
-        traceback.print_exc()
+        logger = logs.get_logger("pubmedcentral")
+        logger.error(f"Error downloading {f_url}")
+        logger.error(traceback.print_exc())
 
 
 def extract_and_convert_tarball(t: str, output_dir: str):
@@ -58,13 +60,9 @@ def extract_and_convert_tarball(t: str, output_dir: str):
         os.system(f"mv {pmcid}.md {output_dir} && rm -r {nxml.split('/')[0]}")
 
     except:
-        print(f"Error extracting {t}")
-        import traceback
-
-        traceback.print_exc()
-        import time
-
-        time.sleep(0.1)
+        logger = logs.get_logger("pubmedcentral")
+        logger.error(f"Error extracting {t}")
+        logger.error(traceback.print_exc())
 
 
 def download_and_convert(line: str, output_dir: str):
@@ -83,7 +81,8 @@ def download_and_convert(line: str, output_dir: str):
         os.system(f"rm {f_dest}")
 
     except Exception as e:
-        print(e)
+        logger = logs.get_logger("pubmedcentral")
+        logger.error(e)
 
 
 def main(args):
@@ -111,4 +110,5 @@ def main(args):
 
 if __name__ == "__main__":
     args = parser.parse_args()
+    logs.configure_logging("pubmedcentral")
     main(args)
