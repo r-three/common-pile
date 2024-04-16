@@ -7,7 +7,11 @@ from licensed_pile.licenses import PermissiveLicenses
 from licensed_pile.write import to_dolma
 
 parser = argparse.ArgumentParser(description="Collect PubMedCentral into Dolma format.")
-parser.add_argument("--filelist", help="The path to the filelist.txt file.")
+parser.add_argument(
+    "--filelist",
+    default="data/permissive_filelist.txt",
+    help="The path to the filelist.txt file.",
+)
 parser.add_argument(
     "--data_dir", default="data/md/", help="Path to the directory of markdown files."
 )
@@ -41,7 +45,7 @@ def format_dolma(
     base_url: str = "https://www.ncbi.nlm.nih.gov/pmc/articles",
 ):
     file, journal, accessionID, _, lic = file.split("\t")
-    file = file.split("/")[-1].replace("tar.gz", "md")
+    file = os.path.basename(file).replace("tar.gz", "md")
     with open(os.path.join(data_dir, file)) as f:
         text = f.read()
 
