@@ -8,6 +8,7 @@ There are 2 kinds of rights to Gutenberg books.
 
 import argparse
 import glob
+
 import tqdm
 from rdflib import Graph
 
