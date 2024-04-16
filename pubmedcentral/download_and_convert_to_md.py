@@ -2,12 +2,15 @@ import argparse
 import functools
 import multiprocessing as mp
 import os
+import shutil
+import subprocess
 import tarfile
 import traceback
 
 from tqdm import tqdm
 
 from licensed_pile import logs
+from licensed_pile.scrape import get_page
 
 cur_dir = os.getcwd()
 
@@ -29,8 +32,12 @@ BASE_URL = "https://ftp.ncbi.nlm.nih.gov/pub/pmc/"
 def download(f_url: str, output_dir: str):
     # download file from f_url to output_dir
     try:
-        # -nc: no clobber, -q: quiet
-        os.system(f"wget -nc -q {f_url} -P {output_dir}")
+        # get the tarball
+        r = get_page(f_url)
+
+        # write tarball to disk
+        with open(os.path.join(output_dir, f_url.split("/")[-1]), "wb") as fh:
+            fh.write(r.content)
     except:
         logger = logs.get_logger("pubmedcentral")
         logger.error(f"Error downloading {f_url}")
@@ -58,10 +65,25 @@ def extract_and_convert_tarball(t: str, output_dir: str):
 
         # convert nxml to markdown
         pmcid = nxml.split("/")[0]
-        os.system(f"pandoc --quiet -f jats {nxml} -o {pmcid}.md --wrap=none")
+        # --quiet is to suppress messages
+        # --from jats specifies the input format as Journal Article Tag Suite (https://jats.nlm.nih.gov/)
+        # -o is the output file
+        # --wrap=none is to prevent pandoc from wrapping lines
+        options = [
+            "pandoc",
+            "--quiet",
+            "--from",
+            "jats",
+            nxml,
+            "-o",
+            f"{pmcid}.md",
+            "--wrap=none",
+        ]
+        subprocess.run(options)
 
         # remove extracted files
-        os.system(f"mv {pmcid}.md {output_dir} && rm -r {nxml.split('/')[0]}")
+        os.rename(f"{pmcid}.md", f"{output_dir}/{pmcid}.md")
+        shutil.rmtree(nxml.split("/")[0], ignore_errors=True)
 
     except:
         logger = logs.get_logger("pubmedcentral")
@@ -82,7 +104,7 @@ def download_and_convert(line: str, output_dir: str):
         extract_and_convert_tarball(f_dest, output_dir)
 
         # delete the tarball
-        os.system(f"rm {f_dest}")
+        os.remove(f_dest)
 
     except Exception as e:
         logger = logs.get_logger("pubmedcentral")
