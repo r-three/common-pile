@@ -46,7 +46,11 @@ def extract_and_convert_tarball(t: str, output_dir: str):
             nxml = [f for f in files if f.endswith(".nxml")]
 
             # make sure there's only one nxml file
-            assert len(nxml) == 1
+            if len(nxml) > 1:
+                error_message = f"More than one nxml file in {t}"
+                logger = logs.get_logger("pubmedcentral")
+                logger.error(error_message)
+                raise ValueError(error_message)
             nxml = nxml[0]
 
             # extract nxml file
