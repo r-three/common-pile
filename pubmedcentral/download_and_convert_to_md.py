@@ -55,6 +55,7 @@ def extract_and_convert_tarball(t: str, output_dir: str):
 
             # make sure there's only one nxml file
             if len(nxml) > 1:
+                # haven't seen an example with more than one nxml file, but just in case
                 error_message = f"More than one nxml file in {t}"
                 logger = logs.get_logger("pubmedcentral")
                 logger.error(error_message)
@@ -66,10 +67,12 @@ def extract_and_convert_tarball(t: str, output_dir: str):
 
         # convert nxml to markdown
         pmcid = nxml.split("/")[0]
-        # --quiet is to suppress messages
-        # --from jats specifies the input format as Journal Article Tag Suite (https://jats.nlm.nih.gov/)
-        # -o is the output file
-        # --wrap=none is to prevent pandoc from wrapping lines
+
+        # pandoc options:
+        #   --quiet is to suppress messages
+        #   --from jats specifies the input format as Journal Article Tag Suite (https://jats.nlm.nih.gov/)
+        #   -o is the output file
+        #   --wrap=none is to prevent pandoc from wrapping lines
         options = [
             "pandoc",
             "--quiet",
