@@ -12,8 +12,6 @@ from tqdm import tqdm
 from licensed_pile import logs
 from licensed_pile.scrape import get_page
 
-cur_dir = os.getcwd()
-
 parser = argparse.ArgumentParser(description="Convert xml documents to markdown.")
 parser.add_argument("--filelist", help="The path to the filelist.txt file.")
 parser.add_argument(
@@ -25,8 +23,6 @@ parser.add_argument(
     type=int,
     help="Total number of documents to convert, for debugging.",
 )
-
-BASE_URL = "https://ftp.ncbi.nlm.nih.gov/pub/pmc/"
 
 
 def download(f_url: str, output_dir: str):
@@ -49,8 +45,7 @@ def extract_and_convert_tarball(t: str, output_dir: str):
         return
     try:
         with tarfile.open(t) as tar:
-            files = tar.getnames()
-            nxml = [f for f in files if f.endswith(".nxml")]
+            nxml = [f for f in tar.getnames() if f.endswith(".nxml")]
 
             # make sure there's only one nxml file
             if len(nxml) > 1:
@@ -91,12 +86,14 @@ def extract_and_convert_tarball(t: str, output_dir: str):
         logger.error(traceback.print_exc())
 
 
-def download_and_convert(line: str, output_dir: str):
+def download_and_convert(
+    line: str, output_dir: str, base_url="https://ftp.ncbi.nlm.nih.gov/pub/pmc/"
+):
     # split line into parts
-    partial_path, journal, PMCID, PMID, license = line.split("\t")
+    partial_path = line.split("\t")[0]
 
     # create paths for the url and the destination of the markdown file
-    f_url = os.path.join(BASE_URL, partial_path)
+    f_url = os.path.join(base_url, partial_path)
     f_dest = os.path.join(output_dir, partial_path.split("/")[-1])
 
     try:
