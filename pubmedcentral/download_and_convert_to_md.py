@@ -2,10 +2,12 @@ import argparse
 import functools
 import multiprocessing as mp
 import os
+import re
 import shutil
 import subprocess
 import tarfile
 import traceback
+import xml.etree.ElementTree as ET
 
 from tqdm import tqdm
 
@@ -24,11 +26,30 @@ parser.add_argument(
     help="Total number of documents to convert, for debugging.",
 )
 parser.add_argument(
+    "--author_dir", default="data/authors/", help="Where the author files go."
+)
+parser.add_argument(
     "--processes",
     default=mp.cpu_count(),
     type=int,
     help="Number of processes to use for conversion.",
 )
+
+
+def get_authors(nxml_file: str, pmcid: str):
+    # get authors from nxml file
+    authors = []
+
+    tree = ET.parse(nxml_file)
+
+    # search for author tags
+    for author in tree.findall(".//contrib[@contrib-type='author']"):
+        surname = author.find("name/surname")
+        given_names = author.find("name/given-names")
+        if surname is not None and given_names is not None:
+            authors.append(f"{surname.text}, {given_names.text}")
+
+    return authors
 
 
 def download(f_url: str, output_dir: str):
@@ -65,9 +86,18 @@ def extract_and_convert_tarball(t: str, output_dir: str):
             # extract nxml file
             tar.extract(nxml)
 
-        # convert nxml to markdown
+        # get pmcid
         pmcid = nxml.split("/")[0]
 
+        # get authors from nxml file
+        authors = get_authors(nxml, pmcid)
+        # write to file
+        with open(
+            f"{os.path.join(args.author_dir, pmcid)}.txt", "w", encoding="utf-8"
+        ) as f:
+            f.write(" and ".join(authors))
+
+        # convert nxml to markdown
         # pandoc options:
         #   --quiet is to suppress messages
         #   --from jats specifies the input format as Journal Article Tag Suite (https://jats.nlm.nih.gov/)
@@ -119,6 +149,7 @@ def download_and_convert(
 
 def main(args):
     os.makedirs(args.output_dir, exist_ok=True)
+    os.makedirs(args.author_dir, exist_ok=True)
 
     with open(args.filelist) as fh:
         files = fh.read().split("\n")

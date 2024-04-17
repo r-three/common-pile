@@ -16,6 +16,9 @@ parser.add_argument(
     "--data_dir", default="data/md/", help="Path to the directory of markdown files."
 )
 parser.add_argument(
+    "--author_dir", default="data/authors/", help="Where the author files go."
+)
+parser.add_argument(
     "--output_dir",
     default="data/pubmedcentral/",
     help="Where the dolma formatted data goes.",
@@ -49,6 +52,12 @@ def format_dolma(
     with open(os.path.join(data_dir, file)) as f:
         text = f.read()
 
+    with open(
+        os.path.join(args.author_dir, f"{os.path.splitext(file)[0]}.txt"),
+        encoding="utf-8",
+    ) as f:
+        authors = f.read()
+
     return {
         "id": accessionID,
         "text": text,
@@ -58,6 +67,7 @@ def format_dolma(
             "license": str(LICENSE_MAP[lic]),
             "url": f"{base_url}/{accessionID}/",
             "journal": journal,
+            "authors": authors,
         },
     }
 
