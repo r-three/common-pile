@@ -1,5 +1,6 @@
 import argparse
 import functools
+import json
 import multiprocessing as mp
 import os
 import re
@@ -47,7 +48,7 @@ def get_authors(nxml_file: str, pmcid: str):
         surname = author.find("name/surname")
         given_names = author.find("name/given-names")
         if surname is not None and given_names is not None:
-            authors.append(f"{surname.text}, {given_names.text}")
+            authors.append({"first": given_names.text, "last": surname.text})
 
     return authors
 
@@ -93,9 +94,9 @@ def extract_and_convert_tarball(t: str, output_dir: str):
         authors = get_authors(nxml, pmcid)
         # write to file
         with open(
-            f"{os.path.join(args.author_dir, pmcid)}.txt", "w", encoding="utf-8"
+            f"{os.path.join(args.author_dir, pmcid)}.json", "w", encoding="utf-8"
         ) as f:
-            f.write(" and ".join(authors))
+            json.dump(authors, f, ensure_ascii=False)
 
         # convert nxml to markdown
         # pandoc options:

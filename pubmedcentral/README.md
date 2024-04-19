@@ -27,15 +27,16 @@ Files converted to markdown will live in `data/md`, author lists live in `data/a
 
 ``` json
 {
-    "id": "'PMC176545'",
-    "text": "Introduction {#s1}\n============\n\nHuman malaria is caused by four species of the parasitic protozoan ...",
+    "id": "PMC176545",
+    "text": "# Introduction {#s1}\n\nHuman malaria is caused by four species of the parasitic protozoan genus...",
     "source": "PubMed Central",
-    "added": "2024-02-01T17:02:52.985753",
-    "metadata": {
-        "license": "Creative Commons - Attribution - https://creativecommons.org/licenses/by/4.0/",
-        "url": "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC176545/",
-        "journal": "PLoS Biol. 2003 Oct 18; 1(1):e5",
-        "authors": "Bozdech, Zbynek and Llinás, Manuel and Pulliam, Brian Lee and Wong, Edith D and Zhu, Jingchun and DeRisi, Joseph L",
+    "added": "2024-04-19T17:48:14.010842",
+    "metadata":
+        {
+            "license": "Creative Commons - Attribution - https://creativecommons.org/licenses/by/4.0/",
+           "url": "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC176545/",
+           "journal": "PLoS Biol. 2003 Oct 18; 1(1):e5",
+           "authors": [{"first": "Zbynek", "last": "Bozdech"}, {"first": "Manuel", "last": "Llin\u00e1s"}, {"first": "Brian Lee", "last": "Pulliam"}, {"first": "Edith D", "last": "Wong"}, {"first": "Jingchun", "last": "Zhu"}, {"first": "Joseph L", "last": "DeRisi"}],
     }
 }
 ```

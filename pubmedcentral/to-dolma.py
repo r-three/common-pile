@@ -1,6 +1,7 @@
 import argparse
 import datetime
 import functools
+import json
 import os
 
 from licensed_pile.licenses import PermissiveLicenses
@@ -53,10 +54,10 @@ def format_dolma(
         text = f.read()
 
     with open(
-        os.path.join(args.author_dir, f"{os.path.splitext(file)[0]}.txt"),
+        os.path.join(args.author_dir, f"{os.path.splitext(file)[0]}.json"),
         encoding="utf-8",
     ) as f:
-        authors = f.read()
+        authors = json.load(f)
 
     return {
         "id": accessionID,
