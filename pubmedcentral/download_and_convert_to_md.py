@@ -27,7 +27,7 @@ parser.add_argument(
     help="Total number of documents to convert, for debugging.",
 )
 parser.add_argument(
-    "--author_dir", default="data/authors/", help="Where the author files go."
+    "--metadata_dir", default="data/metadata/", help="Where the metadata files go."
 )
 parser.add_argument(
     "--processes",
@@ -37,9 +37,10 @@ parser.add_argument(
 )
 
 
-def get_authors(nxml_file: str, pmcid: str):
+def get_authors_and_date(nxml_file: str, pmcid: str):
     # get authors from nxml file
     authors = []
+    date_created = None
 
     tree = ET.parse(nxml_file)
 
@@ -50,7 +51,26 @@ def get_authors(nxml_file: str, pmcid: str):
         if surname is not None and given_names is not None:
             authors.append({"first": given_names.text, "last": surname.text})
 
-    return authors
+    # get date
+    # date can be found under "epub" or "pmc-release" tags
+    pub_types = ["epub", "pmc-release"]
+    for pub_type in pub_types:
+        date = tree.find(f".//pub-date[@pub-type='{pub_type}']")
+        if date is not None:
+            year = date.find("year").text
+            month = date.find("month").text
+            day = date.find("day").text
+            # convert to YYYY-MM-DD format
+            date_created = f"{year}-{month}-{day}"
+            break
+
+    if date_created is None:
+        # haven't seen any examples without a date, but just in case
+        # not a fatal error, just log it
+        logger = logs.get_logger("pubmedcentral")
+        logger.error(f"Date not found for {pmcid}")
+
+    return authors, date_created
 
 
 def download(f_url: str, output_dir: str):
@@ -90,13 +110,14 @@ def extract_and_convert_tarball(t: str, output_dir: str):
         # get pmcid
         pmcid = nxml.split("/")[0]
 
-        # get authors from nxml file
-        authors = get_authors(nxml, pmcid)
+        # get metadata from nxml file
+        authors, date_created = get_authors_and_date(nxml, pmcid)
+        metadata = {"authors": authors, "created": date_created}
         # write to file
         with open(
-            f"{os.path.join(args.author_dir, pmcid)}.json", "w", encoding="utf-8"
+            f"{os.path.join(args.metadata_dir, pmcid)}.json", "w", encoding="utf-8"
         ) as f:
-            json.dump(authors, f, ensure_ascii=False)
+            json.dump(metadata, f, ensure_ascii=False)
 
         # convert nxml to markdown
         # pandoc options:
@@ -150,7 +171,7 @@ def download_and_convert(
 
 def main(args):
     os.makedirs(args.output_dir, exist_ok=True)
-    os.makedirs(args.author_dir, exist_ok=True)
+    os.makedirs(args.metadata_dir, exist_ok=True)
 
     with open(args.filelist) as fh:
         files = fh.read().split("\n")

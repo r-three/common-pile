@@ -17,7 +17,7 @@ parser.add_argument(
     "--data_dir", default="data/md/", help="Path to the directory of markdown files."
 )
 parser.add_argument(
-    "--author_dir", default="data/authors/", help="Where the author files go."
+    "--metadata_dir", default="data/metadata/", help="Where the metadata files go."
 )
 parser.add_argument(
     "--output_dir",
@@ -54,21 +54,22 @@ def format_dolma(
         text = f.read()
 
     with open(
-        os.path.join(args.author_dir, f"{os.path.splitext(file)[0]}.json"),
+        os.path.join(args.metadata_dir, f"{os.path.splitext(file)[0]}.json"),
         encoding="utf-8",
     ) as f:
-        authors = json.load(f)
+        metadata = json.load(f)
 
     return {
         "id": accessionID,
         "text": text,
         "source": source_name,
         "added": datetime.datetime.utcnow().isoformat(),
+        "created": metadata["created"],
         "metadata": {
             "license": str(LICENSE_MAP[lic]),
             "url": f"{base_url}/{accessionID}/",
             "journal": journal,
-            "authors": authors,
+            "authors": metadata["authors"],
         },
     }
 
