@@ -31,6 +31,7 @@ Files converted to markdown will live in `data/md`, author lists live in `data/a
     "text": "# Introduction {#s1}\n\nHuman malaria is caused by four species of the parasitic protozoan genus...",
     "source": "PubMed Central",
     "added": "2024-04-19T17:48:14.010842",
+    "created": "2003-8-18",
     "metadata":
         {
             "license": "Creative Commons - Attribution - https://creativecommons.org/licenses/by/4.0/",
