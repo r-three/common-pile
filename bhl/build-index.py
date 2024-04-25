@@ -1,22 +1,35 @@
 """Build index of Biodiversity Heritage Library books"""
 
 import argparse
-import xml.etree.ElementTree as ET
-import os
-import logging
 import json
+import logging
+import os
+import xml.etree.ElementTree as ET
 from collections import defaultdict
 
 from tqdm.auto import tqdm
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="build-index: [%(asctime)s] [%(funcName)s] %(levelname)s - %(message)s",
+)
 
-logging.basicConfig(level=logging.INFO, format="build-index: [%(asctime)s] [%(funcName)s] %(levelname)s - %(message)s")
+
+SOURCE_NAME = "biodiversity-heritage-library"
 
 
 def parse_args():
     parser = argparse.ArgumentParser("Biodiversity Heritage Library index builder")
-    parser.add_argument("--metadata-file", default="raw_data/bhlitem.mods.xml", help="Path to XML metadata file")
-    parser.add_argument("--output-dir", default="./", help="Path to output directory")
+    parser.add_argument(
+        "--metadata-file",
+        default=f"data/{SOURCE_NAME}/raw/metadata/bhlitem.mods.xml",
+        help="Path to XML metadata file",
+    )
+    parser.add_argument(
+        "--output-dir",
+        default=f"data/{SOURCE_NAME}/raw/",
+        help="Path to output directory",
+    )
     return parser.parse_args()
 
 
@@ -25,7 +38,7 @@ def main(args):
 
     logging.info(f"Loading metadata file from {args.metadata_file}")
     metadata = ET.parse(args.metadata_file).getroot()
-   
+
     num_entries = 0
     pbar = tqdm(metadata)
     for entry in pbar:
@@ -42,12 +55,17 @@ def main(args):
                 break
 
         pbar.set_postfix({"Entries w/ License Info": num_entries})
-    
+
     logging.info("Computing summary statistics")
     counts = {license: len(uris) for license, uris in index.items()}
     print("\nLicense Summary Statistics:")
-    print(json.dumps(dict(sorted(counts.items(), reverse=True, key=lambda entry: entry[1])), indent=4))
-    
+    print(
+        json.dumps(
+            dict(sorted(counts.items(), reverse=True, key=lambda entry: entry[1])),
+            indent=4,
+        )
+    )
+
     logging.info(f"Saving index to {args.output_dir}")
     os.makedirs(args.output_dir, exist_ok=True)
     with open(os.path.join(args.output_dir, "index.json"), "w") as f:

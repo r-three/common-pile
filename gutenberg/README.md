@@ -11,7 +11,7 @@ A collection of public domain books from www.gutenberg.org.
 4. Download the books `python get-books.py`
 5. Get PG19 Special cases `python get-pg19-books.py`
 6. Convert Books to the Dolma format. `python to-dolma.py`
-7. Preprocess the books `python preprocess-books.py`
+7. Preprocess the books `python preprocess.py`
 
 Raw text will live in `./data/project-gutenberg/raw` and processed books in `./data/project-gutenberg/v0`
 
