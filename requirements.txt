@@ -9,3 +9,6 @@ charset_normalizer
 logging_json
 requests>=2.13
 tenacity
+pandas
+jsonlines
+datasets

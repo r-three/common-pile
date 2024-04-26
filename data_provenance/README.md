@@ -4,20 +4,15 @@ The [Data Provenance Initiative](https://www.dataprovenance.org) is a digital li
 
 In this case, we have filtered for the following criteria:
 * English language or code data
+* No model generated text
 * Datasets have a commercially viable license, found through the Data Provenance Initiative or the hosting GitHub repository
-* The original source(s) of the text are (a) not machine generated, and (b) only from the following list of accepted sources:
+* The original source(s) of the text are only from the list of sources in `source_allow_list.txt`
 
-```
-["crowdsourced", "crowdsourced (amt)", "wordnet", "crowdsourced (daemo)", "human", "grammar-based",
-"wikipedia.org", "commoncrawl.org", "stackexchange.com", "github", "opus news-commentary"
-"wikihow.com", "dbpedia", "verbnet", "creative commons license textbooks", "pubmed articles", "pubmed"
-"project gutenberg", "eur-lex portal", "arc corpus", "wikisource", "globalvoices.org", "opus dogc corpus",
-"conceptnet", "semeval 2012 task 2", "crowdflower.com", "yahoo! answers"
-"wiktionary.org", "winograd schema challenge dataset", "sec.gov/edgar/about", "aclanthology.org"
-"parallel meaning bank", "headlines", "freebase", "eu legistlative texts", "search-engine(google) auto-complete",
-"wikidata",]
-```
+The specific filter settings are here: https://github.com/Data-Provenance-Initiative/Data-Provenance-Collection/blob/main/src/configs/pile_v2_test.yaml
+
 
 Here is the process to download the data:
 
-1. Run `python download.py`
+1. Run `PYTHONPATH=. python data_provenance/download.py --include data_provenance/include.csv`
+
+2. Run `PYTHONPATH=. python data_provenance/to-dolma.py --include data_provenance/include.csv`

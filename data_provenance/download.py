@@ -15,20 +15,23 @@ from datasets import load_dataset
 
 from tqdm.auto import tqdm
 
-logging.basicConfig(level=logging.INFO, format="build-index: [%(asctime)s] [%(funcName)s] %(levelname)s - %(message)s")
+from data_provenance.constants import HF_MAPPING
+from licensed_pile.logs import configure_logging, get_logger
+
+# logger = configure_logging()
 
 
 def parse_args():
     parser = argparse.ArgumentParser("Data Provenance Data Downloader")
     parser.add_argument("--hf", default="DataProvenanceInitiative/Commercially-Verified-Licenses", help="HuggingFace path")
-    parser.add_argument("--include", default="./include.txt", help="Path to text file with dataset names we will include")
-    parser.add_argument("--outdir", default="./data", help="Path to output directory")
+    parser.add_argument("--include", default="./data_provenance/include.csv", help="Path to csv file with `Collection Name, Dataset ID` we will include")
+    parser.add_argument("--outdir", default="data/raw-data-provenance", help="Path to output directory")
     return parser.parse_args()
 
 
 def write_jsonl(
-    data: typing.Union[pd.DataFrame, typing.List[typing.Dict]], 
-    outpath: str, 
+    data, 
+    outpath, 
     compress: bool=False, 
     dumps=None,
 ):
@@ -49,23 +52,31 @@ def write_jsonl(
 
 
 def main(args):
-    logging.info(f"Loading dataset from {args.hf}")
-    dataset = load_dataset(args["hf"], revision="main")
+    # logger.info(f"Loading dataset from {args.hf}")
+    # dataset = load_dataset(args.hf, revision="main")
+    logger = get_logger()
+    logger.info(f"Filtering to just the datasets in {args.include}")
 
-    logging.info(f"Filtering to just the datasets in {args.include}")
-    filtered_dataset = dataset.filter(lambda x: x["user_parent"] not in args["include"])
+    include_df = pd.read_csv(args.include) #, sep="\t")
+    include_collections = list(set(include_df["Collection"]))
+    include_dset_ids = list(set(include_df["Dataset ID"]))
+    # filtered_dataset = dataset.filter(lambda x: x["user_parent"] not in include_dset_ids)
 
-    def create_row(ex):
-        ex["text"] = ex["inputs"] + ex["labels"]
-        return ex
-
-    logging.info(f"Transforming data...")
-    final_data = filtered_dataset.map(create_row)
-
-    savepath = os.path.join(args["outdir"], "data.jsonl.gz")
-    logging.info(f"Saving data to {savepath}")
-    write_jsonl(final_data, savepath, compress=True)
-
+    for collection in include_collections:
+        folder_name = HF_MAPPING[collection]
+        # dataset = load_dataset("DataProvenanceInitiative/Commercially-Verified-Licenses")
+        subset = load_dataset(
+            args.hf,
+            split="train",
+            num_proc = os.cpu_count(),
+            revision="main", 
+            data_files=f"data/{folder_name}/*.jsonl",
+        ).to_list()
+        exs = [ex for ex in subset if ex["user_parent"] in include_dset_ids]
+        # subset = subset[subset["user_parent"].isin(include_dset_ids)]
+        savepath = os.path.join(args.outdir, f"{folder_name}.jsonl.gz")
+        write_jsonl(exs, savepath, compress=True)
+        logger.info(f"Saving {len(exs)} examples to {savepath}")
 
 
 if __name__ == "__main__":
