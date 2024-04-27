@@ -9,12 +9,6 @@ class StringEnum(Enum):
         return self.value
 
 
-# {'CDLA Sharing 1.0', 'MPL 2.0', 'CDLA Permissive 1.0', 'Custom', 'No License', 'OANC',
-# 'GNU General Public License v3.0', 'MIT License', 'Unspecified', 'CC BY 4.0', 'CC0 1.0',
-# 'BSD 2-Clause License', 'Apache License 2.0', 'ISC License', 'EPL 1.0', 'GNU General Public License v2.0',
-# 'LGPL 2.1', 'CC BY-SA', 'C-UDA', 'CC BY 3.0', 'CC BY-SA 3.0', 'Artistic License 2.0', 'CC BY-SA 4.0', 'BSD 3-Clause License'}
-
-
 class PermissiveLicenses(StringEnum):
     PD = "Public Domain"
     CC0 = "Creative Commons Zero - Public Domain - https://creativecommons.org/publicdomain/zero/1.0/"
