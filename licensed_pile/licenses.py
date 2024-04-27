@@ -8,10 +8,12 @@ class StringEnum(Enum):
     def __str__(self):
         return self.value
 
-# {'CDLA Sharing 1.0', 'MPL 2.0', 'CDLA Permissive 1.0', 'Custom', 'No License', 'OANC', 
-# 'GNU General Public License v3.0', 'MIT License', 'Unspecified', 'CC BY 4.0', 'CC0 1.0', 
-# 'BSD 2-Clause License', 'Apache License 2.0', 'ISC License', 'EPL 1.0', 'GNU General Public License v2.0', 
+
+# {'CDLA Sharing 1.0', 'MPL 2.0', 'CDLA Permissive 1.0', 'Custom', 'No License', 'OANC',
+# 'GNU General Public License v3.0', 'MIT License', 'Unspecified', 'CC BY 4.0', 'CC0 1.0',
+# 'BSD 2-Clause License', 'Apache License 2.0', 'ISC License', 'EPL 1.0', 'GNU General Public License v2.0',
 # 'LGPL 2.1', 'CC BY-SA', 'C-UDA', 'CC BY 3.0', 'CC BY-SA 3.0', 'Artistic License 2.0', 'CC BY-SA 4.0', 'BSD 3-Clause License'}
+
 
 class PermissiveLicenses(StringEnum):
     PD = "Public Domain"
@@ -43,9 +45,6 @@ class PermissiveLicenses(StringEnum):
     LGPL_2_1 = "LGPL 2.1"
     C_UDA = "C-UDA"
     ARTISTIC_2 = "Artistic License 2.0"
-
-
-
 
     # TODO: Fill out this function to match in more cases.
     # Note: This kind of function will always be messy and probably require

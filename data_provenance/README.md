@@ -1,6 +1,6 @@
 # Processing scripts for Data Provenance data
 
-The [Data Provenance Initiative](https://www.dataprovenance.org) is a digital library for supervised datasets that have been manually annotated with their source and license information. It wraps HuggingFace datasets with extra metadata, and provides code to download, standardize and filter for various criteria. 
+The [Data Provenance Initiative](https://www.dataprovenance.org) is a digital library for supervised datasets that have been manually annotated with their source and license information. It wraps HuggingFace datasets with extra metadata, and provides code to download, standardize and filter for various criteria.
 
 In this case, we have filtered for the following criteria:
 * English language or code data

@@ -1,18 +1,18 @@
 """Download Data Provenance Initative data"""
 
 import argparse
-import tarfile
-import os
-import logging
-import json
-import jsonlines
 import gzip
+import json
+import logging
 import multiprocessing
-import pandas as pd
+import os
+import tarfile
 import typing
 from collections import defaultdict
-from datasets import load_dataset
 
+import jsonlines
+import pandas as pd
+from datasets import load_dataset
 from tqdm.auto import tqdm
 
 from data_provenance.constants import HF_MAPPING
@@ -23,16 +23,26 @@ from licensed_pile.logs import configure_logging, get_logger
 
 def parse_args():
     parser = argparse.ArgumentParser("Data Provenance Data Downloader")
-    parser.add_argument("--hf", default="DataProvenanceInitiative/Commercially-Verified-Licenses", help="HuggingFace path")
-    parser.add_argument("--include", default="./data_provenance/include.csv", help="Path to csv file with `Collection Name, Dataset ID` we will include")
-    parser.add_argument("--outdir", default="data/raw-data-provenance", help="Path to output directory")
+    parser.add_argument(
+        "--hf",
+        default="DataProvenanceInitiative/Commercially-Verified-Licenses",
+        help="HuggingFace path",
+    )
+    parser.add_argument(
+        "--include",
+        default="./data_provenance/include.csv",
+        help="Path to csv file with `Collection Name, Dataset ID` we will include",
+    )
+    parser.add_argument(
+        "--outdir", default="data/raw-data-provenance", help="Path to output directory"
+    )
     return parser.parse_args()
 
 
 def write_jsonl(
-    data, 
-    outpath, 
-    compress: bool=False, 
+    data,
+    outpath,
+    compress: bool = False,
     dumps=None,
 ):
     dirname = os.path.dirname(outpath)
@@ -40,15 +50,20 @@ def write_jsonl(
         os.makedirs(dirname, exist_ok=True)
     if isinstance(data, list):
         if compress:
-            with gzip.open(outpath, 'wb') as fp:
-                json_writer = jsonlines.Writer(fp)#, dumps=dumps)
+            with gzip.open(outpath, "wb") as fp:
+                json_writer = jsonlines.Writer(fp)  # , dumps=dumps)
                 json_writer.write_all(data)
         else:
             with open(outpath, "wb") as fp:
-                json_writer = jsonlines.Writer(fp) #, dumps=dumps)
+                json_writer = jsonlines.Writer(fp)  # , dumps=dumps)
                 json_writer.write_all(data)
-    else: # Must be dataframe:
-        data.to_json(outpath, orient="records", lines=True, compression="gzip" if compress else "infer")
+    else:  # Must be dataframe:
+        data.to_json(
+            outpath,
+            orient="records",
+            lines=True,
+            compression="gzip" if compress else "infer",
+        )
 
 
 def main(args):
@@ -57,7 +72,7 @@ def main(args):
     logger = get_logger()
     logger.info(f"Filtering to just the datasets in {args.include}")
 
-    include_df = pd.read_csv(args.include) #, sep="\t")
+    include_df = pd.read_csv(args.include)  # , sep="\t")
     include_collections = list(set(include_df["Collection"]))
     include_dset_ids = list(set(include_df["Dataset ID"]))
     # filtered_dataset = dataset.filter(lambda x: x["user_parent"] not in include_dset_ids)
@@ -68,8 +83,8 @@ def main(args):
         subset = load_dataset(
             args.hf,
             split="train",
-            num_proc = os.cpu_count(),
-            revision="main", 
+            num_proc=os.cpu_count(),
+            revision="main",
             data_files=f"data/{folder_name}/*.jsonl",
         ).to_list()
         exs = [ex for ex in subset if ex["user_parent"] in include_dset_ids]

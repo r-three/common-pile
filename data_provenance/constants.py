@@ -1,5 +1,3 @@
-
-
 HF_MAPPING = {
     "CommitPackFT": "commitpack_ft",
     "Dolly 15k": "dolly_15k",
@@ -8,7 +6,7 @@ HF_MAPPING = {
     "Open Assistant": "open_assistant",
     "OIG": "oig",
     "Anthropic HH-RLHF": "rlhf_anthropic_hh",
-    "Flan Collection (Super-NaturalInstructions)":  "flan_sni",
+    "Flan Collection (Super-NaturalInstructions)": "flan_sni",
     "Flan Collection (P3)": "flan_p3",
     "Flan Collection (Flan 2021)": "flan_2021",
     "Tasksource Symbol-Tuning": "tasksource_symboltuning",
