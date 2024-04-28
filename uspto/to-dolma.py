@@ -36,7 +36,10 @@ def format_text(example: dict) -> dict:
                 eq.string = format_equation(eq)
         output += claims.get_text().strip()
 
-    return {"text": output}
+    return {
+        "text": output,
+        "date": example.get("publication_date"),
+    }
 
 
 def format_equation(equation: str) -> str:
@@ -46,7 +49,17 @@ def format_equation(equation: str) -> str:
 
 def return_dolma(ds: datasets.Dataset) -> dict:
     for x in ds:
-        return x
+        output = {
+            "text": x.get("text"),
+            "added": datetime.datetime.now(),
+            "id": x.get("publication_number"),
+            "source": "USPTO",
+            "metadata": {
+                "license": str(PermissiveLicenses.PD),
+                "language": x.get("title_language"),
+            },
+        }
+        return output
 
 
 def parser() -> argparse.ArgumentParser:
