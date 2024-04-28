@@ -75,7 +75,7 @@ def parser() -> argparse.ArgumentParser:
 
 if __name__ == "__main__":
     args = parser().parse_args()
-    YEAR = 1975
+    YEAR = args.year
     DATASET = "baber/USPTO"
     uspto_df = datasets.load_dataset(DATASET, split="train", streaming=True)
     uspto_df = uspto_df.filter(lambda x: x["publication_date"].year < YEAR)
