@@ -7,7 +7,14 @@ import os
 import re
 from tempfile import TemporaryDirectory
 
+from licensed_pile.logs import configure_logging
 from licensed_pile.write import ShardParallelProcessor
+
+# By configuring the logger as a module level logger with the name
+# dolma.ProcessorClassName, our logger configuration is used (although dolma
+# forces a WARN level). The other option is to override `cls.get_logger` to
+# set it up yourself (allowing you to do things like use a lower log level.)
+configure_logging("dolma.UbuntuChatParallel")
 
 parser = argparse.ArgumentParser(
     description="Preprocess raw chats in the dolma format."

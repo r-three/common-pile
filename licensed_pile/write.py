@@ -3,7 +3,6 @@
 import abc
 import copy
 import json
-import logging
 import multiprocessing as mp
 import os
 from contextlib import ExitStack
@@ -14,8 +13,7 @@ import smart_open
 import tqdm
 from dolma.core.parallel import BaseParallelProcessor
 
-LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.INFO)
+from licensed_pile.logs import configure_logging, get_logger
 
 
 def shard_name(filename: str, shard: str, padding: int = 5):
@@ -32,6 +30,8 @@ def to_dolma(
     quiet: bool = False,
 ):
     """Write `examples` to `path` in the dolma format with `shard_size`GB shards."""
+    logger = get_logger()
+    logger.info("Writing Dolma Shards to %s", path)
     os.makedirs(path, exist_ok=True)
     shard_idx = 0
     size = 0
@@ -48,11 +48,9 @@ def to_dolma(
             if size >= max_bytes:
                 wf.close()
                 shard_idx += 1
-                wf = stack.enter_context(
-                    smart_open.open(
-                        os.path.join(path, shard_name(filename, shard_idx)), "w"
-                    )
-                )
+                shard_file = os.path.join(path, shard_name(filename, shard_idx))
+                wf = stack.enter_context(smart_open.open(shard_file, "w"))
+                logger.info("Shard size exceeded, creating new shard at %s", shard_file)
                 size = 0
             wf.write(data + "\n")
 
@@ -83,10 +81,11 @@ class ShardParallelProcessor(BaseParallelProcessor):
         queue: Queue,
         **kwargs,
     ):
+        logger = cls.get_logger()
+        logger.debug("Processing %s into %s", source_path, destination_path)
         with smart_open.open(source_path) as f, smart_open.open(
             destination_path, "w"
         ) as wf:
-            logger = cls.get_logger()
             document_count = 0
             update_interval = kwargs.pop("update_interval", 1)
             debug = kwargs.pop("debug", False)
