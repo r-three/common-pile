@@ -49,17 +49,21 @@ def format_equation(equation: str) -> str:
 
 def return_dolma(ds: datasets.Dataset) -> dict:
     for x in ds:
-        output = {
-            "text": x.get("text"),
-            "added": datetime.datetime.now(),
-            "id": x.get("publication_number"),
-            "source": "USPTO",
-            "metadata": {
-                "license": str(PermissiveLicenses.PD),
-                "language": x.get("title_language"),
-            },
-        }
-        return output
+        try:
+            output = {
+                "text": x.get("text"),
+                "added": datetime.datetime.now(),
+                "id": x.get("publication_number"),
+                "source": "USPTO",
+                "metadata": {
+                    "license": str(PermissiveLicenses.PD),
+                    "language": x.get("title_language"),
+                    "year": x.get("publication_date").year,
+                },
+            }
+        except:
+            output = None
+        yield output
 
 
 def parser() -> argparse.ArgumentParser:
