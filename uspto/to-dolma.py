@@ -10,15 +10,38 @@ from licensed_pile.write import to_dolma
 
 
 def format_text(example: dict) -> dict:
-    return {"text": example["text"]}
+    """
+    Title\n\n
+    abstract_text\n\n
+    description\n\n
+    claims
+    """
+    output = ""
+    if title := example.get("title_text"):
+        output += title + "\n\n"
+    if abstract := example.get("abstract_text"):
+        output += BeautifulSoup(abstract, "html.parser").get_text().strip() + "\n\n"
+    if description := example.get("description_html"):
+        description = BeautifulSoup(description, "html.parser")
+        equations: list = description.find_all("maths")
+        if equations:
+            for i, eq in enumerate(equations):
+                eq.string = format_equation(eq)
+        output += description.get_text().strip() + "\n\n"
+    if claims := example.get("claims_text"):
+        claims = BeautifulSoup(claims, "html.parser")
+        equations: list = claims.find_all("maths")
+        if equations:
+            for i, eq in enumerate(equations):
+                eq.string = format_equation(eq)
+        output += claims.get_text().strip()
+
+    return {"text": output}
 
 
 def format_equation(equation: str) -> str:
+    # TODO: parse mathml to TEX
     return equation
-
-
-def format_description(desc: str) -> str:
-    return desc.strip()
 
 
 def return_dolma(ds: datasets.Dataset) -> dict:
