@@ -5,17 +5,35 @@ import logging
 import os
 import json
 import textwrap
+import datetime
 
 import requests
 from bs4 import BeautifulSoup
 
+from licensed_pile.licenses import PermissiveLicenses
+from licensed_pile.write import to_dolma
 
-logging.basicConfig(level=logging.INFO, format="scrape: [%(asctime)s] [%(funcName)s] %(levelname)s - %(message)s")
+
+logging.basicConfig(level=logging.INFO, format="scrape-conjectures: [%(asctime)s] [%(funcName)s] %(levelname)s - %(message)s")
+
+
+SOURCE_NAME = "public-domain-review"
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--output-dir", required=True, help="Path to save parsed essays to")
+    parser.add_argument(
+            "--output-dir", 
+            default=f"data/{SOURCE_NAME}/v0", 
+            help="Where the dolma formatted data goes"
+    )
+    parser.add_argument(
+        "--filename", default=f"conjectures.jsonl.gz", help="The base filename for the PDR data"
+    )
+    parser.add_argument(
+        "--shard_size", type=int, default=1, help="Size, in GB, for each shard."
+    )
+
     args = parser.parse_args()
     return args
 
@@ -111,16 +129,27 @@ def parse_essay_html(html):
     return text
 
 
-def main(args):
-    essays = {}
+def generate_records(args):
     for link in generate_essay_links(args):
         essay_html = get_content(link)
         if contains_permissive_license(essay_html):
             essay = parse_essay_html(essay_html)
-            essays[link] = essay
+            yield {
+                "id": link.strip("/").split("/")[-1]
+                "text": essay,
+                "source": SOURCE_NAME,
+                "type": "conjecture",
+                "added": datetime.datetime.utcnow().isoformat(),
+                "metadata": {
+                    "license": str(PermissiveLicenses.CC_BY_SA),
+                    "url": link
+                },
+            }
 
-    with open(os.path.join(args.output_dir, "conjectures.json"), "w") as f:
-        json.dump(essays, f, indent=4)
+
+def main(args):
+    records = generate_records(args)
+    to_dolma(records, args.output_dir, args.filename, args.shard_size)
 
 
 if __name__ == "__main__":
