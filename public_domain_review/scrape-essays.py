@@ -90,17 +90,20 @@ def parse_essay_html(html):
     {text_blocks}
     """
     ).strip().format(**locals())
-    return text
+    author = byline.strip("By ")
+    return author, date, text
 
 
 def generate_records(args):
     for link in generate_essay_links(args):
         essay_html = get_content(link)
         if contains_permissive_license(essay_html):
-            essay = parse_essay_html(essay_html)
+            author, date, essay = parse_essay_html(essay_html)
             yield {
                 "id": link.strip("/").split("/")[-1],
                 "text": essay,
+                "date": date,
+                "author": author,
                 "source": SOURCE_NAME,
                 "type": "essay",
                 "added": datetime.datetime.utcnow().isoformat(),

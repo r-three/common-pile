@@ -68,9 +68,9 @@ def generate_essay_links(args):
 def parse_essay_html(html):
     document = BeautifulSoup(html, "html.parser")
     
-    title = get_elements_text(document, "span", "title")[0]
-    subtitle = get_elements_text(document, "span", "subtitle")[0]
-    byline = get_elements_text(document, "p", "byline")[0]
+    header = get_elements(document, "div", "collection-header")[0]
+    title = get_elements_text(header, "h1", None)[0]
+    byline = get_elements_text(document, "div", "attribution")[0]
 
     intro = get_elements_text(document, "p", "intro")[0]
     date = get_elements_text(document, "p", "date")[0]
@@ -80,7 +80,6 @@ def parse_essay_html(html):
     text = textwrap.dedent(
     """
     {title}
-    {subtitle}
     {byline}
     {date}
 
@@ -89,17 +88,21 @@ def parse_essay_html(html):
     {text_blocks}
     """
     ).strip().format(**locals())
-    return text
+
+    author = byline.strip("Text by ")
+    return author, date, text
 
 
 def generate_records(args):
     for link in generate_essay_links(args):
         essay_html = get_content(link)
-        essay = parse_essay_html(essay_html)
+        author, date, essay = parse_essay_html(essay_html)
         yield {
             "id": link.strip("/").split("/")[-1],
             "text": essay,
             "source": SOURCE_NAME,
+            "date": date,
+            "author": author,
             "type": "collection",
             "added": datetime.datetime.utcnow().isoformat(),
             "metadata": {
