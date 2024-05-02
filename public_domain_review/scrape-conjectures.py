@@ -1,26 +1,25 @@
 import argparse
-from urllib.parse import urljoin
-import re
+import datetime
+import json
 import logging
 import os
-import json
+import re
 import textwrap
-import datetime
+from urllib.parse import urljoin
 
 import requests
 from bs4 import BeautifulSoup
-
 from utils import (
     SOURCE_NAME,
-    get_outbound_links,
-    get_content,
     contains_permissive_license,
+    get_content,
     get_elements,
     get_elements_text,
+    get_outbound_links,
 )
+
 from licensed_pile.licenses import PermissiveLicenses
 from licensed_pile.write import to_dolma
-
 
 logging.basicConfig(
     level=logging.INFO,

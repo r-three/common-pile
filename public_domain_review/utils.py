@@ -1,9 +1,8 @@
 import logging
-import requests
 from urllib.parse import urljoin
 
+import requests
 from bs4 import BeautifulSoup
-
 
 SOURCE_NAME = "public-domain-review"
 
