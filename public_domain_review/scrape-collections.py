@@ -10,23 +10,35 @@ import datetime
 import requests
 from bs4 import BeautifulSoup
 
-from utils import SOURCE_NAME, get_outbound_links, get_content, contains_permissive_license, get_elements, get_elements_text
+from utils import (
+    SOURCE_NAME,
+    get_outbound_links,
+    get_content,
+    contains_permissive_license,
+    get_elements,
+    get_elements_text,
+)
 from licensed_pile.licenses import PermissiveLicenses
 from licensed_pile.write import to_dolma
 
 
-logging.basicConfig(level=logging.INFO, format="scrape-collections: [%(asctime)s] [%(funcName)s] %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO,
+    format="scrape-collections: [%(asctime)s] [%(funcName)s] %(levelname)s - %(message)s",
+)
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-            "--output-dir", 
-            default=f"data/{SOURCE_NAME}/v0", 
-            help="Where the dolma formatted data goes"
+        "--output-dir",
+        default=f"data/{SOURCE_NAME}/v0",
+        help="Where the dolma formatted data goes",
     )
     parser.add_argument(
-        "--filename", default=f"collections.jsonl.gz", help="The base filename for the PDR data"
+        "--filename",
+        default=f"collections.jsonl.gz",
+        help="The base filename for the PDR data",
     )
     parser.add_argument(
         "--shard_size", type=int, default=1, help="Size, in GB, for each shard."
@@ -37,14 +49,14 @@ def parse_args():
 
 
 def generate_essay_links(args):
-    base_url = 'https://publicdomainreview.org/'
+    base_url = "https://publicdomainreview.org/"
     essay_url = urljoin(base_url, "collections")
     essay_url_pattern = re.compile(urljoin(base_url, "collection/[a-z0-9-]+/"))
     page_url_pattern = re.compile(urljoin(base_url, "collections/all/[0-9]+/"))
-    
+
     pages = set([essay_url])
     seen_pages = set()
-    seen_links = set() 
+    seen_links = set()
     while len(pages) > 0:
         page = pages.pop()
         logging.info(f"Scraping {page}")
@@ -59,26 +71,31 @@ def generate_essay_links(args):
                 logging.info(f"Found {link}")
                 yield link
                 seen_links.add(link)
-            
+
             seen_pages.add(page)
-            page_links = [link for link in links if page_url_pattern.match(link) and link not in seen_pages]
+            page_links = [
+                link
+                for link in links
+                if page_url_pattern.match(link) and link not in seen_pages
+            ]
             pages.update(page_links)
 
 
 def parse_essay_html(html):
     document = BeautifulSoup(html, "html.parser")
-    
+
     header = get_elements(document, "div", "collection-header")[0]
     title = get_elements_text(header, "h1", None)[0]
     byline = get_elements_text(document, "div", "attribution")[0]
 
     intro = get_elements_text(document, "p", "intro")[0]
     date = get_elements_text(document, "p", "date")[0]
-    
+
     text_blocks = "\n".join(get_elements_text(document, "div", "essay__text-block"))
 
-    text = textwrap.dedent(
-    """
+    text = (
+        textwrap.dedent(
+            """
     {title}
     {byline}
     {date}
@@ -87,7 +104,10 @@ def parse_essay_html(html):
     
     {text_blocks}
     """
-    ).strip().format(**locals())
+        )
+        .strip()
+        .format(**locals())
+    )
 
     author = byline.strip("Text by ")
     return author, date, text
@@ -105,10 +125,7 @@ def generate_records(args):
             "author": author,
             "type": "collection",
             "added": datetime.datetime.utcnow().isoformat(),
-            "metadata": {
-                "license": str(PermissiveLicenses.CC_BY_SA),
-                "url": link
-            },
+            "metadata": {"license": str(PermissiveLicenses.CC_BY_SA), "url": link},
         }
 
 
