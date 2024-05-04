@@ -13,8 +13,7 @@ import pandas as pd
 
 from data_provenance.constants import HF_MAPPING
 from licensed_pile.licenses import PermissiveLicenses
-
-# from licensed_pile.write import to_dolma
+from licensed_pile.write import to_dolma
 
 LICENSE_MAPPER = {
     "CDLA Sharing 1.0": PermissiveLicenses.CDLA,
@@ -27,7 +26,8 @@ LICENSE_MAPPER = {
     "MIT License": PermissiveLicenses.MIT,
     "CC BY 4.0": PermissiveLicenses.CC_BY,
     "CC0 1.0": PermissiveLicenses.CC0,
-    "BSD 2-Clause License": PermissiveLicenses.BSD,  # Assuming "BSD" refers to both 2-Clause and 3-Clause
+    "BSD 2-Clause License": PermissiveLicenses.BSD,
+    "BSD 3-Clause License": PermissiveLicenses.BSD,
     "Apache License 2.0": PermissiveLicenses.APACHE_2,
     "ISC License": PermissiveLicenses.ISC,
     "EPL 1.0": PermissiveLicenses.EPL,
@@ -39,7 +39,6 @@ LICENSE_MAPPER = {
     "CC BY-SA 3.0": PermissiveLicenses.CC_BY_SA_3,
     "Artistic License 2.0": PermissiveLicenses.ARTISTIC_2,
     "CC BY-SA 4.0": PermissiveLicenses.CC_BY_SA,
-    "BSD 3-Clause License": PermissiveLicenses.BSD,
 }
 
 parser = argparse.ArgumentParser(
@@ -71,20 +70,17 @@ SOURCE_NAME = "Data Provenance Initiative"
 
 
 def listdir_nohidden(path):
-    """Returns all non-hidden files within a directory."""
-    assert os.path.exists(path) and os.path.isdir(path)
+    """Returns all non-hidden files within a directory, raises ValueError if the path is invalid."""
+    if not os.path.exists(path) or not os.path.isdir(path):
+        raise ValueError(
+            f"Provided path '{path}' is either not a directory or does not exist."
+        )
     return [os.path.join(path, f) for f in os.listdir(path) if not f.startswith(".")]
 
 
-def read_jsonl(inpath: str):
-    if inpath[-2:] in ["gz", "gzip"]:
-        with gzip.open(inpath, "rb") as fp:
-            j_reader = jsonlines.Reader(fp)
-            return [l for l in j_reader]
-    else:
-        with open(inpath, "rb") as fp:
-            j_reader = jsonlines.Reader(fp)
-            return [l for l in j_reader]
+def read_jsonl_gz(inpath: str):
+    with gzip.open(inpath, "rb") as fp:
+        return [json.loads(l) for l in fp]
 
 
 def extract_licenses(license_list, gh_license):
@@ -95,36 +91,37 @@ def extract_licenses(license_list, gh_license):
     return list(license_set) + [gh_license]
 
 
-def format_dolma(path: str, include_df: str, source_name: str = SOURCE_NAME):
+def file_to_dolma(path: str, include_df: str, source_name: str = SOURCE_NAME):
     dset_to_license = {
         row["Dataset ID"]: extract_licenses(row["Licenses"], row["GitHub License"])[0]
-        for i, row in include_df.iterrows()
+        for _, row in include_df.iterrows()
     }
     dset_to_lang = {
-        row["Dataset ID"]: eval(row["Languages"])[0] for i, row in include_df.iterrows()
+        row["Dataset ID"]: eval(row["Languages"])[0] for _, row in include_df.iterrows()
     }
     dset_to_url = {
-        row["Dataset ID"]: row["Dataset URL"] for i, row in include_df.iterrows()
+        row["Dataset ID"]: row["Dataset URL"] for _, row in include_df.iterrows()
     }
 
-    dset_collection = read_jsonl(path)
+    dset_collection = read_jsonl_gz(path)
 
     results = []
     for i, ex in enumerate(dset_collection):
-        license_name = dset_to_license[ex["user_parent"]]
+        license_name = str(LICENSE_MAPPER[dset_to_license[ex["user_parent"]]])
         lang = dset_to_lang[ex["user_parent"]]
         url = dset_to_url[ex["user_parent"]]
         results.append(
             {
                 "id": f"{ex['user_parent']}-{i}",
-                "text": ex["inputs"] + "\n" + ex["labels"],
+                "text": ex["inputs"],
+                "response": ex["labels"],
                 "source": source_name,
                 "added": datetime.utcnow().isoformat(),
                 "metadata": {
                     "license": license_name,
                     "language": lang,
                     "url": url,
-                    "title": "",
+                    "dataset_id": ex["user_parent"],
                 },
             }
         )
@@ -139,7 +136,7 @@ def main(args):
     paths = listdir_nohidden(args.indir)
     examples = []
     for path in paths:
-        examples.extend(format_dolma(path, include_df=include_df))
+        examples.extend(file_to_dolma(path, include_df=include_df))
     to_dolma(examples, args.outdir, args.filename, args.shard_size)
 
 

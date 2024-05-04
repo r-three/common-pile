@@ -18,15 +18,13 @@ from tqdm.auto import tqdm
 from data_provenance.constants import HF_MAPPING
 from licensed_pile.logs import configure_logging, get_logger
 
-# logger = configure_logging()
-
 
 def parse_args():
-    parser = argparse.ArgumentParser("Data Provenance Data Downloader")
+    parser = argparse.ArgumentParser(description="Data Provenance Data Downloader")
     parser.add_argument(
         "--hf",
         default="DataProvenanceInitiative/Commercially-Verified-Licenses",
-        help="HuggingFace path",
+        help="The label for the HuggingFace dataset that can be used in HuggingFace's load_dataset()",
     )
     parser.add_argument(
         "--include",
@@ -39,47 +37,30 @@ def parse_args():
     return parser.parse_args()
 
 
-def write_jsonl(
+def write_jsonl_gz(
     data,
     outpath,
-    compress: bool = False,
-    dumps=None,
 ):
     dirname = os.path.dirname(outpath)
     if dirname:
         os.makedirs(dirname, exist_ok=True)
-    if isinstance(data, list):
-        if compress:
-            with gzip.open(outpath, "wb") as fp:
-                json_writer = jsonlines.Writer(fp)  # , dumps=dumps)
-                json_writer.write_all(data)
-        else:
-            with open(outpath, "wb") as fp:
-                json_writer = jsonlines.Writer(fp)  # , dumps=dumps)
-                json_writer.write_all(data)
-    else:  # Must be dataframe:
-        data.to_json(
-            outpath,
-            orient="records",
-            lines=True,
-            compression="gzip" if compress else "infer",
-        )
+    with gzip.open(outpath, "wb") as fp:  # Open file in binary write mode
+        data_bytes = (
+            b"\n".join(json.dumps(d).encode() for d in data) + b"\n"
+        )  # Encode strings to bytes
+        fp.write(data_bytes)
 
 
 def main(args):
-    # logger.info(f"Loading dataset from {args.hf}")
-    # dataset = load_dataset(args.hf, revision="main")
     logger = get_logger()
     logger.info(f"Filtering to just the datasets in {args.include}")
 
-    include_df = pd.read_csv(args.include)  # , sep="\t")
+    include_df = pd.read_csv(args.include)
     include_collections = list(set(include_df["Collection"]))
-    include_dset_ids = list(set(include_df["Dataset ID"]))
-    # filtered_dataset = dataset.filter(lambda x: x["user_parent"] not in include_dset_ids)
+    include_dset_ids = set(include_df["Dataset ID"])
 
     for collection in include_collections:
         folder_name = HF_MAPPING[collection]
-        # dataset = load_dataset("DataProvenanceInitiative/Commercially-Verified-Licenses")
         subset = load_dataset(
             args.hf,
             split="train",
@@ -88,9 +69,8 @@ def main(args):
             data_files=f"data/{folder_name}/*.jsonl",
         ).to_list()
         exs = [ex for ex in subset if ex["user_parent"] in include_dset_ids]
-        # subset = subset[subset["user_parent"].isin(include_dset_ids)]
         savepath = os.path.join(args.outdir, f"{folder_name}.jsonl.gz")
-        write_jsonl(exs, savepath, compress=True)
+        write_jsonl_gz(exs, savepath)
         logger.info(f"Saving {len(exs)} examples to {savepath}")
 
 
