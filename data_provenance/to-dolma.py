@@ -1,4 +1,8 @@
-"""Convert the index+data into the dolma sharded jsonl.gz format."""
+"""Convert the downloaded data into the dolma sharded jsonl.gz format.
+
+We use `download.py` to save our own intermediate copy of the data, before
+preparing for dolma, in this file.
+"""
 
 import argparse
 import functools
@@ -22,16 +26,14 @@ LICENSE_MAPPER = {
     "Custom": PermissiveLicenses.CUSTOM,
     "No License": PermissiveLicenses.NO_LICENSE,
     "OANC": PermissiveLicenses.OANC,
-    "GNU General Public License v3.0": PermissiveLicenses.GPL_V3,
     "MIT License": PermissiveLicenses.MIT,
     "CC BY 4.0": PermissiveLicenses.CC_BY,
     "CC0 1.0": PermissiveLicenses.CC0,
-    "BSD 2-Clause License": PermissiveLicenses.BSD,
-    "BSD 3-Clause License": PermissiveLicenses.BSD,
+    "BSD 2-Clause License": PermissiveLicenses.BSD_2,
+    "BSD 3-Clause License": PermissiveLicenses.BSD_3,
     "Apache License 2.0": PermissiveLicenses.APACHE_2,
     "ISC License": PermissiveLicenses.ISC,
     "EPL 1.0": PermissiveLicenses.EPL,
-    "GNU General Public License v2.0": PermissiveLicenses.GPL_V2,
     "LGPL 2.1": PermissiveLicenses.LGPL_2_1,
     "CC BY-SA": PermissiveLicenses.CC_BY_SA,
     "C-UDA": PermissiveLicenses.C_UDA,

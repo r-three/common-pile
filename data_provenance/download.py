@@ -28,7 +28,7 @@ def parse_args():
     )
     parser.add_argument(
         "--include",
-        default="./data_provenance/include.csv",
+        default="data_provenance/include.csv",
         help="Path to csv file with `Collection Name, Dataset ID` we will include",
     )
     parser.add_argument(
