@@ -12,22 +12,53 @@ mkdir -p "$download_dir"
 
 dates=(
     "2022-08-02"
-#    "2022-08-31"
-#    "2022-09-30"
-#    "2022-10-31"
-#    "2022-11-30"
-#    "2022-12-31"
-#    "2023-01-31"
-#    "2023-02-28"
-#    "2023-03-31"
-#    "2023-04-30"
-#    "2023-05-31"
-#    "2023-07-31"
-#    "2023-08-31"
-#    "2023-12-04"
+    "2022-08-31"
+    "2022-09-30"
+    "2022-10-31"
+    "2022-11-30"
+    "2022-12-31"
+    "2023-01-31"
+    "2023-02-28"
+    "2023-03-31"
+    "2023-04-30"
+    "2023-05-31"
+    "2023-07-31"
+    "2023-08-31"
+    "2023-12-04"
+    "2024-03-11"
 )
 
-max_jobs=4
+max_jobs=8
+
+# Parse command-line options
+while [[ $# -gt 0 ]]; do
+    key="$1"
+    case $key in
+        --test_run)
+            # Use the first N dates for testing
+            shift
+            test_run_count=$1
+            dates=("${dates[@]:0:$test_run_count}")
+            shift
+            ;;
+        --max_jobs)
+            # Set the maximum number of parallel jobs
+            shift
+            max_jobs=$1
+            shift
+            ;;
+        *)
+            echo "Unknown option: $key"
+            exit 1
+            ;;
+    esac
+done
+
+# Display the dates of the files to be fetched
+echo "Dates of files to be fetched:"
+for date in "${dates[@]}"; do
+    echo "$date"
+done
 
 # Function to download and decompress a file
 download_and_decompress() {
