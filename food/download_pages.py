@@ -22,7 +22,6 @@ parser.add_argument(
 )
 parser.add_argument(
     "--output_dir",
-    default="data/pages",
     help="Where to store pages when they are downloaded.",
 )
 parser.add_argument(

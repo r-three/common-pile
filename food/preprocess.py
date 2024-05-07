@@ -113,12 +113,12 @@ def parse_page(html, idx):
     else:
         logger.warning(f"Failed to find text for example: {idx}")
 
+    # Collect all comments first as we may filter them out later.
+    comments = []
     # Find possible comments on the page.
-    if comments := soup.find_all("div", class_="comment"):
-        result.append("\nComments:")
+    if comments_soup := soup.find_all("div", class_="comment"):
         # Parse the author, date, and text from each comment
-        for comment in comments:
-            result.append("\n")
+        for comment in comments_soup:
             if comment_submitted := comment.find("div", class_="submitted"):
                 if comment_author := comment_submitted.find(
                     ["span", "a"], class_="username"
@@ -129,24 +129,44 @@ def parse_page(html, idx):
                     if comment_author.name == "a":
                         user_id = comment_author["href"]
                     comment_author = comment_author.get_text().strip()
-                    result.append(comment_author)
-                    authors.append((comment_author, user_id))
                 else:
                     logger.warning(f"Failed to find comment author in example: {idx}")
                 # The date follows a <br> which bs4 wraps in <br>...</br>
                 if comment_date := comment_submitted.find("br"):
                     comment_date = comment_date.get_text().strip()
-                    result.append(comment_date)
                 else:
                     logger.warning(f"Failed to find comment date in example: {idx}")
             if comment_text := comment.find("div", class_="content"):
                 comment_text = comment_text.get_text().strip()
-                result.append(f"\n{comment_text}")
             else:
                 logger.warning(f"Failed to find comment text in example: {idx}")
+
+            # Some comments seems to be snippets from other sites, ignore those
+            if comment_text.startswith("[...]") or comment_text.endswith("[...]"):
+                continue
+            comments.append(
+                {
+                    "author": comment_author,
+                    "date": comment_date,
+                    "text": comment_text,
+                    "user_id": user_id,
+                }
+            )
     else:
         # Not all articles have comments, so we don't call this an error.
         logger.info(f"Didn't find comments for example: {idx}")
+
+    # Add non-filtered comments into the text.
+    if comments:
+        result.append("\nComments:")
+        for comment in comments:
+            authors.append((comment["author"], comment["user_id"]))
+            if comment["author"]:
+                result.append(comment["author"])
+            if comment["date"]:
+                result.append(comment["date"])
+            if comment["text"]:
+                result.append(f"\n{comment['text']}")
 
     result = "\n".join(result).strip()
     return result, sorted(set(authors)), parse_date(date)
