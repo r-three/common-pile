@@ -1,4 +1,6 @@
 click
+pyrate-limiter
 requests-ratelimiter
 titlecase
 furl
+tqdm

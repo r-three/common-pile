@@ -222,16 +222,16 @@ def main():
 
 @main.command()
 @click.option(
-    "--base_url",
+    "--base-url",
     required=True,
     help="Base URL for the data to be downloaded (including LoC catalog facets, etc.).",
     default="https://www.loc.gov/collections/selected-digitized-books/?fa=language:english",
 )
 @click.option(
-    "--download_folder", required=True, help="Download folder for the data to be saved."
+    "--download-folder", required=True, help="Download folder for the data to be saved."
 )
 @click.option(
-    "--date_range", required=False, help="Date range for the data to be downloaded."
+    "--date-range", required=False, help="Date range for the data to be downloaded."
 )
 def download(base_url, download_folder, date_range):
     if date_range:
@@ -248,7 +248,7 @@ def download(base_url, download_folder, date_range):
 
 
 @click.option(
-    "--download_folder",
+    "--download-folder",
     required=True,
     help="Download folder for the data to be processed.",
 )
