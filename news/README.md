@@ -34,3 +34,14 @@ Public Domain
 Use
 
 `bash news/get-data.sh`
+
+
+## TODO:
+
+Add per site filtering to urls, for example, balkandiskurs should probably have a filter that ensures the url path starts with /en/YYYY/MM/DD...
+
+`https://globalvoices.org/2008/07/22/home/` gets filtered based on removing `/home/` from 360info. Have per site filters?
+
+Milwaukee seems to have a lot of link that aren't from the same site.
+
+There are a lot of pages that are just pictures for Propastop, they aren't easy to filter out.
