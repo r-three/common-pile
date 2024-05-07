@@ -67,7 +67,7 @@ class FoodistaParallel(ShardParallelProcessor):
         return example
 
 
-def parse_page(html, idx):
+def parse_page(html, idx, include_user_id: bool = False):
     """Convert a page's html to plain text for LLM training."""
     logger = logs.get_logger("dolma.FoodistaParallel")
     soup = bs4.BeautifulSoup(html, "html.parser")
@@ -93,7 +93,10 @@ def parse_page(html, idx):
             )
         author = author.get_text().strip()
         result.append(f"By: {author}")
-        authors.append((author, user_id))
+        if include_user_id:
+            authors.append((author, user_id))
+        else:
+            authors.append(author)
     else:
         logger.warning(f"Failed to find author for example: {idx}")
 
@@ -160,7 +163,10 @@ def parse_page(html, idx):
     if comments:
         result.append("\nComments:")
         for comment in comments:
-            authors.append((comment["author"], comment["user_id"]))
+            if include_user_id:
+                authors.append((comment["author"], comment["user_id"]))
+            else:
+                authors.append(comment["author"])
             if comment["author"]:
                 result.append(comment["author"])
             if comment["date"]:
