@@ -17,7 +17,7 @@ SOURCE_NAME = "CourtListenerOpinion"
 
 csv.field_size_limit(sys.maxsize)
 
-configure_logging("court-listener-opinion")
+logger = configure_logging("court-listener-opinion")
 
 
 def make_record_generator(file_path):
@@ -51,7 +51,7 @@ def main(args):
         ".csv", ".jsonl.gz"
     )
     to_dolma(example_generator, args.output_dir, output_file_base_name, args.shard_size)
-    logging.info(f"Saved {args.input_file} as dolma shared files at {args.output_dir}")
+    logger.info(f"Saved {args.input_file} as dolma shared files at {args.output_dir}")
 
 
 if __name__ == "__main__":
