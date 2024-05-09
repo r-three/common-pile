@@ -1,3 +1,4 @@
+import datetime
 import functools
 import multiprocessing.dummy as mp
 import os
@@ -21,6 +22,8 @@ from tenacity import (
 from tqdm import tqdm
 
 from licensed_pile import logs
+from licensed_pile.licenses import PermissiveLicenses
+from licensed_pile.write import to_dolma
 
 file_directory = os.path.dirname(os.path.abspath(__file__))
 download_folder = os.path.join(file_directory, "data/downloads/books")
@@ -104,7 +107,7 @@ class LocBooksDownloader:
                             )
                             raise e
             except RetryError:
-                logger.error(f"Failed to download {text_file_url} after 5 attempts")
+                logger.error(f"Failed to download {text_file_url} after 3 attempts")
                 return {
                     "success": False,
                     "url": text_file_url,
@@ -113,6 +116,44 @@ class LocBooksDownloader:
                 }
 
         return None
+
+
+class LocBooksProcessor:
+    def __init__(self, metadata_file):
+        self.metadata = pd.read_csv(metadata_file)
+        self.metadata["text_file_name"] = self.metadata["text_file_url"].apply(
+            lambda x: Path(str(furl(x).path)).name
+        )
+
+    def start_processing(self, shard_size, filename):
+        text_files = list(Path(download_folder).glob("*.txt"))
+        print(f"Found {len(text_files)} text files")
+        results = map(functools.partial(self.format_dolma), text_files)
+        to_dolma(results, "data/processed/books", filename, shard_size)
+
+    def format_dolma(self, filepath):
+        filename = filepath.name
+        metadata = self.metadata.loc[self.metadata["text_file_name"] == filename]
+        if not metadata.empty:
+            with open(filepath) as f:
+                text = f.read()
+
+            dolma_data = {
+                "id": metadata["lccn"].values[0],
+                "text": text,
+                "source": "loc_books",
+                "added": datetime.datetime.utcnow().isoformat(),
+                "metadata": {
+                    "license": str(PermissiveLicenses.PD),
+                    "title": metadata["title"].values[0],
+                    "author": metadata["author"].values[0],
+                    "year": int(metadata["year"].values[0]),
+                    "language": metadata["language"].values[0],
+                    "url": metadata["text_file_url"].values[0],
+                },
+            }
+
+            return dolma_data
 
 
 @click.group()
@@ -126,6 +167,21 @@ def download(metadata_file):
     metadata_path = Path(metadata_file).absolute()
     downloader = LocBooksDownloader(metadata_path)
     downloader.start_download()
+
+
+@main.command()
+@click.option("--metadata-file", required=True, help="Path to the metadata file")
+@click.option("--shard-size", default=1, help="File size in GB")
+@click.option(
+    "--filename",
+    required=True,
+    default="loc_books.jsonl.gz",
+    help="The base filename for LOC books",
+)
+def process(metadata_file, shard_size, filename):
+    metadata_path = Path(metadata_file).absolute()
+    processor = LocBooksProcessor(metadata_path)
+    processor.start_processing(shard_size, filename)
 
 
 if __name__ == "__main__":
