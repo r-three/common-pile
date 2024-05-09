@@ -22,19 +22,20 @@ filename_digits = 4
 
 logger = logs.get_logger("loc_books")
 
+
 class LocBooksMetadataDownloader:
     def __init__(self, base_url, download_folder):
         self.base_url = base_url
         self.download_folder = download_folder
-        self.burst_rate = RequestRate(
-            20, Duration.SECOND * 10
-        )  # 10 requests per 10 seconds
-        self.crawl_rate = RequestRate(80, Duration.MINUTE)  # 80 requests per minute
-        self.limiter = Limiter(self.burst_rate, self.crawl_rate)
-        self.start = time()
+
+        concurrent_rate = RequestRate(10, Duration.SECOND)
+        burst_rate = RequestRate(20, Duration.SECOND * 10)
+        crawl_rate = RequestRate(80, Duration.MINUTE)
+        self.limiter = Limiter(concurrent_rate, burst_rate, crawl_rate)
+        self.session = LimiterSession(limiter=self.limiter)
+
         self.date_facets = []
         self.items_per_page = 100
-        self.session = LimiterSession(limiter=self.limiter)
         self.progress_bar = tqdm(
             total=0, position=0, delay=1, desc="Downloading metadata"
         )
