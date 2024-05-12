@@ -23,7 +23,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Data Provenance Data Downloader")
     parser.add_argument(
         "--hf",
-        default="DataProvenanceInitiative/Commercially-Verified-Licenses",
+        default="DataProvenanceInitiative/Ultra_Permissive_Test",
         help="The label for the HuggingFace dataset that can be used in HuggingFace's load_dataset()",
     )
     parser.add_argument(
