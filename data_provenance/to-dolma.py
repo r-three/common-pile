@@ -17,15 +17,12 @@ import pandas as pd
 
 from data_provenance.constants import HF_MAPPING
 from licensed_pile.licenses import PermissiveLicenses
-from licensed_pile.write import to_dolma
+
+# from licensed_pile.write import to_dolma
 
 LICENSE_MAPPER = {
-    "CDLA Sharing 1.0": PermissiveLicenses.CDLA,
     "MPL 2.0": PermissiveLicenses.MPL,
     "CDLA Permissive 1.0": PermissiveLicenses.CDLA_P,
-    "Custom": PermissiveLicenses.CUSTOM,
-    "No License": PermissiveLicenses.NO_LICENSE,
-    "OANC": PermissiveLicenses.OANC,
     "MIT License": PermissiveLicenses.MIT,
     "CC BY 4.0": PermissiveLicenses.CC_BY,
     "CC0 1.0": PermissiveLicenses.CC0,
@@ -34,9 +31,7 @@ LICENSE_MAPPER = {
     "Apache License 2.0": PermissiveLicenses.APACHE_2,
     "ISC License": PermissiveLicenses.ISC,
     "EPL 1.0": PermissiveLicenses.EPL,
-    "LGPL 2.1": PermissiveLicenses.LGPL_2_1,
     "CC BY-SA": PermissiveLicenses.CC_BY_SA,
-    "C-UDA": PermissiveLicenses.C_UDA,
     "CC BY 3.0": PermissiveLicenses.CC_BY_3,
     "CC BY-SA 3.0": PermissiveLicenses.CC_BY_SA_3,
     "Artistic License 2.0": PermissiveLicenses.ARTISTIC_2,
@@ -89,19 +84,26 @@ def extract_licenses(license_list, gh_license):
     license_set = set()
     for license_dict in eval(license_list):
         if license_dict["License"] != "Unspecified":
-            license_set.add(license_dict["License"])
-    return list(license_set) + [gh_license]
+            license_set.add(str(LICENSE_MAPPER[license_dict["License"]]))
+    if gh_license:
+        license_set = list(license_set) + [str(LICENSE_MAPPER[gh_license])]
+    return license_set
 
 
 def file_to_dolma(path: str, include_df: str, source_name: str = SOURCE_NAME):
-    dset_to_license = {
-        row["Dataset ID"]: extract_licenses(row["Licenses"], row["GitHub License"])[0]
+    dset_to_licenses = {
+        row["Dataset ID"]: extract_licenses(row["Licenses"], row["GitHub License"])
         for _, row in include_df.iterrows()
     }
-    dset_to_lang = {
-        row["Dataset ID"]: eval(row["Languages"])[0] for _, row in include_df.iterrows()
+    dset_to_license_urls = {
+        row["Dataset ID"]: entry["License URL"]
+        for _, row in include_df.iterrows()
+        for entry in eval(row["Licenses"])
     }
-    dset_to_url = {
+    dset_to_langs = {
+        row["Dataset ID"]: eval(row["Languages"]) for _, row in include_df.iterrows()
+    }
+    dset_to_urls = {
         row["Dataset ID"]: row["Dataset URL"] for _, row in include_df.iterrows()
     }
 
@@ -109,9 +111,10 @@ def file_to_dolma(path: str, include_df: str, source_name: str = SOURCE_NAME):
 
     results = []
     for i, ex in enumerate(dset_collection):
-        license_name = str(LICENSE_MAPPER[dset_to_license[ex["user_parent"]]])
-        lang = dset_to_lang[ex["user_parent"]]
-        url = dset_to_url[ex["user_parent"]]
+        license_names = dset_to_licenses[ex["user_parent"]]
+        langs = dset_to_langs[ex["user_parent"]]
+        url = dset_to_urls[ex["user_parent"]]
+        license_urls = dset_to_license_urls[ex["user_parent"]]
         results.append(
             {
                 "id": f"{ex['user_parent']}-{i}",
@@ -120,8 +123,9 @@ def file_to_dolma(path: str, include_df: str, source_name: str = SOURCE_NAME):
                 "source": source_name,
                 "added": datetime.utcnow().isoformat(),
                 "metadata": {
-                    "license": license_name,
-                    "language": lang,
+                    "license": license_names,
+                    "license_urls": license_urls,
+                    "language": langs,
                     "url": url,
                     "dataset_id": ex["user_parent"],
                 },
@@ -133,13 +137,13 @@ def file_to_dolma(path: str, include_df: str, source_name: str = SOURCE_NAME):
 def main(args):
     os.makedirs(args.outdir, exist_ok=True)
 
-    include_df = pd.read_csv(args.include)
+    include_df = pd.read_csv(args.include).fillna("")
 
     paths = listdir_nohidden(args.indir)
     examples = []
     for path in paths:
         examples.extend(file_to_dolma(path, include_df=include_df))
-    to_dolma(examples, args.outdir, args.filename, args.shard_size)
+    # to_dolma(examples, args.outdir, args.filename, args.shard_size)
 
 
 if __name__ == "__main__":
