@@ -25,25 +25,30 @@ from licensed_pile import logs
 from licensed_pile.licenses import PermissiveLicenses
 from licensed_pile.write import to_dolma
 
-file_directory = os.path.dirname(os.path.abspath(__file__))
-download_folder = os.path.join(file_directory, "data/downloads/books")
+data_path = Path(__file__).resolve().parent / "data"
+metadata_exports_path = data_path / "exports/metadata"
+book_downloads_path = data_path / "downloads/books"
+book_exports_path = data_path / "exports/books"
 
 logger = logs.get_logger("loc_books")
 
 
 class LocBooksDownloader:
-    def __init__(self, metadata_file):
-        self.metadata_file = metadata_file
+    def __init__(self, snapshot):
+        self.snapshot = snapshot
 
-        concurrent_rate = RequestRate(10, Duration.SECOND)
-        burst_rate = RequestRate(80, Duration.SECOND * 10)
-        crawl_rate = RequestRate(400, Duration.MINUTE)
-        self.limiter = Limiter(concurrent_rate, burst_rate, crawl_rate)
+        metadata_path = Path(metadata_exports_path) / f"{snapshot}.csv"
+        self.metadata_file = metadata_path.absolute()
+
+        self.concurrent_rate = RequestRate(10, Duration.SECOND)
+        self.burst_rate = RequestRate(80, Duration.SECOND * 10)
+        self.crawl_rate = RequestRate(400, Duration.MINUTE)
+        self.limiter = Limiter(self.concurrent_rate, self.burst_rate, self.crawl_rate)
         self.session = LimiterSession(limiter=self.limiter)
 
         self.progress_bar = tqdm(total=0, position=0, delay=1, desc="Downloading books")
 
-    def start_download(self):
+    def download(self):
         metadata = pd.read_csv(self.metadata_file)
         metadata_filtered = metadata.dropna()
         metadata_filtered = metadata_filtered[
@@ -52,13 +57,17 @@ class LocBooksDownloader:
         metadata_filtered = metadata_filtered[metadata_filtered["year"] >= 1500]
 
         text_file_urls = metadata_filtered["text_file_url"]
-        print(f"Found {len(text_file_urls)} books in metadata file")
         download_urls = self.urls_to_download(text_file_urls)
-        print(f"{len(text_file_urls) - len(download_urls)} books already downloaded")
-        print(f"Downloading {len(download_urls)} books")
+
+        logger.info(f"Found {len(text_file_urls)} books in metadata file")
+        logger.info(
+            f"{len(text_file_urls) - len(download_urls)} books already downloaded"
+        )
+        logger.info(f"Downloading {len(download_urls)} books")
+
         self.progress_bar.total = len(download_urls)
 
-        with mp.Pool(20) as pool:
+        with mp.Pool(10) as pool:
             results = pool.imap(functools.partial(self.download_book), download_urls)
             for result in results:
                 if result:
@@ -68,7 +77,7 @@ class LocBooksDownloader:
 
     def urls_to_download(self, text_file_urls):
         existing_files = set(
-            [path.name for path in Path(download_folder).glob("*.txt")]
+            [path.name for path in Path(book_downloads_path).glob("*.txt")]
         )
         download_urls = [
             text_file_url
@@ -81,7 +90,7 @@ class LocBooksDownloader:
     def download_book(self, text_file_url):
         text_file_furl = furl(text_file_url)
         text_file_name = Path(str(text_file_furl.path)).name
-        text_file_path = os.path.join(download_folder, text_file_name)
+        text_file_path = os.path.join(book_downloads_path, text_file_name)
         if not os.path.exists(text_file_path):
             try:
                 for attempt in Retrying(
@@ -118,18 +127,27 @@ class LocBooksDownloader:
         return None
 
 
-class LocBooksProcessor:
-    def __init__(self, metadata_file):
+class LocBooksExporter:
+    def __init__(self, snapshot):
+        self.snapshot = snapshot
+
+        metadata_path = metadata_exports_path / f"{snapshot}.csv"
+        metadata_file = metadata_path.absolute()
+
         self.metadata = pd.read_csv(metadata_file)
         self.metadata["text_file_name"] = self.metadata["text_file_url"].apply(
             lambda x: Path(str(furl(x).path)).name
         )
 
-    def start_processing(self, shard_size, filename):
-        text_files = list(Path(download_folder).glob("*.txt"))
-        print(f"Found {len(text_files)} text files")
+    def export(self, shard_size, filename):
+        text_files = list(book_downloads_path.glob("*.txt"))
+        logger.info(f"Found {len(text_files)} text files")
         results = map(functools.partial(self.format_dolma), text_files)
-        to_dolma(results, "data/processed/books", filename, shard_size)
+
+        export_folder = book_exports_path / self.snapshot
+        export_folder.mkdir(parents=True, exist_ok=True)
+
+        to_dolma(results, export_folder, filename, shard_size)
 
     def format_dolma(self, filepath):
         filename = filepath.name
@@ -149,7 +167,8 @@ class LocBooksProcessor:
                     "author": metadata["author"].values[0],
                     "year": int(metadata["year"].values[0]),
                     "language": metadata["language"].values[0],
-                    "url": metadata["text_file_url"].values[0],
+                    "item_url": f"https://www.loc.gov/item/{metadata['lccn'].values[0]}",
+                    "text_file_url": metadata["text_file_url"].values[0],
                 },
             }
 
@@ -162,26 +181,24 @@ def main():
 
 
 @main.command()
-@click.option("--metadata-file", required=True, help="Path to the metadata file")
-def download(metadata_file):
-    metadata_path = Path(metadata_file).absolute()
-    downloader = LocBooksDownloader(metadata_path)
-    downloader.start_download()
+@click.option("--snapshot", required=True, help="Snapshot name")
+def download(snapshot):
+    downloader = LocBooksDownloader(snapshot)
+    downloader.download()
 
 
 @main.command()
-@click.option("--metadata-file", required=True, help="Path to the metadata file")
-@click.option("--shard-size", default=1, help="File size in GB")
+@click.option("--snapshot", required=True, help="Snapshot name")
+@click.option("--dolma-shard-size", default=1, help="File size in GB")
 @click.option(
-    "--filename",
+    "--dolma-filename",
     required=True,
     default="loc_books.jsonl.gz",
-    help="The base filename for LOC books",
+    help="The base filename for the dolma export",
 )
-def process(metadata_file, shard_size, filename):
-    metadata_path = Path(metadata_file).absolute()
-    processor = LocBooksProcessor(metadata_path)
-    processor.start_processing(shard_size, filename)
+def export(snapshot, dolma_shard_size, dolma_filename):
+    exporter = LocBooksExporter(snapshot)
+    exporter.export(dolma_shard_size, dolma_filename)
 
 
 if __name__ == "__main__":

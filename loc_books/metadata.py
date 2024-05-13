@@ -16,22 +16,23 @@ from tqdm import tqdm
 
 from licensed_pile import logs
 
-file_directory = os.path.dirname(os.path.abspath(__file__))
-downloads_folder = os.path.join(file_directory, "data/downloads/metadata")
+data_path = Path(__file__).resolve().parent / "data"
+metadata_downloads_path = data_path / "downloads/metadata"
+metadata_exports_path = data_path / "exports/metadata"
 filename_digits = 4
 
 logger = logs.get_logger("loc_books")
 
 
 class LocBooksMetadataDownloader:
-    def __init__(self, base_url, download_folder):
+    def __init__(self, base_url, snapshot):
         self.base_url = base_url
-        self.download_folder = download_folder
+        self.snapshot = snapshot
+        self.download_path = metadata_downloads_path / snapshot
 
-        concurrent_rate = RequestRate(10, Duration.SECOND)
-        burst_rate = RequestRate(20, Duration.SECOND * 10)
-        crawl_rate = RequestRate(80, Duration.MINUTE)
-        self.limiter = Limiter(concurrent_rate, burst_rate, crawl_rate)
+        self.burst_rate = RequestRate(10, Duration.SECOND * 10)
+        self.crawl_rate = RequestRate(60, Duration.MINUTE)
+        self.limiter = Limiter(self.burst_rate, self.crawl_rate)
         self.session = LimiterSession(limiter=self.limiter)
 
         self.date_facets = []
@@ -56,7 +57,8 @@ class LocBooksMetadataDownloader:
             logger.error("Failed to download base URL:", str(e))
 
     def download_date_facet(self, date_facet):
-        facet_folder = os.path.join(self.download_folder, date_facet["year_range"])
+        facet_path = self.download_path / date_facet["year_range"]
+        facet_folder = facet_path.absolute()
         facet_url = date_facet["link"]
 
         os.makedirs(facet_folder, exist_ok=True)
@@ -133,9 +135,10 @@ class LocBooksMetadataDownloader:
         self.progress_bar.desc = f"{filename}"
 
 
-class LocBooksMetadataParser:
-    def __init__(self, download_folder):
-        self.download_folder = download_folder
+class LocBooksMetadataExporter:
+    def __init__(self, snapshot):
+        download_path = metadata_downloads_path / snapshot
+        self.download_folder = download_path.absolute()
         self.total_data = []
 
     def parse_year(self, x):
@@ -166,7 +169,7 @@ class LocBooksMetadataParser:
                 if file.endswith(".json"):
                     json_files.append(os.path.join(root, file))
 
-        progress_bar = tqdm(json_files, desc="Processing metadata")
+        progress_bar = tqdm(json_files, desc="Exporting metadata")
 
         for filepath in progress_bar:
             filename = os.path.basename(filepath).split(".")[0]
@@ -225,23 +228,12 @@ def main():
 @click.option(
     "--base-url",
     required=True,
-    help="Base URL for the data to be downloaded (including LoC catalog facets, etc.).",
+    help="Base URL for the data to be downloaded (including facets, etc.).",
     default="https://www.loc.gov/collections/selected-digitized-books/?fa=language:english",
 )
-@click.option(
-    "--download-folder", required=True, help="Download folder for the data to be saved."
-)
-@click.option(
-    "--date-range", required=False, help="Date range for the data to be downloaded."
-)
-def download(base_url, download_folder, date_range):
-    if date_range:
-        base_url = f"{base_url}&dates={date_range}"
-        first_date = date_range.split("/")[0]
-        last_date = date_range.split("/")[1]
-        download_folder = os.path.join(download_folder, f"{first_date}-{last_date}")
-
-    downloader = LocBooksMetadataDownloader(base_url, download_folder)
+@click.option("--snapshot", required=True, help="Snapshot name")
+def download(base_url, snapshot):
+    downloader = LocBooksMetadataDownloader(base_url, snapshot)
     downloader.start_download()
     logger.info(
         f"Downloaded {downloader.progress_bar.total} pages. {downloader.existing_pages_count} files already exist."
@@ -249,19 +241,17 @@ def download(base_url, download_folder, date_range):
 
 
 @click.option(
-    "--download-folder",
+    "--snapshot",
     required=True,
-    help="Download folder for the data to be processed.",
+    help="Folder where metadata has been downloaded.",
 )
 @main.command()
-def process(download_folder):
-    parser = LocBooksMetadataParser(download_folder)
+def export(snapshot):
+    parser = LocBooksMetadataExporter(snapshot)
     df = parser.parse_files()
-    filename = Path(download_folder).name + ".csv"
-    processed_folder = os.path.join(file_directory, "data/processed/metadata")
-    processed_csv = os.path.join(processed_folder, filename)
-    df.to_csv(processed_csv, index=False)
-    logger.info(f"Processed metadata saved to {processed_csv}")
+    export_csv = metadata_exports_path / f"{snapshot}.csv"
+    df.to_csv(export_csv, index=False)
+    logger.info(f"Exported metadata saved to {export_csv}")
 
 
 if __name__ == "__main__":
