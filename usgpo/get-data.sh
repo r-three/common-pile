@@ -1,7 +1,7 @@
 set -e
 
 api_key=${1}
-start_date=${2}
+start_date=${2:-"1990-01-01'T'00:00:00'Z'"}
 
 USGPO_DIRECTORY="data/usgpo"
 
