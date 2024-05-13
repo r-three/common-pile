@@ -4,3 +4,4 @@ requests-ratelimiter
 titlecase
 furl
 tqdm
+pandas
