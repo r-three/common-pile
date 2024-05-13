@@ -18,6 +18,9 @@ cd mathml-to-latex || exit
 # Install Node.js dependencies
 npm install
 
+# Compile TypeScript to JavaScript
+npx tsc
+
 # Start the Node server in the background
 node dist/server.js &
 
