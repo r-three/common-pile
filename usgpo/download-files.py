@@ -1,25 +1,19 @@
 import argparse
+import datetime
 import html
-import logging
 import os
 import queue
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import datetime
 
 import jsonlines
 import requests
 from bs4 import BeautifulSoup
 from tqdm.auto import tqdm
 
-from licensed_pile.write import to_dolma
+from licensed_pile import logs
 from licensed_pile.licenses import PermissiveLicenses
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="download-files: [%(asctime)s] [%(funcName)s] %(levelname)s - %(message)s",
-)
-
+from licensed_pile.write import to_dolma
 
 SOURCE_NAME = "usgpo"
 
@@ -49,10 +43,11 @@ def parse_args():
 
 
 def api_query(endpoint, headers, params):
+    logger = logs.get_logger("usgpo")
     response = requests.get(endpoint, headers=headers, params=params)
     if response.status_code == 429:
         # Sleep for an hour if we've hit the rate-limit
-        logging.info("Sleeping for one hour to avoid rate-limit")
+        logger.info("Sleeping for one hour to avoid rate-limit")
         time.sleep(60 * 60)
         response = requests.get(endpoint, headers=headers, params=params)
     return response
@@ -116,4 +111,5 @@ def main(args):
 
 if __name__ == "__main__":
     args = parse_args()
+    logs.configure_logging("usgpo")
     main(args)

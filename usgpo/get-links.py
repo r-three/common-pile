@@ -1,6 +1,5 @@
 import argparse
 import json
-import logging
 import os
 import queue
 import time
@@ -9,11 +8,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import jsonlines
 import requests
 from tqdm.auto import tqdm
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="get-links: [%(asctime)s] [%(funcName)s] %(levelname)s - %(message)s",
-)
 
 
 def parse_args():
@@ -52,16 +46,18 @@ def parse_args():
 
 
 def api_query(endpoint, headers, params):
+    logger = logs.get_logger("usgpo")
     response = requests.get(endpoint, headers=headers, params=params)
     if response.status_code == 429:
         # Sleep for an hour if we've hit the rate-limit
-        logging.info("Sleeping for one hour to avoid rate-limit")
+        logger.info("Sleeping for one hour to avoid rate-limit")
         time.sleep(60 * 60)
         response = requests.get(endpoint, headers=headers, params=params)
     return response
 
 
 def get_collections(api_key):
+    logger = logs.get_logger("usgpo")
     response = api_query(
         "https://api.govinfo.gov/collections",
         headers={"accept": "application/json"},
@@ -72,10 +68,11 @@ def get_collections(api_key):
         for record in output["collections"]:
             yield record["collectionCode"]
     else:
-        logging.error(f"get_collections received status code {response.status_code}")
+        logger.error(f"get_collections received status code {response.status_code}")
 
 
 def get_packages(api_key, collections, start_date, package_queue):
+    logger = logs.get_logger("usgpo")
     url = f"https://api.govinfo.gov/published/{start_date}"
     offset_mark = "*"
     pbar = tqdm(desc="Producer")
@@ -102,7 +99,7 @@ def get_packages(api_key, collections, start_date, package_queue):
             # Prevent too many API requests in a short period of time
             time.sleep(5)
         else:
-            logging.error(
+            logger.error(
                 f"get_packages received status code {response.status_code} for query {url}"
             )
             break
@@ -165,15 +162,18 @@ def main(args):
     metadata_queue = queue.Queue()
 
     with ThreadPoolExecutor(max_workers=args.workers + 2) as executor:
+        # One thread for getting each package (i.e. file) from the specified collections
         executor.submit(
             get_packages, args.api_key, args.collections, args.start_date, package_queue
         )
 
+        # `args.workers` threads for getting package metadata
         for _ in range(args.workers):
             executor.submit(
                 get_package_metadata, args.api_key, package_queue, metadata_queue
             )
 
+        # One thread for writing out the package metadata to disk
         executor.submit(write_metadata, args.output_dir, metadata_queue)
 
         metadata_queue.join()
@@ -181,4 +181,5 @@ def main(args):
 
 if __name__ == "__main__":
     args = parse_args()
+    logs.configure_logging("usgpo")
     main(args)
