@@ -1,53 +1,105 @@
 import argparse
+import glob
 from functools import partial
+from typing import Iterable
 
-import datasets
-from download_preprocess import format_text
+import polars as pl
+from download_preprocess import parse_html
+from polars import col
 
 from licensed_pile.licenses import PermissiveLicenses
 from licensed_pile.write import to_dolma
 
 
-def get_dataset(
-    hf_path: str, cache_dir: str | None = None, streaming: bool = False
-) -> datasets.Dataset:
-    kwargs = dict(split="train")
-    if cache_dir:
-        kwargs["cache_dir"] = cache_dir
-    if streaming:
-        kwargs["streaming"] = True
-    uspto_df = datasets.load_dataset(hf_path, **kwargs)
-    return uspto_df
+def scan_dataset(
+    data_dir: str = r"./data/uspto/",
+    url=r"http://localhost:3000/convert",
+    streaming: bool = True,
+) -> Iterable[dict]:
+    """
+    Scans the dataset in the specified directory and yields dictionaries representing each row of data.
+    The data is selected and transformed according to the specified columns.
+    HTML content in the "description_html" and "claims_html" columns is parsed using the provided local URL.
+
+    Parameters:
+    - data_dir (str): The path to the directory containing the dataset. Defaults to "./data/uspto/".
+    - url (str): The URL used for parsing HTML content. Defaults to "http://localhost:3000/convert".
+    - streaming (bool): Do not load the whole dataset in Memory. Defaults to True.
+
+    Returns:
+    Iterable[dict]: An iterable of dictionaries representing each row of data.
+
+    Example usage:
+    ```python
+    for row in scan_dataset(data_dir="./data/", url="http://example.com/"):
+        print(row)
+    ```
+    """
+    if not data_dir[-1] == r"/":
+        data_dir += r"/"
+    html_fn = partial(parse_html, url)
+
+    # columns to use
+    columns = [
+        "title_text",
+        "title_language",
+        "abstract_text",
+        "description_html",
+        "claims_html",
+        "publication_date",
+        "application_number",
+        "filing_date",
+    ]
+    for file_name in glob.glob(data_dir + r"*.parquet"):
+        df: pl.LazyFrame = (
+            pl.scan_parquet(file_name)
+            .select(columns)
+            .drop_nulls(["abstract_text", "description_html", "claims_html"])
+            # we use app no. for the id and filing date for the date added to database
+            .rename({"application_number": "id", "filing_date": "added"})
+            .with_columns(
+                col("added").cast(pl.String, strict=False),
+                col("publication_date").cast(pl.String, strict=False),
+                col("description_html").map_elements(html_fn, return_dtype=pl.String),
+                col("claims_html").map_elements(html_fn, return_dtype=pl.String),
+                # if abstract returns `ABSTRACT\n\n<abstract>`. Null otherwise
+                pl.concat_str(
+                    pl.lit(r"ABSTRACT", dtype=pl.String),
+                    pl.lit("\n\n", dtype=pl.String),
+                    col("abstract_text"),
+                    ignore_nulls=False,
+                ).alias("abstract_text"),
+            )
+            .with_columns(
+                pl.concat_str(
+                    col("title_text"),
+                    pl.lit("\n\n", dtype=pl.String),
+                    col("abstract_text"),
+                    col("description_html"),
+                    col("claims_html"),
+                    ignore_nulls=True,
+                ).alias("text")
+            )
+        ).select(["id", "text", "added", "title_language", "publication_date"])
+
+        yield from df.collect(streaming=streaming).iter_rows(named=True)
 
 
-def return_dolma(ds: datasets.Dataset) -> dict[str, str]:
+def serialize_dolma(ds: Iterable[dict[str, str]]) -> dict[str, str]:
     for x in ds:
-        output = {
-            "text": x.get("text"),
-            "id": x.get("application_number"),
+        metadata = {
             "source": "Google Patents Public Data",
             "metadata": {
                 "license": str(PermissiveLicenses.CC_BY),
-                "language": x.get("title_language"),
-                "publication_date": str(x.get("publication_date")),
+                "language": x.pop("title_language", "en"),
+                "publication_date": str(x.pop("publication_date", "9999")),
             },
         }
-        yield output
+        yield x | metadata
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument(
-    "--output_dir", type=str, help="Output directory", default=r"/data/uspto/raw"
-)
-parser.add_argument(
-    "--dataset", type=str, help="Path to raw HF dataset", default=r"baber/USPTO"
-)
-parser.add_argument(
-    "--cache_dir",
-    type=str,
-    help="Path to cache HF dataset",
-    default=r"./data/uspto/raw",
-)
+parser.add_argument("--output_dir", type=str, help="Output directory", default=r"raw")
 parser.add_argument("--streaming", action="store_true")
 parser.add_argument(
     "--url",
@@ -58,10 +110,5 @@ parser.add_argument(
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    URL = args.url
-    DATASET = args.dataset
-    OUTPUT_DIR = args.output_dir
-    uspto_df = get_dataset(DATASET, cache_dir=args.cache_dir, streaming=args.streaming)
-    format_text = partial(format_text, URL)
-    uspto_df = uspto_df.map(format_text, remove_columns=list(uspto_df.column_names))
-    to_dolma(return_dolma(uspto_df), OUTPUT_DIR, "uspto.jsonl.gz")
+    uspto_df = scan_dataset(args.dataset, url=args.url)
+    to_dolma(serialize_dolma(uspto_df), args.output_dir, "uspto.jsonl.gz")

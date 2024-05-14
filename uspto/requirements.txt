@@ -1,2 +1,2 @@
-datasets
-bs4
+polars
+lxml

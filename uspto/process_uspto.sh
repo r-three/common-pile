@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Download HF Dataset repo
+git clone git@hf.co:datasets/baber/USPTO ./data/uspto/raw
+
 # Get the current directory
 CURRENT_DIR=$(basename "$PWD")
 
@@ -8,6 +11,7 @@ if [ "$CURRENT_DIR" != "uspto" ]; then
     # Navigate to the uspto directory
     cd uspto || exit
 fi
+
 
 # Clone MathML to LaTeX converter
 git clone https://github.com/baberabb/mathml-to-latex.git
