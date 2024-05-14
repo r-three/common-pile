@@ -14,7 +14,7 @@ from licensed_pile.write import to_dolma
 def scan_dataset(
     data_dir: str = r"./data/uspto/",
     url=r"http://localhost:3000/convert",
-    streaming: bool = True,
+    limit: int = 0,
 ) -> Iterable[dict]:
     """
     Scans the dataset in the specified directory and yields dictionaries representing each row of data.
@@ -54,7 +54,13 @@ def scan_dataset(
         df: pl.LazyFrame = (
             pl.scan_parquet(file_name)
             .select(columns)
-            .drop_nulls(["abstract_text", "description_html", "claims_html"])
+            .filter(
+                ~pl.all_horizontal(
+                    pl.col(
+                        ["abstract_text", "description_html", "claims_html"]
+                    ).is_null()
+                )
+            )
             # we use app no. for the id and filing date for the date added to database
             .rename({"application_number": "id", "filing_date": "added"})
             .with_columns(
@@ -81,8 +87,9 @@ def scan_dataset(
                 ).alias("text")
             )
         ).select(["id", "text", "added", "title_language", "publication_date"])
-
-        yield from df.collect(streaming=streaming).iter_rows(named=True)
+        if limit > 0:
+            df = df.fetch(limit).lazy()
+        yield from df.collect(streaming=True).iter_rows(named=True)
 
 
 def serialize_dolma(ds: Iterable[dict[str, str]]) -> dict[str, str]:
@@ -100,15 +107,21 @@ def serialize_dolma(ds: Iterable[dict[str, str]]) -> dict[str, str]:
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--output_dir", type=str, help="Output directory", default=r"raw")
-parser.add_argument("--streaming", action="store_true")
 parser.add_argument(
     "--url",
     type=str,
     help="REST API URL for the Node.js MathML to LaTeX converter",
     default=r"http://localhost:3000/convert",
 )
+parser.add_argument(
+    "--limit", type=int, default=0, help="Limit the number of rows to read for testing"
+)
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    uspto_df = scan_dataset(args.dataset, url=args.url)
+    uspto_df = scan_dataset(
+        "/Users/baber/Downloads/uspto_test",
+        url=args.url,
+        limit=args.limit,
+    )
     to_dolma(serialize_dolma(uspto_df), args.output_dir, "uspto.jsonl.gz")
