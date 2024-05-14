@@ -10,7 +10,10 @@ from download_preprocess import parse_html
 from polars import col
 
 from licensed_pile.licenses import PermissiveLicenses
+from licensed_pile.logs import configure_logging, get_logger
 from licensed_pile.write import to_dolma
+
+logger = configure_logging()
 
 
 def batched(iterable, n):
@@ -60,6 +63,7 @@ def process_datasets(
     args = [(x, url, limit) for x in file_name]
     with multiprocessing.get_context("spawn").Pool() as pool:
         for batch in batched(args, max_concurrency):
+            logger.debug("Processing files %s", [b[0] for b in batch])
             for res in pool.imap_unordered(scan_dataset, batch):
                 yield from res.iter_rows(named=True)
 
@@ -199,9 +203,12 @@ def create_args_parser() -> argparse.ArgumentParser:
 
 if __name__ == "__main__":
     args = create_args_parser().parse_args()
+    logger.info(
+        f"""Processing USPTO with the following parameters: Output Dir: {args.output_dir}, Data Dir: {args.data_dir}, REST API URL: {args.url}, Limit: {args.limit}, Max Concurrency: {args.max_concurrency}"""
+    )
     to_dolma(
         serialize_dolma(
-            data_dir=args.data_dir,
+            data_dir="/Users/baber/Downloads/uspto_test/test",
             url=args.url,
             limit=args.limit,
             max_concurrency=args.max_concurrency,
