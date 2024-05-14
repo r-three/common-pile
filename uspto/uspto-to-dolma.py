@@ -166,29 +166,39 @@ def serialize_dolma(
         yield x | metadata
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--output_dir", type=str, help="Output directory", default=r"raw")
-parser.add_argument(
-    "data_dir", type=str, help="Dataset directory where all parquet files are located"
-)
-parser.add_argument(
-    "--url",
-    type=str,
-    help="REST API URL for the Node.js MathML to LaTeX converter",
-    default=r"http://localhost:3000/convert",
-)
-parser.add_argument(
-    "--limit", type=int, default=0, help="Limit the number of rows to read for testing"
-)
-parser.add_argument(
-    "--max-concurrency",
-    type=int,
-    default=4,
-    help="Maximum number of parquet files to process concurrently",
-)
+def create_args_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--output_dir", type=str, help="Output directory", default=r"raw"
+    )
+    parser.add_argument(
+        "data_dir",
+        type=str,
+        help="Dataset directory where all parquet files to process are located ",
+    )
+    parser.add_argument(
+        "--url",
+        type=str,
+        help="REST API URL for the Node.js MathML to LaTeX converter",
+        default=r"http://localhost:3000/convert",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=0,
+        help="Limit the number of rows to read for testing",
+    )
+    parser.add_argument(
+        "--max-concurrency",
+        type=int,
+        default=4,
+        help="Maximum number of parquet files to process concurrently",
+    )
+    return parser
+
 
 if __name__ == "__main__":
-    args = parser.parse_args()
+    args = create_args_parser().parse_args()
     to_dolma(
         serialize_dolma(
             data_dir=args.data_dir,
