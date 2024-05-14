@@ -9,13 +9,15 @@ import urllib.parse
 from rdflib import Graph
 from utils import file_type, parse_id
 
+from licensed_pile import logs
+
 # These books are in PG, but their metadata is messed up. We force their addition
 # to the index here.
 BOOKS = (1546, 378)
 
 parser = argparse.ArgumentParser(description="Add specific books to the main index.")
 parser.add_argument(
-    "books", default=BOOKS, nargs="+", help="Ids of the books to add to the index."
+    "--books", default=BOOKS, nargs="+", help="Ids of the books to add to the index."
 )
 parser.add_argument(
     "--data", default="data/cache/epub", help="Path to the directory of rdf metadata."
@@ -52,7 +54,8 @@ WHERE {
 
 
 def main(args):
-    print("Parsing metadata.")
+    logger = logs.get_logger("gutenberg")
+    logger.info("Parsing metadata.")
     results = []
     for book in args.books:
         g = Graph()
@@ -63,9 +66,9 @@ def main(args):
 
     results = map(lambda x: x.asdict(), results)
     results = list(map(parse_id, results))
-    print(f"Built {len(results)} extra metadata entries.")
+    logger.info(f"Built {len(results)} extra metadata entries.")
 
-    print("Adding new metadata to the index.")
+    logger.info("Adding new metadata to the index.")
     with open(args.index) as f:
         og_results = json.load(f)
 
@@ -76,4 +79,5 @@ def main(args):
 
 if __name__ == "__main__":
     args = parser.parse_args()
+    logs.configure_logging("gutenberg")
     main(args)
