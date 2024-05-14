@@ -17,8 +17,7 @@ import pandas as pd
 
 from data_provenance.constants import HF_MAPPING
 from licensed_pile.licenses import PermissiveLicenses
-
-# from licensed_pile.write import to_dolma
+from licensed_pile.write import to_dolma
 
 LICENSE_MAPPER = {
     "MPL 2.0": PermissiveLicenses.MPL,
@@ -143,7 +142,7 @@ def main(args):
     examples = []
     for path in paths:
         examples.extend(file_to_dolma(path, include_df=include_df))
-    # to_dolma(examples, args.outdir, args.filename, args.shard_size)
+    to_dolma(examples, args.outdir, args.filename, args.shard_size)
 
 
 if __name__ == "__main__":
