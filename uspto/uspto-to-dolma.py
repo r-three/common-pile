@@ -160,7 +160,7 @@ def serialize_dolma(
             "metadata": {
                 "license": str(PermissiveLicenses.CC_BY),
                 "language": x.pop("title_language", "en"),
-                "publication_date": str(x.pop("publication_date", "9999")),
+                "publication_date": str(x.pop("publication_date", "")),
             },
         }
         yield x | metadata
