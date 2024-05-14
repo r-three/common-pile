@@ -107,6 +107,7 @@ def serialize_dolma(ds: Iterable[dict[str, str]]) -> dict[str, str]:
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--output_dir", type=str, help="Output directory", default=r"raw")
+parser.add_argument("data_dir", type=str, help="Dataset directory")
 parser.add_argument(
     "--url",
     type=str,
@@ -120,7 +121,7 @@ parser.add_argument(
 if __name__ == "__main__":
     args = parser.parse_args()
     uspto_df = scan_dataset(
-        "/Users/baber/Downloads/uspto_test",
+        args.data_dir,
         url=args.url,
         limit=args.limit,
     )
