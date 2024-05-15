@@ -19,6 +19,10 @@ from licensed_pile import logs
 data_path = Path(__file__).resolve().parent / "data"
 metadata_downloads_path = data_path / "downloads/metadata"
 metadata_exports_path = data_path / "exports/metadata"
+
+metadata_downloads_path.mkdir(parents=True, exist_ok=True)
+metadata_exports_path.mkdir(parents=True, exist_ok=True)
+
 filename_digits = 4
 
 logger = logs.get_logger("loc_books")
@@ -219,7 +223,7 @@ class LocBooksMetadataExporter:
         return df
 
 
-@click.group()
+@click.group("metadata", context_settings={"show_default": True})
 def main():
     pass
 
@@ -228,7 +232,7 @@ def main():
 @click.option(
     "--base-url",
     required=True,
-    help="Base URL for the data to be downloaded (including facets, etc.).",
+    help="Base URL for the data to be downloaded (including facets, etc.)",
     default="https://www.loc.gov/collections/selected-digitized-books/?fa=language:english",
 )
 @click.option("--snapshot", required=True, help="Snapshot name")
@@ -243,7 +247,7 @@ def download(base_url, snapshot):
 @click.option(
     "--snapshot",
     required=True,
-    help="Folder where metadata has been downloaded.",
+    help="Snapshot name",
 )
 @main.command()
 def export(snapshot):

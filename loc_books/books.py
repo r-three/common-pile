@@ -26,9 +26,13 @@ from licensed_pile.licenses import PermissiveLicenses
 from licensed_pile.write import to_dolma
 
 data_path = Path(__file__).resolve().parent / "data"
+
 metadata_exports_path = data_path / "exports/metadata"
 book_downloads_path = data_path / "downloads/books"
 book_exports_path = data_path / "exports/books"
+
+book_downloads_path.mkdir(parents=True, exist_ok=True)
+book_exports_path.mkdir(parents=True, exist_ok=True)
 
 logger = logs.get_logger("loc_books")
 
@@ -141,13 +145,16 @@ class LocBooksExporter:
 
     def export(self, shard_size, filename):
         text_files = list(book_downloads_path.glob("*.txt"))
-        logger.info(f"Found {len(text_files)} text files")
+        logger.info(f"Found {len(text_files)} text files to export")
         results = map(functools.partial(self.format_dolma), text_files)
 
-        export_folder = book_exports_path / self.snapshot
+        export_folder = book_exports_path / self.snapshot / "documents"
         export_folder.mkdir(parents=True, exist_ok=True)
 
         to_dolma(results, export_folder, filename, shard_size)
+        logger.info(
+            f"Exported {len(text_files)} text files in dolma format to {export_folder}"
+        )
 
     def format_dolma(self, filepath):
         filename = filepath.name
@@ -175,7 +182,7 @@ class LocBooksExporter:
             return dolma_data
 
 
-@click.group()
+@click.group("books", context_settings={"show_default": True})
 def main():
     pass
 
@@ -189,7 +196,7 @@ def download(snapshot):
 
 @main.command()
 @click.option("--snapshot", required=True, help="Snapshot name")
-@click.option("--dolma-shard-size", default=1, help="File size in GB")
+@click.option("--dolma-shard-size", default=1, help="Shard file size in GB")
 @click.option(
     "--dolma-filename",
     required=True,
