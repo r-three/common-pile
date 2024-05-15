@@ -1,6 +1,7 @@
 import argparse
 import glob
 import multiprocessing
+import sys
 from functools import partial
 from itertools import islice
 from typing import Iterable, Iterator
@@ -14,6 +15,9 @@ from licensed_pile.logs import configure_logging, get_logger
 from licensed_pile.write import to_dolma
 
 logger = configure_logging()
+
+if sys.version_info < (3, 9):
+    raise RuntimeError("Python version >= 3.9 required")
 
 
 def batched(iterable, n):
@@ -59,8 +63,11 @@ def process_datasets(
 
     # columns to use
 
-    file_name = glob.glob(data_dir + r"*.parquet")
-    args = [(x, url, limit) for x in file_name]
+    file_names = glob.glob(data_dir + r"*.parquet")
+    if limit > 0:
+        limit //= len(file_names)
+        logger.info(f"Processing {limit} entries each from {len(file_names)} files.")
+    args = [(x, url, limit) for x in file_names]
     with multiprocessing.get_context("spawn").Pool() as pool:
         for batch in batched(args, max_concurrency):
             logger.debug("Processing files %s", [b[0] for b in batch])
@@ -149,6 +156,7 @@ def serialize_dolma(
         data_dir: The directory path where the dataset files are located. Default is `./data/uspto/`.
         url: The URL of the server to which the serialized documents will be sent. Default is `http://localhost:3000/convert`.
         limit: The maximum number of documents to be serialized. Default is 0, which represents no limit.
+        max_concurrency: max files to process in parallel. Default is `4`.
 
     Returns:
         A generator that yields dictionaries representing serialized documents. Each dictionary consists of the document
@@ -178,6 +186,7 @@ def create_args_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "data_dir",
         type=str,
+        default=r"./data/uspto/",
         help="Dataset directory where all parquet files to process are located ",
     )
     parser.add_argument(
@@ -204,11 +213,12 @@ def create_args_parser() -> argparse.ArgumentParser:
 if __name__ == "__main__":
     args = create_args_parser().parse_args()
     logger.info(
-        f"""Processing USPTO with the following parameters: Output Dir: {args.output_dir}, Data Dir: {args.data_dir}, REST API URL: {args.url}, Limit: {args.limit}, Max Concurrency: {args.max_concurrency}"""
+        f"""Processing USPTO with the following parameters: Output Dir: {args.output_dir}, Data Dir: {args.data_dir},
+        REST API URL: {args.url}, Limit: {args.limit}, Max Concurrency: {args.max_concurrency}"""
     )
     to_dolma(
         serialize_dolma(
-            data_dir="/Users/baber/Downloads/uspto_test/test",
+            data_dir=args.data_dir,
             url=args.url,
             limit=args.limit,
             max_concurrency=args.max_concurrency,
