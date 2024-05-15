@@ -110,13 +110,13 @@ def file_to_dolma(path: str, include_df: str, source_name: str = SOURCE_NAME):
 
     results = []
     for i, ex in enumerate(dset_collection):
-        license_names = dset_to_licenses[ex["user_parent"]]
-        langs = dset_to_langs[ex["user_parent"]]
-        url = dset_to_urls[ex["user_parent"]]
-        license_urls = dset_to_license_urls[ex["user_parent"]]
+        license_names = dset_to_licenses[ex["dataset"]]
+        langs = dset_to_langs[ex["dataset"]]
+        url = dset_to_urls[ex["dataset"]]
+        license_urls = dset_to_license_urls[ex["dataset"]]
         results.append(
             {
-                "id": f"{ex['user_parent']}-{i}",
+                "id": f"{ex['dataset']}-{i}",
                 "text": ex["inputs"],
                 "response": ex["labels"],
                 "source": source_name,
@@ -126,7 +126,7 @@ def file_to_dolma(path: str, include_df: str, source_name: str = SOURCE_NAME):
                     "license_urls": license_urls,
                     "language": langs,
                     "url": url,
-                    "dataset_id": ex["user_parent"],
+                    "dataset_id": ex["dataset"],
                 },
             }
         )

@@ -68,7 +68,7 @@ def main(args):
             revision="main",
             data_files=f"data/{folder_name}/*.jsonl",
         ).to_list()
-        exs = [ex for ex in subset if ex["user_parent"] in include_dset_ids]
+        exs = [ex for ex in subset if ex["dataset"] in include_dset_ids]
         savepath = os.path.join(args.outdir, f"{folder_name}.jsonl.gz")
         write_jsonl_gz(exs, savepath)
         logger.info(f"Saving {len(exs)} examples to {savepath}")
