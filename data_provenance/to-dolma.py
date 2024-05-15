@@ -7,16 +7,17 @@ preparing for dolma, in this file.
 import argparse
 import functools
 import gzip
+import itertools
 import json
-import operator as op
 import os
 from datetime import datetime
 
 import jsonlines
 import pandas as pd
+from constants import HF_MAPPING
 
-from data_provenance.constants import HF_MAPPING
 from licensed_pile.licenses import PermissiveLicenses
+from licensed_pile.logs import configure_logging, get_logger
 from licensed_pile.write import to_dolma
 
 LICENSE_MAPPER = {
@@ -47,12 +48,12 @@ parser.add_argument(
 )
 parser.add_argument(
     "--outdir",
-    default="data/data-provenance/raw/documents/",
+    default="data/data-provenance/v0/documents/",
     help="Where the dolma formatted data goes.",
 )
 parser.add_argument(
     "--include",
-    default="data_provenance/include.csv",
+    default="include.csv",
     help="The csv with metadata on data provenance datasets.",
 )
 parser.add_argument(
@@ -90,6 +91,8 @@ def extract_licenses(license_list, gh_license):
 
 
 def file_to_dolma(path: str, include_df: str, source_name: str = SOURCE_NAME):
+    logger = get_logger()
+    logger.info(f"Converting {path} to the dolma format.")
     dset_to_licenses = {
         row["Dataset ID"]: extract_licenses(row["Licenses"], row["GitHub License"])
         for _, row in include_df.iterrows()
@@ -114,19 +117,23 @@ def file_to_dolma(path: str, include_df: str, source_name: str = SOURCE_NAME):
         langs = dset_to_langs[ex["dataset"]]
         url = dset_to_urls[ex["dataset"]]
         license_urls = dset_to_license_urls[ex["dataset"]]
+        input_text = ex["inputs"]
+        target_text = ex.get("labels", ex.get("targets", ""))
+        # If target_text isn't found, the strip will remove the extra newline
+        text = f"{input_text}\n{target_text}".strip()
         results.append(
             {
                 "id": f"{ex['dataset']}-{i}",
-                "text": ex["inputs"],
-                "response": ex["labels"],
+                "text": text,
                 "source": source_name,
                 "added": datetime.utcnow().isoformat(),
                 "metadata": {
-                    "license": license_names,
-                    "license_urls": license_urls,
+                    "license": sorted(license_names),
+                    "license_url": license_urls,
                     "language": langs,
                     "url": url,
                     "dataset_id": ex["dataset"],
+                    "response": target_text,
                 },
             }
         )
@@ -139,12 +146,13 @@ def main(args):
     include_df = pd.read_csv(args.include).fillna("")
 
     paths = listdir_nohidden(args.indir)
-    examples = []
-    for path in paths:
-        examples.extend(file_to_dolma(path, include_df=include_df))
+    examples = itertools.chain(
+        *(file_to_dolma(path, include_df=include_df) for path in paths)
+    )
     to_dolma(examples, args.outdir, args.filename, args.shard_size)
 
 
 if __name__ == "__main__":
     args = parser.parse_args()
+    configure_logging()
     main(args)

@@ -13,8 +13,8 @@ In this case, we have filtered for the following criteria:
 The specific filter settings are here: https://github.com/Data-Provenance-Initiative/Data-Provenance-Collection/blob/main/src/configs/pile_v2_test.yaml
 
 
-Here is the process to download the data:
+Here is the process to download the data, from inside the `data_provenance` dir:
 
-1. Run `PYTHONPATH=. python data_provenance/download.py --include data_provenance/include.csv`
+1. Run `python download.py --include include.csv`
 
-2. Run `PYTHONPATH=. python data_provenance/to-dolma.py --include data_provenance/include.csv`
+2. Run `python to-dolma.py --include include.csv`

@@ -12,10 +12,10 @@ from collections import defaultdict
 
 import jsonlines
 import pandas as pd
+from constants import HF_MAPPING
 from datasets import load_dataset
 from tqdm.auto import tqdm
 
-from data_provenance.constants import HF_MAPPING
 from licensed_pile.logs import configure_logging, get_logger
 
 
@@ -28,7 +28,7 @@ def parse_args():
     )
     parser.add_argument(
         "--include",
-        default="data_provenance/include.csv",
+        default="include.csv",
         help="Path to csv file with `Collection Name, Dataset ID` we will include",
     )
     parser.add_argument(
@@ -76,4 +76,5 @@ def main(args):
 
 if __name__ == "__main__":
     args = parse_args()
+    configure_logging()
     main(args)
