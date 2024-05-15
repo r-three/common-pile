@@ -12,7 +12,7 @@ OUTPUT_FOLDER_PATH.mkdir(parents=True, exist_ok=True)
 
 row_shifted = lambda column: (~pl.col(column).eq(pl.col(column).shift()))
 
-df = (
+(
     pl.read_database_uri(query=query, uri=uri)
     .with_columns(pl.col(pl.Utf8).replace("", None))
     .with_columns(
