@@ -35,6 +35,7 @@ row_shifted = lambda column: (~pl.col(column).eq(pl.col(column).shift()))
             )
         ),
     )
+    .lazy()
     .group_by("speechdate")
     .agg(
         pl.concat_str(
