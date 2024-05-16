@@ -14,7 +14,7 @@ from licensed_pile.licenses import PermissiveLicenses
 from licensed_pile.logs import configure_logging, get_logger
 from licensed_pile.write import to_dolma
 
-logger = configure_logging()
+logger = configure_logging("uspto")
 
 if sys.version_info < (3, 9):
     raise RuntimeError("Python version >= 3.9 required")
