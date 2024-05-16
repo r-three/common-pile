@@ -140,7 +140,7 @@ def scan_dataset(args: tuple) -> pl.DataFrame:
     ).select(["id", "text", "added", "title_language", "publication_date"])
     if limit > 0:
         df = df.fetch(limit).lazy()
-    return df.collect(streaming=True)
+    return df.collect()
 
 
 def serialize_dolma(
