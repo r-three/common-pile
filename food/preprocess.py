@@ -6,7 +6,9 @@ import datetime
 import glob
 import multiprocessing as mp
 import os
+import re
 import textwrap
+import urllib.parse
 from tempfile import TemporaryDirectory
 
 import bs4
@@ -56,6 +58,13 @@ class FoodistaParallel(ShardParallelProcessor):
     def process_example(cls, example, **kwargs):
         logger = cls.get_logger()
 
+        # Filter out static, siteinfo pages as they are varied and have little
+        # content.
+        if urllib.parse.urlparse(example["metadata"]["url"]).path.startswith(
+            "/static/"
+        ):
+            return None
+
         html = example["text"]
 
         text, authors, date = parse_page(html, example["id"])
@@ -65,6 +74,24 @@ class FoodistaParallel(ShardParallelProcessor):
         example["metadata"]["authors"] = authors
 
         return example
+
+
+def clean_author(author: str) -> str:
+    author = re.sub("^(Creator|Author):?", "", author.strip())
+    return author.strip()
+
+
+def clean_date(date: str) -> str:
+    date = re.sub(r"(Added):?", "", date.strip())
+    return date.strip()
+
+
+def clean_text(text: str) -> str:
+    text = text.strip()
+    # Remove when the text is only the section header.
+    if text in ("Tools", "Ingredients", "Preparation"):
+        return ""
+    return text
 
 
 def parse_page(html, idx, include_user_id: bool = False):
@@ -91,7 +118,7 @@ def parse_page(html, idx, include_user_id: bool = False):
             logger.warning(
                 f"Failed to find the user_id for the author in example: {idx}"
             )
-        author = author.get_text().strip()
+        author = clean_author(author.get_text()).strip()
         result.append(f"By: {author}")
         if include_user_id:
             authors.append((author, user_id))
@@ -102,25 +129,42 @@ def parse_page(html, idx, include_user_id: bool = False):
 
     # Find the date it was published.
     if date := soup.find("div", class_="pane-node-created"):
-        date = date.get_text().strip()
+        date = clean_date(date.get_text()).strip()
         result.append(f"Published: {date}")
     else:
         logger.warning(f"Failed to find date for example: {idx}")
 
-    # TODO: split into blocks with extra new lines?
     # Find the text of the page.
-    if text := soup.find("div", class_="pane-node-body"):
-        text = text.get_text().strip()
+    if text := soup.find_all(
+        "div",
+        class_=(
+            "pane-node-body",
+            "pane-node-field-rec-ing",
+            "pane-node-field-rec-steps",
+            "pane-node-field-rec-tools",
+            "pane-node-field-about",
+        ),
+    ):
         # Create an empty line between the header and the body text.
-        result.append(f"\n{text}")
+        for t in text:
+            t = clean_text(t.get_text()).strip()
+            if t:
+                result.append(f"\n{t}")
     else:
         logger.warning(f"Failed to find text for example: {idx}")
 
     # Collect all comments first as we may filter them out later.
     comments = []
+    # Answers on /question/ pages are saved as comments. We check what the header
+    # is decide if it should be "Comments" or "Answers" in the output text.
+    comment_header = "Comments"
+    if comment_title := soup.find("div", class_="pane-node-comments"):
+        if title := comment_title.find("h2", class_="pane-title"):
+            if title.get_text().strip() == "Answers":
+                comment_header = "Answers"
     # Find possible comments on the page.
     if comments_soup := soup.find_all("div", class_="comment"):
-        # Parse the author, date, and text from each comment
+        # Parse the author, date, and text, from each comment
         for comment in comments_soup:
             if comment_submitted := comment.find("div", class_="submitted"):
                 if comment_author := comment_submitted.find(
@@ -161,7 +205,7 @@ def parse_page(html, idx, include_user_id: bool = False):
 
     # Add non-filtered comments into the text.
     if comments:
-        result.append("\nComments:")
+        result.append(f"\n{comment_header}:")
         for comment in comments:
             if include_user_id:
                 authors.append((comment["author"], comment["user_id"]))
@@ -180,13 +224,13 @@ def parse_page(html, idx, include_user_id: bool = False):
 
 def parse_date(date: str) -> datetime.datetime:
     """Parse a date into a datetime object."""
-    date_formats = ["%B %d, %Y", "%b %d, %Y"]
+    date_formats = ("%B %d, %Y", "%b %d, %Y", "%A, %B %d, %Y - %I:%M%p")
     for fmt in date_formats:
         try:
             return datetime.datetime.strptime(date, fmt).isoformat()
         except:
             pass
-    logger = logs.get_logger("food")
+    logger = logs.get_logger("dolma.FoodistaParallel")
     logger.warning(f"Filed to parse date: {date}")
     return date
 

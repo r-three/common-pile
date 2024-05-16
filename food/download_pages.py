@@ -55,14 +55,14 @@ def download_page(page_info, output_dir, overwrite: bool = True, wait: int = 0):
 
     if not overwrite and os.path.exists(page_path):
         logger.info(f"{page_path} already exists, not downloading {page_info['url']}")
-
+        return
     try:
         logger.info(f"Downloading {page_info['url']}")
         page = scrape.get_page(page_info["url"])
         with open(page_path, "wb") as f:
             f.write(page.content)
     except Exception as err:
-        logger.error(f"Failed to fetch {url}: {err}")
+        logger.error(f"Failed to fetch {page_info['url']}: {err}")
     if wait:
         # time.sleep releases the GIL so we can use it in threads.
         time.sleep(wait)
