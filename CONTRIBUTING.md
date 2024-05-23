@@ -23,7 +23,7 @@ The current list of the permissive licenses allowed by this project is below and
 - [MIT License](https://opensource.org/license/mit/)
 - [BSD License](https://opensource.org/license/bsd-2-clause/)
 
-This list contains some of the common permissive licenses that cover many large data sources, but we intend to expand this list as we continue to collect data. If you come across a source with a license that you believe should be on this list, feel free to comment in our [Allowable License Meta-Issue](https://github.com/r-three/licensed-pile/issues/34). 
+This list contains some of the common permissive licenses that cover many large data sources, but we intend to expand this list as we continue to collect data. If you come across a source with a license that you believe should be on this list, feel free to comment in our [Allowable License Meta-Issue](https://github.com/r-three/licensed-pile/issues/34).
 
 ### Finding License Information
 
@@ -47,14 +47,14 @@ License information can sometimes be difficult to find for certain text sources 
 
 5. An "about" page can include licensing information for the website as a whole.
 
-## Contributing Data Collection Code 
+## Contributing Data Collection Code
 
 Once you have selected a source from the list of [Issues](https://github.com/r-three/licensed-pile/issues), add a comment that you plan to work on it and an adim will assign the issue to you. Then, you can follow these guidelines for how to get started with contributing to the repo:
 
 1. Clone the repo
 
 2. Run `pip install -r requirements.txt`
-    
+
 3. Create a subdirectory for your data source (e.g., the `licensed-pile/gutenberg` directory for the Project Gutenberg data source).
 
 4. Identify the best way to collect the raw data
@@ -67,11 +67,11 @@ Once you have selected a source from the list of [Issues](https://github.com/r-t
 
 5. If necessary, write code to filter the downloaded items down to only those with appropriate licenses.
 
-6. Write code that outputs the resulting data to `licensed-pile/data/{SOURCE}/v0` 
+6. Write code that outputs the resulting data to `licensed-pile/data/{SOURCE}/v0`
 
 > The data format used in this project is [Dolma](https://github.com/allenai/dolma). To write out the resulting data as a Dolma dataset, convert each record in the dataset to a python dictionary and use the utilities in `licensed-pile/licensed_pile/write.py` to convert the list of dictionaries to a Dolma dataset. In cases where the dataset is very large, it is better to define a record generator rather than a list and pass the generator to the Dolma utility functions.
 
-> Each record should minimally have the following keys:  
+> Each record should minimally have the following keys:
 ```json
 {
     "id": <unique record identifier>,
