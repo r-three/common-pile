@@ -37,8 +37,6 @@ class PermissiveLicenses(StringEnum):
 
     # Not in the Blue Oak Council list, but open source compliant.
     CDLA_P = "Community Data License Agreement - Permissive 1.0 - https://cdla.dev/"
-    MPL = "Mozilla Public License 2.0 - https://opensource.org/license/MPL-2.0"
-    EPL = "Eclipse Public License 1.0 - https://opensource.org/license/EPL-1.0"
 
     # TODO: Fill out this function to match in more cases.
     # Note: This kind of function will always be messy and probably require
