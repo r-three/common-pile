@@ -20,7 +20,7 @@ LICENSE_MAP = {
 
 
 def main(args):
-    ds = load_dataset("bigcode/starcoder2data", data_dir="python", split="train")
+    ds = load_dataset("bigcode/starcoder2data", data_dir=args.data_dir, split="train")
     ds.filter(lambda x: x["license"] in LICENSE_MAP.keys())
     ds = ds.map(
         lambda x: {
@@ -55,6 +55,9 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--shard_size", type=int, default=1, help="Size, in GB, for each shard."
+    )
+    parser.add_argument(
+        "--data_dir", type=str, default=None, help="Optionally select a language"
     )
     args = parser.parse_args()
     main(args)
