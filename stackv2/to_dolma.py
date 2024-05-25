@@ -20,7 +20,7 @@ LICENSE_MAP = {
 
 
 def main(args):
-    ds = load_dataset("bigcode/starcoder2data", data_dir=args.data_dir, split="train")
+    ds = load_dataset(args.data_path, data_dir=args.data_dir, split="train")
     ds.filter(lambda x: x["license"] in LICENSE_MAP.keys())
     ds = ds.map(
         lambda x: {
@@ -29,7 +29,7 @@ def main(args):
             "source": SOURCE_NAME,
             "added": datetime.utcnow().isoformat(),
             "created": "2024-02-29",
-            "metadata": {  # Thu, 29 Feb 2024 13:53:35 UTC (275 KB)
+            "metadata": {
                 "license": str(LICENSE_MAP[x["license"]]),
                 "url": "https://github.com/" + x["repo"] + "/tree/" + x["revision_id"],
             },
