@@ -10,7 +10,7 @@ from licensed_pile.write import to_dolma
 
 SOURCE_NAME = "The Stack v2"
 
-logger = configure_logging("court-listener-opinion")
+logger = configure_logging("stackv2")
 
 LICENSE_MAP = {
     "Apache-2.0": PermissiveLicenses.APACHE_2,
@@ -35,14 +35,12 @@ def main(args):
             },
         }
     )
-
-    output_file_base_name = os.path.join(args.output_dir, "starcoder2data.jsonl.gz")
-    to_dolma(ds, args.output_dir, output_file_base_name, args.shard_size)
+    to_dolma(ds, args.output_dir, "stackv2.jsonl.gz", args.shard_size)
     logger.info(f"Saved {args.data_path} as dolma sharded files at {args.output_dir}")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Convert csv data to dolma.")
+    parser = argparse.ArgumentParser(description="Convert HF data to dolma.")
     parser.add_argument(
         "--output_dir",
         default=f"data/stackv2",
@@ -57,7 +55,10 @@ if __name__ == "__main__":
         "--shard_size", type=int, default=1, help="Size, in GB, for each shard."
     )
     parser.add_argument(
-        "--data_dir", type=str, default=None, help="Optionally select a language"
+        "--language",
+        type=str,
+        default=None,
+        help="Optionally select a single programming language",
     )
     args = parser.parse_args()
     main(args)
