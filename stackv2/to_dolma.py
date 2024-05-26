@@ -56,7 +56,6 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--language",
-        type=str,
         default=None,
         help="Optionally select a single programming language",
     )
