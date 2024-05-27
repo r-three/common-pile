@@ -92,7 +92,7 @@ def scan_dataset(args: tuple) -> pl.DataFrame:
         result = scan_dataset((file_name, url, limit))
     """
     file_name, url, limit = args
-    columns = [
+    columns = (
         "title_text",
         "title_language",
         "abstract_text",
@@ -101,7 +101,7 @@ def scan_dataset(args: tuple) -> pl.DataFrame:
         "publication_date",
         "application_number",
         "filing_date",
-    ]
+    )
 
     html_fn = partial(parse_html, url)
     df: pl.LazyFrame = (
