@@ -21,6 +21,22 @@ Look at the text for item with the id of 12 (note that position in file is not c
 
 Note: You can also use `gunzip -c ${file}.jsonl.gz | jq -s ${command}` which is slightly faster (reduces the amount of  data flowwing through pipes) but if you forget the `-c` flag you end up uncompressing the file and deleting the compressed version, i.e. you need to run `gzip ${file}.jsonl` to fix it.
 
+### Capped-parallelism in bash script
+Sometimes we want to download/process multiple files in parallel up to a limited number of jobs in bash script.
+Below is a example code snippet (used in [courtlistener/get_data.sh](courtlistener/get_data.sh)).
+Note that `jobs -r` counts all jobs running in the current shell.
+
+````
+max_jobs = 8
+for file in "${files[@]}"; do
+    download_and_process "file" &
+
+    # Limit the number of parallel jobs
+    if (( $(jobs -r | wc -l) >= max_jobs )); then
+        wait -n
+    fi
+done
+````
 ## Development
 
 We use git pre-commit hooks to format code and keep style consistent.
