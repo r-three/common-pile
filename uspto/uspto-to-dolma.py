@@ -1,10 +1,9 @@
 import argparse
-import glob
 import multiprocessing
-import os
 import sys
 from functools import partial
 from itertools import islice
+from pathlib import Path
 from typing import Iterable, Iterator
 
 import polars as pl
@@ -12,7 +11,7 @@ from download_preprocess import parse_html
 from polars import col
 
 from licensed_pile.licenses import PermissiveLicenses
-from licensed_pile.logs import configure_logging, get_logger
+from licensed_pile.logs import configure_logging
 from licensed_pile.write import to_dolma
 
 logger = configure_logging("uspto")
@@ -59,12 +58,15 @@ def process_datasets(
         print(data)
     ```
     """
-
-    file_names = glob.glob(os.path.join(data_dir + "*.parquet"))
+    data_path = Path(data_dir)
+    logger.info(f"Processing files in {data_path}")
+    file_names = list(data_path.glob("*.parquet"))
     if limit > 0:
         limit //= len(file_names)
         logger.info(f"Processing {limit} entries each from {len(file_names)} files.")
     args = [(x, url, limit) for x in file_names]
+    # we'll let polars handle the row parallelism but the API calls are IO bound
+    # so, we can increase the number of files to process concurrently
     with multiprocessing.get_context("spawn").Pool() as pool:
         for batch in batched(args, max_concurrency):
             logger.debug("Processing files %s", [b[0] for b in batch])
@@ -74,7 +76,7 @@ def process_datasets(
 
 def scan_dataset(args: tuple) -> pl.DataFrame:
     """
-    Scans a dataset and returns a processed DataFrame.
+    Scans an individual parquet file and returns a processed DataFrame.
 
     Parameters:
         args (tuple): A tuple containing the file name, URL, and limit.
