@@ -24,7 +24,7 @@ cd ..
 
 # Run the Python script
 echo "Running the uspto-to-dolma.py script..."
-python uspto-to-dolma.py
+python uspto-to-dolma.py "$@"
 echo "uspto-to-dolma.py script completed."
 
 # Kill the Node server after the Python script completes
