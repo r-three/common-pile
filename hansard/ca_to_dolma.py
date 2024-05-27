@@ -23,7 +23,6 @@ def format_dolma(row: dict) -> dict:
 
 
 if __name__ == "__main__":
-    # Load the dataset
     parser = argparse.ArgumentParser(
         description="Collect Canadian Hansard into Dolma format."
     )
@@ -41,6 +40,7 @@ if __name__ == "__main__":
         "--shard-size", type=int, default=1, help="Size, in GB, for each shard."
     )
     args = parser.parse_args()
+    # Load the dataset
     dataset = datasets.load_dataset(
         "baber/canadian_hansard",
         split="train",
