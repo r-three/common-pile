@@ -1,6 +1,6 @@
 # USPTP
 
-USPTO dataset extracted from Google Patents Public Dataset and uploaded to HF.
+USPTO dataset extracted from [Google Patents Public Dataset](https://cloud.google.com/blog/topics/public-datasets/google-patents-public-datasets-connecting-public-paid-and-private-patent-data) and uploaded to HF.
 
 ## Data Download and Processing
 
