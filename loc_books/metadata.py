@@ -1,5 +1,4 @@
 import json
-import os
 from concurrent.futures import ThreadPoolExecutor as PoolExecutor
 from pathlib import Path
 from time import time
@@ -65,16 +64,14 @@ class LocBooksMetadataDownloader:
         facet_folder = facet_path.absolute()
         facet_url = date_facet["link"]
 
-        os.makedirs(facet_folder, exist_ok=True)
+        facet_path.mkdir(parents=True, exist_ok=True)
 
         self.download_page(facet_url, facet_folder, 1)
-        with open(
-            os.path.join(facet_folder, f"{str(1).zfill(filename_digits)}.json")
-        ) as f:
+        with open(facet_path / f"{str(1).zfill(filename_digits)}.json") as f:
             file_data = json.load(f)
             total_pages = file_data["pagination"]["total"]
 
-        pages_to_download = self.check_existing_files(total_pages, facet_folder)
+        pages_to_download = self.check_existing_files(total_pages, facet_path)
         self.existing_pages_count += total_pages - len(pages_to_download)
         self.progress_bar.total += len(pages_to_download)
 
@@ -108,41 +105,36 @@ class LocBooksMetadataDownloader:
 
         self.date_facets = date_facets
 
-    def check_existing_files(self, total_pages, output_folder):
+    def check_existing_files(self, total_pages, output_path):
         pages_to_download = []
         for page in range(1, total_pages + 1):
-            filename = os.path.join(
-                output_folder, f"{str(page).zfill(filename_digits)}.json"
-            )
-            if not os.path.exists(filename):
+            filepath = output_path / f"{str(page).zfill(filename_digits)}.json"
+            if not filepath.exists():
                 pages_to_download.append(page)
         return pages_to_download
 
-    def download_page(self, facet_url, output_folder, page):
+    def download_page(self, facet_url, output_path, page):
         facet_furl = furl(facet_url)
         facet_furl.args["c"] = self.items_per_page
         facet_furl.args["sp"] = page
         facet_furl.args["fo"] = "json"
-        filename = os.path.join(
-            output_folder, f"{str(page).zfill(filename_digits)}.json"
-        )
+        filepath = output_path / f"{str(page).zfill(filename_digits)}.json"
 
-        if not os.path.exists(filename):
+        if not filepath.exists():
             try:
                 response = self.session.get(facet_furl.url)
                 response.raise_for_status()
-                with open(filename, "w", encoding="utf-8") as file:
+                with filepath.open("w", encoding="utf-8") as file:
                     file.write(response.text)
             except requests.exceptions.RequestException as e:
                 logger.error(f"Failed to download page {page}: {str(e)}")
         self.progress_bar.update(1)
-        self.progress_bar.desc = f"{filename}"
+        self.progress_bar.desc = f"{filepath.name}"
 
 
 class LocBooksMetadataExporter:
     def __init__(self, snapshot):
-        download_path = metadata_downloads_path / snapshot
-        self.download_folder = download_path.absolute()
+        self.download_path = metadata_downloads_path / snapshot
         self.total_data = []
 
     def parse_year(self, x):
@@ -168,15 +160,11 @@ class LocBooksMetadataExporter:
     def parse_files(self):
         json_files = []
 
-        for root, dirs, files in os.walk(self.download_folder):
-            for file in files:
-                if file.endswith(".json"):
-                    json_files.append(os.path.join(root, file))
+        json_files = list(self.download_path.glob("**/*.json"))
 
         progress_bar = tqdm(json_files, desc="Exporting metadata")
 
         for filepath in progress_bar:
-            filename = os.path.basename(filepath).split(".")[0]
             progress_bar.set_description(f"{filepath}")
 
             with open(filepath, "r", encoding="utf-8") as f:

@@ -1,8 +1,6 @@
 import datetime
 import functools
 import multiprocessing.dummy as mp
-import os
-import sys
 from pathlib import Path
 from time import time
 
@@ -94,8 +92,8 @@ class LocBooksDownloader:
     def download_book(self, text_file_url):
         text_file_furl = furl(text_file_url)
         text_file_name = Path(str(text_file_furl.path)).name
-        text_file_path = os.path.join(book_downloads_path, text_file_name)
-        if not os.path.exists(text_file_path):
+        text_file_path = book_downloads_path / text_file_name
+        if not text_file_path.exists():
             try:
                 for attempt in Retrying(
                     stop=stop_after_attempt(3),
