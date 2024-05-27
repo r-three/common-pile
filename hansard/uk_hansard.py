@@ -1,3 +1,4 @@
+import argparse
 import os
 import re
 from datetime import datetime
@@ -7,6 +8,22 @@ from typing import Iterator
 import lxml.etree as ET
 
 from licensed_pile.licenses import PermissiveLicenses
+from licensed_pile.write import to_dolma
+
+parser = argparse.ArgumentParser(description="Collect UK-Hansard into Dolma format")
+parser.add_argument(
+    "--base_folder",
+    default="./hansard/uk_parlparse/scrapedxml",
+    help="Path to the directory of UK-Hansard XML files.",
+)
+parser.add_argument(
+    "--output_dir",
+    default="data/hansard/",
+    help="Where the dolma formatted data goes.",
+)
+parser.add_argument(
+    "--shard_size", type=int, default=1, help="Size, in GB, for each shard."
+)
 
 FILE_NAMES = {
     "debates": {"source": "commons-debates"},
@@ -112,16 +129,16 @@ def process_folder(folder_path: Path) -> Iterator[dict]:
                 yield from process_files_in_folder(subfolder, source)
 
 
-def main(base_folder: str):
-    base_folder = Path(base_folder)
-    count = 0
-    for record in process_folder(base_folder):
-        count += 1
-        if count % 200 == 0:
-            print(record)
-    print(count)
+def main(args):
+    base_folder = Path(args.base_folder)
+    to_dolma(
+        examples=process_folder(base_folder),
+        path=args.output_dir,
+        shard_size=args.shard_size,
+        filename="ukhansard.jsonl.gz",
+    )
 
 
 if __name__ == "__main__":
-    base_folder = "/Users/baber/Downloads/uk_parlparse/scrapedxml"
-    main(base_folder)
+    args = parser.parse_args()
+    main(args)
