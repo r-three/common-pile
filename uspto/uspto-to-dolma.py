@@ -1,6 +1,7 @@
 import argparse
 import glob
 import multiprocessing
+import os
 import sys
 from functools import partial
 from itertools import islice
@@ -39,7 +40,7 @@ def process_datasets(
     Parameters:
     - `data_dir` (str): The directory where the dataset is located. Default value is "./data/uspto/".
     - `url` (str): The API endpoint URL for converting the dataset files. Default value is "http://localhost:3000/convert".
-    - `limit` (int): The maximum number of files to convert. Default value is 0, which means convert all files in the dataset.
+    - `limit` (int): The maximum number of rows to convert. Default value is 0, which means convert all rows from all files in the dataset.
     - `max_concurrency` (int): The maximum number of concurrent conversions to perform. Default value is 2.
 
     Returns:
@@ -48,7 +49,7 @@ def process_datasets(
     Note:
     - The `data_dir` parameter should be a valid directory path ending with a forward slash '/'.
     - The `url` parameter should be a valid API endpoint URL.
-    - The `limit` parameter determines how many files to convert. Set it to 0 to convert all files.
+    - The `limit` parameter determines how many row to read. Set it to 0 to convert all files.
     - The `max_concurrency` parameter determines how many parquet files to process concurrently.
 
     Example usage:
@@ -58,12 +59,8 @@ def process_datasets(
         print(data)
     ```
     """
-    if not data_dir[-1] == r"/":
-        data_dir += r"/"
 
-    # columns to use
-
-    file_names = glob.glob(data_dir + r"*.parquet")
+    file_names = glob.glob(os.path.join(data_dir + "*.parquet"))
     if limit > 0:
         limit //= len(file_names)
         logger.info(f"Processing {limit} entries each from {len(file_names)} files.")
@@ -103,6 +100,7 @@ def scan_dataset(args: tuple) -> pl.DataFrame:
         "application_number",
         "filing_date",
     ]
+
     html_fn = partial(parse_html, url)
     df: pl.LazyFrame = (
         pl.scan_parquet(file_name)
@@ -112,10 +110,12 @@ def scan_dataset(args: tuple) -> pl.DataFrame:
                 pl.col(["abstract_text", "description_html", "claims_html"]).is_null()
             )
         )
-        # we use app no. for the id and filing date for the date added to database
-        .rename({"application_number": "id", "filing_date": "added"})
+        # we use app no. for the id and filing date for the date created
+        .rename({"application_number": "id", "filing_date": "created"})
         .with_columns(
-            col("added").cast(pl.String, strict=False),
+            # the data was scrapped approx at this date
+            pl.lit("2024-03-22", dtype=pl.String).alias("added"),
+            col("created").cast(pl.String, strict=False),
             col("publication_date").cast(pl.String, strict=False),
             col("description_html").map_elements(html_fn, return_dtype=pl.String),
             col("claims_html").map_elements(html_fn, return_dtype=pl.String),
@@ -137,7 +137,7 @@ def scan_dataset(args: tuple) -> pl.DataFrame:
                 ignore_nulls=True,
             ).alias("text")
         )
-    ).select(["id", "text", "added", "title_language", "publication_date"])
+    ).select(["id", "text", "added", "created", "title_language", "publication_date"])
     if limit > 0:
         df = df.fetch(limit).lazy()
     return df.collect()
