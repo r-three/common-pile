@@ -46,3 +46,6 @@ The main script can be run with `bash run process_uspto.sh --output_dir <output_
 
 ## Example
 Some output examples are in the examples dir.
+
+## License
+Creative Commons - Attribution - https://creativecommons.org/licenses/by/4.0/
