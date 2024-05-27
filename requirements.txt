@@ -13,3 +13,4 @@ pandas
 jsonlines
 datasets
 tqdm
+ultimate-sitemap-parser
