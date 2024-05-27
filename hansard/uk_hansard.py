@@ -2,6 +2,7 @@ import os
 import re
 from datetime import datetime
 from pathlib import Path
+from typing import Iterator
 
 import lxml.etree as ET
 
@@ -73,7 +74,7 @@ def parse_hansard_xml_file(root: ET._Element) -> str:
     return "\n\n".join(parsed_text).replace(" ", "")
 
 
-def process_files_in_folder(folder_path: Path, source: str):
+def process_files_in_folder(folder_path: Path, source: str) -> dict:
     language = "en" if not source == "senedd-cy" else "cy"
     date_match = re.compile(r"\d{4}-\d{2}-\d{2}")
     for file in folder_path.iterdir():
@@ -99,7 +100,7 @@ def process_files_in_folder(folder_path: Path, source: str):
                 }
 
 
-def process_folder(folder_path: Path):
+def process_folder(folder_path: Path) -> Iterator[dict]:
     for subfolder in get_subfolders(folder_path):
         if subfolder.name in FILE_NAMES:
             source = FILE_NAMES[subfolder.name]["source"]
