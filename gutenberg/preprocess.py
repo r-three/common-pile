@@ -72,7 +72,7 @@ def strip_footer(text: str, footer=FOOTER) -> str:
 class ProjectGutenbergParallel(ShardParallelProcessor):
     @classmethod
     def process_example(cls, example, **kwargs):
-        example["text"] = strip_footer(strip_header(example["text"]))
+        example["text"] = strip_footer(strip_header(example["text"])).strip()
         return example
 
 

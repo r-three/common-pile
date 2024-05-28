@@ -64,8 +64,8 @@ def main(args):
     with open(args.index) as f:
         index = json.load(f)
 
+    index = sorted(index, key=op.itemgetter("id"))
     examples = map(functools.partial(format_dolma, book_dir=args.book_dir), index)
-    examples = sorted(examples, key=op.itemgetter("id"))
 
     to_dolma(examples, args.output_dir, args.filename, args.shard_size)
 
