@@ -16,3 +16,10 @@ Note: It is normal to see messages in the log like this when doing test runs, bu
 ``` json
 {"level_name": "ERROR", "timestamp": "2024-05-07 14:02:52,846", "module_name": "to_dolma", "function_name": "format_page", "logger": "food", "message": "Article data/pages/foodista.com_tool_Z2MHM8QR_julienne-peeler.html exists in the index but is not downloaded."}
 ```
+
+## Timing
+
+Foodista isn't the most robust site, hitting it with parallelism or with a wait less than 5 seconds between requests
+results in server errors.
+
+There are ~70K pages, with a 5 seconds wait, it will take ~4.3 days to scrape the entire site.
