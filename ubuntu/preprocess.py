@@ -101,7 +101,10 @@ class UbuntuChatParallel(ShardParallelProcessor):
             "",
             text,
         )
+        text = text.strip()
         # TODO: Check for min lines
+        if not text:
+            return None
         # Extract authors and action authors.
         # Look at the start of the line to avoid picking up authors that are quoted.
         authors = set(
