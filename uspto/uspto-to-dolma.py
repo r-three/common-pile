@@ -1,16 +1,13 @@
 import argparse
-import multiprocessing
-import re
 import sys
 from functools import partial
-from itertools import islice
 from pathlib import Path
 from typing import Iterable, Iterator
 
 import polars as pl
-import pypandoc
 from polars import col
 from tqdm import tqdm
+from utils import parallel_apply
 
 from licensed_pile.licenses import PermissiveLicenses
 from licensed_pile.logs import configure_logging
@@ -20,27 +17,6 @@ logger = configure_logging("uspto")
 
 if sys.version_info < (3, 9):
     raise RuntimeError("Python version >= 3.9 required")
-
-
-def batched(iterable, n):
-    it = iter(iterable)
-    while batch := tuple(islice(it, n)):
-        yield batch
-
-
-def parse_html(html_string: str) -> str:
-    if not html_string:
-        return ""
-    text = pypandoc.convert_text(html_string, "plain", "html", extra_args=["--quiet"])
-    return re.sub(r"(?<!\n)\n(?!\n)", "", text)
-
-
-# from: https://stackoverflow.com/a/74749075/19355181
-def parallel_apply(max_concurrency: int, column: pl.Series) -> pl.Series:
-    if max_concurrency == 0:
-        max_concurrency = None
-    with multiprocessing.get_context("spawn").Pool(4) as pool:
-        return pl.Series(pool.imap(parse_html, column))
 
 
 def process_datasets(
@@ -126,26 +102,26 @@ def scan_dataset(args: tuple) -> pl.DataFrame:
             pl.lit("2024-03-22", dtype=pl.String).alias("added"),
             col("created").cast(pl.String, strict=False),
             col("publication_date").cast(pl.String, strict=False),
-            col("description_html")
-            .map_batches(
-                parallel_apply_,
-                return_dtype=pl.String,
-                is_elementwise=True,
-            )
-            .str.replace_all(r"\\left(\.|)|\\right(\.|)", ""),
-            col("claims_html")
-            .map_batches(
-                parallel_apply_,
-                return_dtype=pl.String,
-                is_elementwise=True,
-            )
-            .str.replace_all(r"\\left(\.|)|\\right(\.|)", ""),
             pl.concat_str(
                 pl.lit(r"ABSTRACT", dtype=pl.String),
                 pl.lit("\n\n", dtype=pl.String),
                 col("abstract_text"),
                 ignore_nulls=False,
             ).alias("abstract_text"),
+        )
+        .with_columns_seq(
+            col("description_html")
+            .map_batches(
+                parallel_apply_,
+                return_dtype=pl.String,
+            )
+            .str.replace_all(r"\\left(\.|)|\\right(\.|)", ""),
+            col("claims_html")
+            .map_batches(
+                parallel_apply_,
+                return_dtype=pl.String,
+            )
+            .str.replace_all(r"\\left(\.|)|\\right(\.|)", ""),
         )
         .with_columns(
             pl.concat_str(
@@ -200,10 +176,10 @@ def serialize_dolma(
 def create_args_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--output_dir", type=str, help="Output directory", default=r"raw"
+        "--output_dir", type=str, help="Output directory", default=r"/uspto/output"
     )
     parser.add_argument(
-        "data_dir",
+        "--data-dir",
         type=str,
         default=r"/uspto/data/",
         help="Dataset directory where all parquet files to process are located ",
@@ -232,7 +208,7 @@ if __name__ == "__main__":
     )
     to_dolma(
         serialize_dolma(
-            data_dir="/Users/baber/Downloads/untitled folder",
+            data_dir=args.data_dir,
             limit=args.limit,
             max_concurrency=args.max_concurrency,
         ),
