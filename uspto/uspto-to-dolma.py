@@ -153,7 +153,7 @@ def scan_dataset(file_name, limit, max_concurrency) -> pl.DataFrame:
     ).select(["id", "text", "added", "created", "source", "metadata"])
     if limit > 0:
         df = df.fetch(limit).lazy()
-    return df.collect(streaming=True)
+    return df.collect()
 
 
 def create_args_parser() -> argparse.ArgumentParser:
