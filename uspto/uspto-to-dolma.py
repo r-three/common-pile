@@ -139,6 +139,7 @@ def scan_dataset(file_name, limit, max_concurrency) -> pl.DataFrame:
                 col("abstract_text"),
                 pl.lit("\n\n", dtype=pl.String),
                 col("description_html"),
+                pl.lit("\n\n", dtype=pl.String),
                 col("claims_html"),
                 ignore_nulls=True,
             ).alias("text"),
