@@ -65,7 +65,7 @@ def to_parquet(
         f'Processing {len(list(datapath.glob("*.parquet")))} files in {datapath}'
     )
     for i, files in enumerate(tqdm(datapath.glob("*.parquet"))):
-        file_path = output_dir.joinpath(f"uspto{i}")
+        file_path = output_dir.joinpath(f"uspto{i}.parquet")
         scan_dataset(files, limit, max_concurrency).write_parquet(file_path)
 
 
