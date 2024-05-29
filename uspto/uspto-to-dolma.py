@@ -177,8 +177,8 @@ def create_args_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--max-concurrency",
         type=int,
-        default=8,
-        help="Maximum number of parquet files to process concurrently",
+        default=0,
+        help="Maximum number of multiprocessing for pandoc conversions",
     )
     parser.add_argument(
         "--to-parquet",
