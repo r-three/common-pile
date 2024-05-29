@@ -2,7 +2,7 @@ import argparse
 import sys
 from functools import partial
 from pathlib import Path
-from typing import Iterable, Iterator
+from typing import Iterator
 
 import polars as pl
 from polars import col
@@ -23,7 +23,7 @@ def process_datasets(
     data_dir: str = r"./data/uspto/",
     limit: int = 0,
     max_concurrency: int = 4,
-) -> Iterable[dict]:
+) -> Iterator[dict]:
     """
     This function `run_dataset` scans a dataset located in a directory, converts each file in the dataset to a desired
     format using pandoc,and returns an iterable of dictionaries containing the converted data.
@@ -51,18 +51,27 @@ def process_datasets(
     data_path = Path(data_dir)
     logger.info(f"Processing files in {data_path}")
     file_names = list(data_path.glob("*.parquet"))
-    for file_name in file_names:
-        yield from scan_dataset((file_name, limit, max_concurrency)).iter_rows(
-            named=True
-        )
+    for i, file_name in enumerate(file_names):
+        for x in scan_dataset(file_name, limit, max_concurrency).iter_rows(named=True):
+            yield x
 
 
-def scan_dataset(args: tuple) -> pl.DataFrame:
+def to_parquet(
+    output_dir: str, data_dir: str, limit: int, max_concurrency: int
+) -> None:
+    output_dir = Path(output_dir)
+    datapath = Path(data_dir)
+    logger.info(
+        f'Processing {len(list(datapath.glob("*.parquet")))} files in {datapath}'
+    )
+    for i, files in enumerate(tqdm(datapath.glob("*.parquet"))):
+        file_path = output_dir.joinpath(f"uspto{i}")
+        scan_dataset(files, limit, max_concurrency).write_parquet(file_path)
+
+
+def scan_dataset(file_name, limit, max_concurrency) -> pl.DataFrame:
     """
     Scans an individual parquet file and returns a processed DataFrame.
-
-    Parameters:
-        args (tuple): A tuple containing the file name, limit and max_concurrency.
 
     Returns:
         DataFrame: A processed DataFrame containing the selected columns from the dataset.
@@ -74,8 +83,8 @@ def scan_dataset(args: tuple) -> pl.DataFrame:
 
         result = scan_dataset((file_name, limit, max_concurrency))
     """
-    file_name, limit, max_concurrency = args
-    parallel_apply_ = partial(parallel_apply, max_concurrency)
+    parallel_apply_desc = partial(parallel_apply, False, max_concurrency)
+    parallel_apply_claims = partial(parallel_apply, True, max_concurrency)
     columns = (
         "title_text",
         "title_language",
@@ -112,13 +121,13 @@ def scan_dataset(args: tuple) -> pl.DataFrame:
         .with_columns_seq(
             col("description_html")
             .map_batches(
-                parallel_apply_,
+                parallel_apply_desc,
                 return_dtype=pl.String,
             )
             .str.replace_all(r"\\left(\.|)|\\right(\.|)", ""),
             col("claims_html")
             .map_batches(
-                parallel_apply_,
+                parallel_apply_claims,
                 return_dtype=pl.String,
             )
             .str.replace_all(r"\\left(\.|)|\\right(\.|)", ""),
@@ -132,56 +141,29 @@ def scan_dataset(args: tuple) -> pl.DataFrame:
                 col("description_html"),
                 col("claims_html"),
                 ignore_nulls=True,
-            ).alias("text")
+            ).alias("text"),
+            pl.struct(
+                pl.lit(str(PermissiveLicenses.CC_BY), dtype=pl.String).alias("license"),
+                col("title_language").alias("language"),
+                col("publication_date").alias("publication_date"),
+            ).alias("metadata"),
+            pl.lit("Google Patents Public Data").alias("source"),
         )
-    ).select(["id", "text", "added", "created", "title_language", "publication_date"])
+    ).select(["id", "text", "added", "created", "source", "metadata"])
     if limit > 0:
         df = df.fetch(limit).lazy()
     return df.collect(streaming=True)
 
 
-def serialize_dolma(
-    data_dir: str = r"./data/uspto/",
-    limit: int = 0,
-    max_concurrency: int = 4,
-) -> Iterator[dict[str, str]]:
-    """
-    Serialize a dataset of documents into a standardized format.
-
-    Args:
-        data_dir: The directory path where the dataset files are located. Default is `./data/uspto/`.
-        limit: The maximum number of documents to be serialized. Default is 0, which represents no limit.
-        max_concurrency: max files to process in parallel. Default is `4`.
-
-    Returns:
-        A generator that yields dictionaries representing serialized documents. Each dictionary consists of the document
-        content and metadata in a standardized format.
-
-    Example Usage:
-        for document in serialize_dolma(data_dir="./data/uspto/", limit=10):
-            print(document)
-    """
-    for x in tqdm(process_datasets(data_dir, limit, max_concurrency)):
-        metadata = {
-            "source": "Google Patents Public Data",
-            "metadata": {
-                "license": str(PermissiveLicenses.CC_BY),
-                "language": x.pop("title_language", "en"),
-                "publication_date": str(x.pop("publication_date", "")),
-            },
-        }
-        yield x | metadata
-
-
 def create_args_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--output_dir", type=str, help="Output directory", default=r"/uspto/output"
+        "--output-path", type=str, help="Output directory", default=r"/uspto/outputs"
     )
     parser.add_argument(
-        "--data-dir",
+        "--data-path",
         type=str,
-        default=r"/uspto/data/",
+        default=r"/uspto/data",
         help="Dataset directory where all parquet files to process are located ",
     )
 
@@ -197,21 +179,30 @@ def create_args_parser() -> argparse.ArgumentParser:
         default=8,
         help="Maximum number of parquet files to process concurrently",
     )
+    parser.add_argument(
+        "--to-parquet",
+        action="store_true",
+        help="Output to parquet file",
+    )
+
     return parser
 
 
 if __name__ == "__main__":
     args = create_args_parser().parse_args()
     logger.info(
-        f"""Processing USPTO with the following parameters: Output Dir: {args.output_dir},
+        f"""Processing USPTO with the following parameters: Output Dir: {args.output_path}, Data Dir: {args.data_path},
          Limit: {args.limit}, Max Concurrency: {args.max_concurrency}"""
     )
-    to_dolma(
-        serialize_dolma(
-            data_dir=args.data_dir,
-            limit=args.limit,
-            max_concurrency=args.max_concurrency,
-        ),
-        args.output_dir,
-        "uspto.jsonl.gz",
-    )
+    if args.to_parquet:
+        to_parquet(args.output_path, args.data_path, args.limit, args.max_concurrency)
+    else:
+        to_dolma(
+            process_datasets(
+                data_dir=args.data_path,
+                limit=args.limit,
+                max_concurrency=args.max_concurrency,
+            ),
+            args.output_path,
+            "uspto.jsonl.gz",
+        )
