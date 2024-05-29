@@ -17,7 +17,9 @@ def batched(iterable, n):
 def parse_html(claims: bool, html_string: str) -> str:
     if not html_string:
         return ""
-    text = pypandoc.convert_text(html_string, "plain", "html", extra_args=["--quiet"])
+    text = pypandoc.convert_text(
+        html_string, "markdown", "html", extra_args=["--quiet"]
+    )
     # remove single newlines that are not surrounded by other newlines as those are likely line length formatting.
     new_line_pattern = r"(?<!\n)\n(?!\n)"
     # also add line-breaks after <number><periods> for claims (as they are all numbered).
@@ -36,5 +38,7 @@ def parallel_apply(claims: bool, max_concurrency: int, column: pl.Series) -> pl.
         fn = partial(parse_html, False)
     if max_concurrency == 0:
         max_concurrency = None
+    # polars mainly handles the concurrency but the pandoc calls add as a blocker. This is a workaround to
+    # increase the concurrency of the pandoc calls.
     with multiprocessing.get_context("spawn").Pool(max_concurrency) as pool:
         return pl.Series(pool.imap(fn, track(column, description="Processing column")))
