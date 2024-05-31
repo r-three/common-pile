@@ -6,7 +6,13 @@ USPTO dataset extracted from [Google Patents Public Dataset](https://cloud.googl
 
 To clone the unprocessed dataset from HuggingFace run `bash setup.sh`. The default location is `/uspto/data`
 
-The main script can be run with `bash run process_uspto.sh --output-dir <output_dir> --max-concurrency <int> --limit <max_rows>`
+`pandoc` is required to run the script. The command to install it is provided in the script (commented out). Alternatively you can install it with`sudo apt-get install pandoc` but that installs an older version.
+
+
+The main script can be run with `bash run process_uspto.sh --output-dir <output_dir> --max-concurrency <int> --limit <max_rows>`.
+
+Note: The script will take a long time to run. The `--max-concurrency` flag can be used to speed up the process. The `--limit` flag can be used to limit the number of rows processed.
+It takes ~30 mins to process 1 file with 256 threads. The bulk of the processing is done by pandoc.
 
 To save the processed data to parquet add the `--to-parquet` flag.
 
