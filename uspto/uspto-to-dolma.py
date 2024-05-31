@@ -21,7 +21,7 @@ if sys.version_info < (3, 9):
 
 
 def process_datasets(
-    data_dir: str = r"./data/uspto/",
+    data_dir: str = r"data/uspto/",
     limit: int = 0,
     max_concurrency: int = 4,
 ) -> Iterator[dict]:
@@ -120,18 +120,14 @@ def scan_dataset(file_name, limit, max_concurrency) -> pl.DataFrame:
             ).alias("abstract_text"),
         )
         .with_columns_seq(
-            col("description_html")
-            .map_batches(
+            col("description_html").map_batches(
                 parallel_apply_desc,
                 return_dtype=pl.String,
-            )
-            .str.replace_all(r"\\left(\.|)|\\right(\.|)", ""),
-            col("claims_html")
-            .map_batches(
+            ),
+            col("claims_html").map_batches(
                 parallel_apply_claims,
                 return_dtype=pl.String,
-            )
-            .str.replace_all(r"\\left(\.|)|\\right(\.|)", ""),
+            ),
         )
         .with_columns(
             pl.concat_str(
@@ -160,12 +156,12 @@ def scan_dataset(file_name, limit, max_concurrency) -> pl.DataFrame:
 def create_args_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--output-path", type=str, help="Output directory", default=r"/uspto/outputs"
+        "--output-path", type=str, help="Output directory", default=r"uspto/outputs"
     )
     parser.add_argument(
         "--data-path",
         type=str,
-        default=r"/uspto/data",
+        default=r"uspto/data",
         help="Dataset directory where all parquet files to process are located ",
     )
 
