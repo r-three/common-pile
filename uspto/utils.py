@@ -22,7 +22,7 @@ def parse_html(claims: bool, html_string: str) -> str:
     new_line_pattern = r"(?<!\n)\n(?!\n)"
     # also add line-breaks after <number><periods> for claims (as they are all numbered).
     list_pattern = r"(\s\d+\.\s)"
-    text = re.sub(new_line_pattern, "", text)
+    text = re.sub(new_line_pattern, " ", text)
     if claims:
         text = re.sub(list_pattern, r"\n\1", text)
     return text

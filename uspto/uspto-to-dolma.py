@@ -1,4 +1,5 @@
 import argparse
+import os
 import sys
 from functools import partial
 from pathlib import Path
@@ -177,7 +178,7 @@ def create_args_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--max-concurrency",
         type=int,
-        default=0,
+        default=int(os.cpu_count()) - 1,
         help="Maximum number of multiprocessing for pandoc conversions",
     )
     parser.add_argument(
