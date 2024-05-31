@@ -41,10 +41,11 @@ def build_url_index(url: str) -> List[str]:
     return page_list
 
 
-def url_to_filename(url: str) -> str:
+def url_to_filename(url: str, max_length: int = 255) -> str:
     url = re.sub(r"https?://(?:www\.)?", "", url)
     url = re.sub(r"[?,=/]", "_", url)
     url = re.sub(r"\s+", "_", url)
+    url = url[:max_length]
     return url
 
 

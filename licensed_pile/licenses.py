@@ -10,6 +10,11 @@ class StringEnum(Enum):
 
 
 class PermissiveLicenses(StringEnum):
+    """By 'Permissive' we mean licenses that are in the Gold, Silver, or Bronze
+    lists of the Blue Oak Countil (https://blueoakcouncil.org/list), even if
+    they have copyleft requirements.
+    """
+
     PD = "Public Domain"
     CC0 = "Creative Commons Zero - Public Domain - https://creativecommons.org/publicdomain/zero/1.0/"
     CC_BY = (
@@ -24,7 +29,14 @@ class PermissiveLicenses(StringEnum):
     GFDL = "GNU Free Documentation License"
     APACHE_2 = "Apache 2 License - https://www.apache.org/licenses/LICENSE-2.0"
     MIT = "MIT License"
-    BSD = "BSD License"
+    BSD_2 = "BSD 2-Clause"
+    BSD_3 = "BSD 3-Clause"
+
+    ISC = "ISC License"
+    ARTISTIC_2 = "Artistic License 2.0"
+
+    # Not in the Blue Oak Council list, but open source compliant.
+    CDLA_P = "Community Data License Agreement - Permissive 1.0 - https://cdla.dev/"
 
     # TODO: Fill out this function to match in more cases.
     # Note: This kind of function will always be messy and probably require

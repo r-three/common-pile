@@ -9,4 +9,8 @@ rdflib
 requests>=2.13
 smart_open
 tenacity
+pandas
+jsonlines
+datasets
 tqdm
+ultimate-sitemap-parser
