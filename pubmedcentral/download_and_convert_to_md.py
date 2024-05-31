@@ -36,6 +36,86 @@ parser.add_argument(
     help="Number of processes to use for conversion.",
 )
 
+def get_date_from_tree(tree):
+    date_created = None
+    # get date from tree
+    # date can be found under a number of tags
+    pub_types = ["pub", "epub", "pmc-release", "ppub"]
+    for pub_type in pub_types:
+
+        # try most common location first
+        date = tree.find(f".//pub-date[@pub-type='{pub_type}']")
+        if date is not None:
+            # get year, month, and day
+            # Use 1900-01-01 as default date
+            # Try to get each component separately
+            try:
+                year = date.find("year").text
+            except AttributeError:
+                # if year is missing, use full default
+                date_created = "1900-01-01"
+                continue
+
+            # if we found the year, try the month
+            try:
+                month = date.find("month").text
+            except AttributeError:
+                # if month is missing, use default month and date
+                date_created = f"{year}-01-01"
+                continue
+
+
+            # if we found the month, try the day
+            try:
+                day = date.find("day").text
+            except AttributeError:
+                # if day is missing, use default day
+                date_created = f"{year}-{month}-01"
+                continue
+
+
+            # If we successfully found all date components,
+            #   convert to YYYY-MM-DD format
+            date_created = f"{year}-{month}-{day}"
+            break
+    
+        # try the next location
+        date = tree.find(f".//pub-date[@date-type='{pub_type}']")
+        if date is not None:
+            # get year, month, and day
+            # Use 1900-01-01 as default date
+            # Try to get each component separately
+            try:
+                year = date.find("year").text
+            except AttributeError:
+                # if year is missing, use full default
+                date_created = "1900-01-01"
+                continue
+
+            # if we found the year, try the month
+            try:
+                month = date.find("month").text
+            except AttributeError:
+                # if month is missing, use default month and date
+                date_created = f"{year}-01-01"
+                continue
+
+
+            # if we found the month, try the day
+            try:
+                day = date.find("day").text
+            except AttributeError:
+                # if day is missing, use default day
+                date_created = f"{year}-{month}-01"
+                continue
+
+
+            # If we successfully found all date components,
+            #   convert to YYYY-MM-DD format
+            date_created = f"{year}-{month}-{day}"
+            break
+
+    return date_created
 
 def get_authors_and_date(nxml_file: str, pmcid: str):
     # get authors from nxml file
@@ -52,23 +132,14 @@ def get_authors_and_date(nxml_file: str, pmcid: str):
             authors.append({"first": given_names.text, "last": surname.text})
 
     # get date
-    # date can be found under "epub" or "pmc-release" tags
-    pub_types = ["epub", "pmc-release"]
-    for pub_type in pub_types:
-        date = tree.find(f".//pub-date[@pub-type='{pub_type}']")
-        if date is not None:
-            year = date.find("year").text
-            month = date.find("month").text
-            day = date.find("day").text
-            # convert to YYYY-MM-DD format
-            date_created = f"{year}-{month}-{day}"
-            break
+    date_created = get_date_from_tree(tree)
 
+    # occasionally, articles don't have a date within the tree
+    # not a fatal error, just log it
     if date_created is None:
-        # haven't seen any examples without a date, but just in case
-        # not a fatal error, just log it
         logger = logs.get_logger("pubmedcentral")
-        logger.error(f"Date not found for {pmcid}")
+        logger.info(f"Date not found for {pmcid}. Setting to default value of '1900-01-01'")
+        date_created = "1900-01-01"
 
     return authors, date_created
 
