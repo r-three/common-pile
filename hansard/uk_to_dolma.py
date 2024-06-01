@@ -120,14 +120,15 @@ def process_files_in_folder(
                 else:
                     date = "9999-01-01"
                 yield {
-                    "text": parsed_text,
-                    "source": f"uk-hansard-{source}",
                     "id": file.stem,
+                    "text": parsed_text,
+                    "created": date,
+                    "source": f"uk-hansard-{source}",
                     "added": str(datetime.now().date()),
                     "metadata": {
-                        "year": date.split("-")[0],
-                        "language": language,
                         "license": str(PermissiveLicenses.OPL),
+                        "language": language,
+                        "year": date.split("-")[0],
                     },
                 }
 
