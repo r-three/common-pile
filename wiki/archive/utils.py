@@ -28,10 +28,11 @@ def check_alive(item) -> bool:
 
 # TODO:
 def check_out_of_date(item, offset: datetime):
+    if "late-updated-date" not in item["metadata"]:
+        return False
     last_updated = datetime.datetime.strptime(
         item["metadata"]["last-updated-date"], "%Y-%m-%d"
     )
-    print(last_updated)
     return False
 
 
@@ -362,5 +363,8 @@ KNOWN_BAD = frozenset(
         "wikiteam_2020-02-09",
         # This is an old version of wiki-windowswallpapermirahezeorg_w
         "wiki-windowswallpapermirahezeorg-20220509",
+        # This was causing errors when downloading.
+        "wiki-galaxiesunboundfandomcom",
+        "wiki-doomwiki.org-20231010",
     }
 )

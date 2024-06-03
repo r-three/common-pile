@@ -5,6 +5,8 @@ import functools
 import json
 import multiprocessing.dummy as mp
 import os
+import subprocess
+import re
 import random
 
 import internetarchive
@@ -19,8 +21,8 @@ parser = argparse.ArgumentParser(
 parser.add_argument("--wiki_metadata", default="data/ia-wikis.jsonl")
 parser.add_argument("--test_run", type=int, help="")
 parser.add_argument("--num_threads", type=int, default=32, help="")
-parser.add_argument("--worker_id", type=int, required=True, help="")
-parser.add_argument("--num_workers", type=int, required=True, help="")
+parser.add_argument("--worker_id", type=int, help="")
+parser.add_argument("--num_workers", type=int, help="")
 
 
 # TODO: Default downloading to .../dumps
@@ -28,7 +30,7 @@ def download_and_extract(
     ident: str,
     dl_file,
     output_dir: str = "/fruitbasket/users/bdlester/projects/licensed_pile/wiki/archive/data/dumps",
-    verbose: bool = False,
+    verbose: bool = True,
 ):
     logger = logs.get_logger("wiki/archive")
     dest = os.path.join(output_dir, ident)
@@ -37,12 +39,22 @@ def download_and_extract(
             f"Skipping download of {dl_file['name']} for {ident} as {dest} already exists on disk."
         )
         return dest
-    logger.info(f"Downloading {dl_file['name']} for {ident}.")
-    internetarchive.download(
-        ident, checksum=True, verbose=verbose, files=dl_file["name"], destdir=output_dir
-    )
+    else:
+        logger.info(f"Downloading {dl_file['name']} for {ident}.")
+        try:
+            internetarchive.download(
+                ident, checksum=True, verbose=verbose, files=dl_file["name"], destdir=output_dir
+            )
+        except:
+            logger.error(f"Failed to download {dl_file['name']}")
+            return dest
     logger.info(f"Extracting download for {ident} to {dest}.")
-    pyunpack.Archive(os.path.join(dest, dl_file["name"])).extractall(dest)
+    try:
+        pyunpack.Archive(os.path.join(dest, dl_file["name"])).extractall(dest)
+    except:
+        if dl_file["name"].endswith(".zst"):
+            with open(os.path.join(dest, re.sub(r"\.zst$", "", dl_file["name"])), "w") as wf:
+               subprocess.run(["/usr/bin/zstd", "-c", "-d", "--long=31", "--", os.path.join(dest, dl_file["name"])], stdout=wf)
     return dest
 
 
@@ -113,12 +125,14 @@ def main(args):
         random.shuffle(wiki_metadata)
         wiki_metadata = wiki_metadata[: args.test_run]
 
-    wiki_metadata = [
-        w for i, w in enumerate(wiki_metadata) if i % args.num_workers == args.worker_id
-    ]
-    logger.info(
-        f"{len(wiki_metadata)} wikis to download as {args.worker_id}/{args.num_workers}."
-    )
+    if args.num_workers and args.worker_id:
+        wiki_metadata = [
+            w for i, w in enumerate(wiki_metadata)
+            if i % args.num_workers == args.worker_id
+        ]
+        logger.info(
+            f"{len(wiki_metadata)} wikis to download as {args.worker_id}/{args.num_workers}."
+        )
 
     with mp.Pool(args.num_threads) as pool:
         pool.starmap(
