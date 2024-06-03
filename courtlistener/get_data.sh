@@ -10,22 +10,11 @@ download_dir="./data/courtlistener/raw"
 # Create the directory if it does not exist
 mkdir -p "$download_dir"
 
+# Only download the data from most recent CL dump
+# The newest dump contains the previous dumps data 
+# Differences from the previous data should not be included
 dates=(
-    "2022-08-02"
-    "2022-08-31"
-    "2022-09-30"
-    "2022-10-31"
-    "2022-11-30"
-    "2022-12-31"
-    "2023-01-31"
-    "2023-02-28"
-    "2023-03-31"
-    "2023-04-30"
-    "2023-05-31"
-    "2023-07-31"
-    "2023-08-31"
-    "2023-12-04"
-    "2024-03-11"
+    "2024-05-06"
 )
 
 max_jobs=8

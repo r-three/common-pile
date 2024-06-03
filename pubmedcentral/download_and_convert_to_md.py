@@ -36,13 +36,13 @@ parser.add_argument(
     help="Number of processes to use for conversion.",
 )
 
+
 def get_date_from_tree(tree):
     date_created = None
     # get date from tree
     # date can be found under a number of tags
     pub_types = ["pub", "epub", "pmc-release", "ppub"]
     for pub_type in pub_types:
-
         # try most common location first
         date = tree.find(f".//pub-date[@pub-type='{pub_type}']")
         if date is not None:
@@ -64,7 +64,6 @@ def get_date_from_tree(tree):
                 date_created = f"{year}-01-01"
                 continue
 
-
             # if we found the month, try the day
             try:
                 day = date.find("day").text
@@ -73,12 +72,11 @@ def get_date_from_tree(tree):
                 date_created = f"{year}-{month}-01"
                 continue
 
-
             # If we successfully found all date components,
             #   convert to YYYY-MM-DD format
             date_created = f"{year}-{month}-{day}"
             break
-    
+
         # try the next location
         date = tree.find(f".//pub-date[@date-type='{pub_type}']")
         if date is not None:
@@ -100,7 +98,6 @@ def get_date_from_tree(tree):
                 date_created = f"{year}-01-01"
                 continue
 
-
             # if we found the month, try the day
             try:
                 day = date.find("day").text
@@ -109,13 +106,13 @@ def get_date_from_tree(tree):
                 date_created = f"{year}-{month}-01"
                 continue
 
-
             # If we successfully found all date components,
             #   convert to YYYY-MM-DD format
             date_created = f"{year}-{month}-{day}"
             break
 
     return date_created
+
 
 def get_authors_and_date(nxml_file: str, pmcid: str):
     # get authors from nxml file
@@ -138,7 +135,9 @@ def get_authors_and_date(nxml_file: str, pmcid: str):
     # not a fatal error, just log it
     if date_created is None:
         logger = logs.get_logger("pubmedcentral")
-        logger.info(f"Date not found for {pmcid}. Setting to default value of '1900-01-01'")
+        logger.info(
+            f"Date not found for {pmcid}. Setting to default value of '1900-01-01'"
+        )
         date_created = "1900-01-01"
 
     return authors, date_created
