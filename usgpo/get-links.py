@@ -11,6 +11,7 @@ from tqdm.auto import tqdm
 
 from licensed_pile import logs
 
+
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--api-key", required=True, help="GovInfo API key")
