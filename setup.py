@@ -63,4 +63,5 @@ setup(
         "requests>=2.13",
         "tenacity",
     ],
+    entry_points={"console_scripts": ["count-tokens-dolma = licensed_pile.count:main"]},
 )
