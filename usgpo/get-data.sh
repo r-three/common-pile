@@ -8,7 +8,7 @@ USGPO_DIRECTORY="data/usgpo"
 mkdir -p ${USGPO_DIRECTORY}/raw
 
 echo "Getting Document Links"
-python usgpo/get-links.py --api-key "${api_key}" --start-date "${start_date}" --output-dir ${USGPO_DIRECTORY}/raw
+python get-links.py --api-key "${api_key}" --start-date "${start_date}" --output-dir ${USGPO_DIRECTORY}/raw
 
 echo "Downloading Documents"
-python usgpo/download-files.py --api-key ${api_key} --links-file ${USGPO_DIRECTORY}/raw/links.jsonl
+python download-files.py --api-key ${api_key} --links-file ${USGPO_DIRECTORY}/raw/links.jsonl

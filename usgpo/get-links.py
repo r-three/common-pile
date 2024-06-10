@@ -9,6 +9,7 @@ import jsonlines
 import requests
 from tqdm.auto import tqdm
 
+from licensed_pile import logs
 
 def parse_args():
     parser = argparse.ArgumentParser()
