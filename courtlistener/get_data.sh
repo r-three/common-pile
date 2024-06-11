@@ -11,7 +11,7 @@ download_dir="./data/courtlistener/raw"
 mkdir -p "$download_dir"
 
 # Only download the data from most recent CL dump
-# The newest dump contains the previous dumps data 
+# The newest dump contains the previous dumps data
 # Differences from the previous data should not be included
 dates=(
     "2024-05-06"

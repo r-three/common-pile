@@ -7,7 +7,7 @@ import multiprocessing as mp
 import os
 from contextlib import ExitStack
 from queue import Queue
-from typing import Dict, Sequence
+from typing import Dict, Iterator
 
 import smart_open
 import tqdm
@@ -23,7 +23,7 @@ def shard_name(filename: str, shard: str, padding: int = 5):
 
 # TODO: Add overwrite protection
 def to_dolma(
-    examples: Sequence[Dict],
+    examples: Iterator[Dict],
     path: str,
     filename: str,
     shard_size: int = 1,
