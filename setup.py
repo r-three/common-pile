@@ -63,5 +63,5 @@ setup(
         "requests>=2.13",
         "tenacity",
     ],
-    entry_points={"console_scripts": ["count-tokens-dolma = licensed_pile.count:main"]},
+    entry_points={"console_scripts": ["size-stats-dolma = licensed_pile.stats:main"]},
 )
