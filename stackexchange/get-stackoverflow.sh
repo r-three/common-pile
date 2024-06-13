@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 
+data_dir=${1:-"data"}
+data_dir=${data_dir%/}
+
 # Stackoverflow is larger than the other sites so they distribute each .xml file
 # as its own .7z compressed file.
-mkdir -p data/dump/stackoverflow.com
+mkdir -p ${data_dir}/dump/stackoverflow.com
 
 STACKOVERFLOW=(
   "https://archive.org/download/stackexchange/stackoverflow.com-Badges.7z"
@@ -17,8 +20,8 @@ STACKOVERFLOW=(
 for url in "${STACKOVERFLOW[@]}"; do
     file="${url##*.com-}"
     file="${file%.7z}"
-    wget -c -nc -P data/dump/stackoverflow.com --show-progress "${url}"
-    if [[ ! -f "data/dump/stackoverflow.com/${file}.xml" ]]; then
-      7z x -odata/dump/stackoverflow.com/ data/dump/stackoverflow.com/"${url##*/}"
+    wget -c -nc -P ${data_dir}/dump/stackoverflow.com --show-progress "${url}"
+    if [[ ! -f "${data_dir}/dump/stackoverflow.com/${file}.xml" ]]; then
+      7z x -o${data_dir}/dump/stackoverflow.com/ ${data_dir}/dump/stackoverflow.com/"${url##*/}"
     fi
 done

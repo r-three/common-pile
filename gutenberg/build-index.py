@@ -10,6 +10,8 @@ import tqdm
 from rdflib import Graph
 from utils import file_type, parse_id
 
+from licensed_pile import logs
+
 # These books are not good data for Language Modeling, they are boilerplate
 # descriptions for data formats for recorded music and how PG books were
 # distributed on disk. We skip adding these to the index these.
@@ -67,7 +69,8 @@ def main(args):
     results = []
     skip = set(args.skip)
 
-    print("Parsing metadata")
+    logger = logs.get_logger("gutenberg")
+    logger.info("Parsing metadata")
     for i, filename in enumerate(tqdm.tqdm(glob.iglob(args.data))):
         id = os.path.basename(os.path.dirname(filename))
         if id in skip:
@@ -76,8 +79,8 @@ def main(args):
         g.parse(source=filename, format=args.format)
         results.extend(file_type(g.query(QUERY)))
 
-    print(f"There are {len(results)} public-domain books.")
-    print(f"Writing index to {args.output}")
+    logger.info(f"There are {len(results)} public-domain books.")
+    logger.info(f"Writing index to {args.output}")
 
     results = map(lambda x: x.asdict(), results)
     results = map(parse_id, results)
@@ -88,4 +91,5 @@ def main(args):
 
 if __name__ == "__main__":
     args = parser.parse_args()
+    logs.configure_logging("gutenberg")
     main(args)

@@ -4,6 +4,7 @@ import functools
 import json
 import os
 
+from licensed_pile import logs
 from licensed_pile.licenses import PermissiveLicenses
 from licensed_pile.write import to_dolma
 
@@ -50,8 +51,12 @@ def format_dolma(
 ):
     file, journal, accessionID, _, lic = file.split("\t")
     file = os.path.basename(file).replace("tar.gz", "md")
-    with open(os.path.join(data_dir, file)) as f:
-        text = f.read()
+    try:
+        with open(os.path.join(data_dir, file)) as f:
+            text = f.read()
+    except FileNotFoundError:
+        logger = logs.get_logger("pubmedcentral")
+        logger.error(f"File {os.path.join(data_dir, file)} does not exist")
 
     with open(
         os.path.join(args.metadata_dir, f"{os.path.splitext(file)[0]}.json"),
