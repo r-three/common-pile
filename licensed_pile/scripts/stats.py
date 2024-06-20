@@ -107,6 +107,7 @@ def main():
     parser = argparse.ArgumentParser(description="Calculate Size Stats in dolma files.")
     parser.add_argument(
         "--input",
+        required=True,
         help="The dolma input directory, should be where the `documents` dir lives. Can also be a specific file.",
     )
     parser.add_argument(
