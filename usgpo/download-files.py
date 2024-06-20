@@ -1,16 +1,12 @@
 import argparse
 import datetime
-import html
-import os
-import queue
-import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import jsonlines
-import requests
-from bs4 import BeautifulSoup
+import trafilatura
 from tqdm.auto import tqdm
 
+from utils import api_query
 from licensed_pile import logs
 from licensed_pile.licenses import PermissiveLicenses
 from licensed_pile.write import to_dolma
@@ -42,41 +38,18 @@ def parse_args():
     return args
 
 
-def api_query(endpoint, headers, params):
-    logger = logs.get_logger("usgpo")
-    response = requests.get(endpoint, headers=headers, params=params)
-    if response.status_code == 429:
-        # Sleep for an hour if we've hit the rate-limit
-        logger.info("Sleeping for one hour to avoid rate-limit")
-        time.sleep(60 * 60)
-        response = requests.get(endpoint, headers=headers, params=params)
-    return response
-
-
 def download_file(api_key, file_url):
     response = api_query(file_url, headers=None, params={"api_key": api_key})
     text = response.text
     return text
 
 
-def parse_html(text):
-    # Most documents are primarily pre-formatted text inside of the a <pre> tag
-    # If so, just take the contents of that tag instead of the whole document
-    soup = BeautifulSoup(text, "html.parser")
-    pre_tag = soup.find("pre")
-    if pre_tag:
-        parsed_text = pre_tag.get_text()
-    else:
-        parsed_text = text
-    return html.unescape(parsed_text)
-
-
 def construct_record(api_key, file):
     file_url = file["links"].get("txtLink")
     if file_url is None:
         return None
-    raw_html = download_file(api_key, file_url)
-    parsed_text = parse_html(raw_html)
+    html = download_file(api_key, file_url)
+    text = trafilatura.extract(html)
 
     return {
         "id": file["package_id"],
@@ -85,8 +58,7 @@ def construct_record(api_key, file):
         "author": file["author"],
         "publisher": file["publisher"],
         "category": file["category"],
-        "html": raw_html,
-        "text": parsed_text,
+        "text": text,
         "source": SOURCE_NAME,
         "added": datetime.datetime.utcnow().isoformat(),
         "metadata": {"license": str(PermissiveLicenses.PD), "url": file_url},
