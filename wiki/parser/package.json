@@ -1,6 +1,8 @@
 {
   "dependencies": {
     "commander": "^12.1.0",
-    "wtf_wikipedia": "^10.3.1"
+    "wtf_wikipedia": "^10.3.1",
+    "wtf-plugin-api": "^2.0.0",
+    "wtf-plugin-latex": "^1.0.0"
   }
 }

@@ -21,8 +21,8 @@ declare -a wikis=(
 )
 
 for wiki in ${wikis[@]}; do
-    filename="en${wiki}-${DATE}-pages-articles-multistream.xml.bz2"
-    url="https://dumps.wikimedia.org/en${wiki}/latest/${filename}"
+    filename="en${wiki}-${DATE}-pages-meta-current.xml.bz2"
+    url="https://dumps.wikimedia.org/en${wiki}/${DATE}/${filename}"
     # Use wget to avoid re-downloading and continue downloads.
     wget -nc -c ${url} -O "${data_dir}/dumps/${filename}"
     # bzip2 doesn't decompress if the output is already there, so we don't check

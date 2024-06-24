@@ -10,8 +10,9 @@ from tempfile import TemporaryDirectory
 import requests
 import tqdm
 
-from licensed_pile import logs
+from licensed_pile import logs, utils
 from licensed_pile.write import ShardParallelProcessor
+from wiki import adjust_indentation, format_document, parse_wikitext, replace_math_tags
 
 parser = argparse.ArgumentParser(description="Preprocess raw books in dolma format.")
 parser.add_argument(
@@ -23,6 +24,11 @@ parser.add_argument(
     "--output",
     default="dump/data/wiki/dump/v0",
     help="The output version, this directory should be where the `documents` dir will live.",
+)
+parser.add_argument(
+    "--filename",
+    default="*.jsonl.gz",
+    help="The filename to match with globs, probably needs to be escaped.",
 )
 # TODO: Respect this flag
 parser.add_argument(
@@ -45,28 +51,39 @@ parser.add_argument(
 logs.configure_logging("dolma.WTFWikipediaParallel")
 
 
-def parse_wikitext(text, doc_id, source):
-    return requests.post(
-        "http://localhost:3000", json={"wikitext": text, "id": doc_id, "source": source}
-    ).json()["text"]
-
-
 class WTFWikipediaParallel(ShardParallelProcessor):
     @classmethod
     def process_example(cls, example, **kwargs):
-        example["text"] = parse_wikitext(
-            example["text"], example["id"], example["source"]
+        logger = cls.get_logger()
+        logger.warning(f"Processing example: {example['id']}")
+        wikitext = example["text"]
+        if wikitext is None:
+            wikitext = ""
+        # Convert <math>
+        wikitext = replace_math_tags(wikitext)
+        # Adjust indentation to avoid reorderings.
+        wikitext = adjust_indentation(wikitext)
+        # Extract Templates
+        ...
+        # Parse Wiki Text
+        document = parse_wikitext(wikitext, example["id"], example["source"])
+        # Format plaintext into document
+        document = format_document(
+            document, example.get("metadata", {}).get("title", "")
         )
+        # Process Templates
+        ...
+        # Reinsert Templates
+        ...
+        example["text"] = document
         return example
 
 
 def main(args):
     with TemporaryDirectory() as tempdir:
         processor = WTFWikipediaParallel(
-            source_prefix=os.path.join(
-                args.input, "documents", "*_wiktionary.com.jsonl.gz"
-            ),
-            destination_prefix=os.path.join(args.output, "documents"),
+            source_prefix=utils.dolma_input(args.input, args.filename),
+            destination_prefix=utils.dolma_output(args.output),
             metadata_prefix=tempdir,
             num_processes=args.processes,
         )
