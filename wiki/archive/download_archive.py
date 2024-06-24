@@ -5,9 +5,9 @@ import functools
 import json
 import multiprocessing.dummy as mp
 import os
-import subprocess
-import re
 import random
+import re
+import subprocess
 
 import internetarchive
 import pyunpack
@@ -43,7 +43,11 @@ def download_and_extract(
         logger.info(f"Downloading {dl_file['name']} for {ident}.")
         try:
             internetarchive.download(
-                ident, checksum=True, verbose=verbose, files=dl_file["name"], destdir=output_dir
+                ident,
+                checksum=True,
+                verbose=verbose,
+                files=dl_file["name"],
+                destdir=output_dir,
             )
         except:
             logger.error(f"Failed to download {dl_file['name']}")
@@ -53,8 +57,20 @@ def download_and_extract(
         pyunpack.Archive(os.path.join(dest, dl_file["name"])).extractall(dest)
     except:
         if dl_file["name"].endswith(".zst"):
-            with open(os.path.join(dest, re.sub(r"\.zst$", "", dl_file["name"])), "w") as wf:
-               subprocess.run(["/usr/bin/zstd", "-c", "-d", "--long=31", "--", os.path.join(dest, dl_file["name"])], stdout=wf)
+            with open(
+                os.path.join(dest, re.sub(r"\.zst$", "", dl_file["name"])), "w"
+            ) as wf:
+                subprocess.run(
+                    [
+                        "/usr/bin/zstd",
+                        "-c",
+                        "-d",
+                        "--long=31",
+                        "--",
+                        os.path.join(dest, dl_file["name"]),
+                    ],
+                    stdout=wf,
+                )
     return dest
 
 
@@ -127,7 +143,8 @@ def main(args):
 
     if args.num_workers and args.worker_id:
         wiki_metadata = [
-            w for i, w in enumerate(wiki_metadata)
+            w
+            for i, w in enumerate(wiki_metadata)
             if i % args.num_workers == args.worker_id
         ]
         logger.info(
