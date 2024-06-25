@@ -5,8 +5,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import jsonlines
 from tqdm.auto import tqdm
-
 from utils import api_query
+
 from licensed_pile import logs
 
 
@@ -110,16 +110,21 @@ def get_package_metadata(api_key, package):
 def main(args):
     logger = logs.get_logger("usgpo")
     os.makedirs(args.output_dir, exist_ok=True)
-    
+
     # Get packages from the specified USGPO collections from `args.start_date` to current day
     logger.info(f"Getting packages from the following collections: {args.collections}")
     packages = get_packages(args.api_key, args.collections, args.start_date)
-    
+
     logger.info(f"Getting package metadata and writing out to {args.output_dir}")
-    with jsonlines.open(os.path.join(args.output_dir, "links.jsonl"), mode="w", flush=True) as writer:
+    with jsonlines.open(
+        os.path.join(args.output_dir, "links.jsonl"), mode="w", flush=True
+    ) as writer:
         # Spawn multiple worker threads to get the metadata associated with all packages
         with ThreadPoolExecutor(max_workers=args.workers) as executor:
-            metadata_futures_to_package = {executor.submit(get_package_metadata, args.api_key, package): package for package in packages}
+            metadata_futures_to_package = {
+                executor.submit(get_package_metadata, args.api_key, package): package
+                for package in packages
+            }
 
             # Write out package metadata to file
             for metadata_future in tqdm(as_completed(metadata_futures_to_package)):
