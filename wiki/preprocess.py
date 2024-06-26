@@ -77,10 +77,11 @@ class WTFWikipediaParallel(ShardParallelProcessor):
         # Process Templates
         math_templates = map(wiki.fix_math, math_templates)
         parsed_templates = [
-            wiki.parse_wikitext(t, example["id"], example["source"])
+            wiki.parse_wikitext(t, example["id"], example["source"])[0]["text"]
             for t in math_templates
         ]
         parsed_templates = [t.replace(wiki.ABS_MARKER, "|") for t in parsed_templates]
+        parsed_templates = [f"${t}$" for t in parsed_templates]
         # Reinsert Templates
         document = wiki.insert_templates(document, parsed_templates, wiki.MATH_MARKER)
         example["text"] = document

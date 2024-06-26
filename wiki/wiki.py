@@ -16,6 +16,24 @@ ABS_MARKER = "\u00A6\u00A6\u00A6"
 # WTF Wikipedia strips out most templates, which is where almost all the math is :(
 
 
+CHAR_SYMBOLS = {
+    "[Pp]hi": r"\phi",
+    r"\)": ")",
+    r"\(": "(",
+    "[Dd]elta": r"\delta",
+    "[Pp]i": r"\pi",
+    "[Gg]amma": r"\gamma",
+    "[Ee]psilon": r"\epsilon",
+    "[Ss]igma": r"\sigma",
+    "[Tt]heta": r"\theta",
+    "[Vv]arepsilon": r"\epsilon",
+    "[Vv]arphi": r"\phi",
+    "[Vv]arsigma": r"\sigma",
+    "[Vv]artheta": r"\theta",
+    "[Ee]ll": r"\ell",
+}
+
+
 def insert_templates(text: str, templates: List[str], marker) -> str:
     """
 
@@ -528,23 +546,6 @@ MATH_TEMPLATES = (
     "Tee",
     "True",
 )
-
-CHAR_SYMBOLS = {
-    "[Pp]hi": r"\phi",
-    r"\)": ")",
-    r"\(": "(",
-    "[Dd]elta": r"\delta",
-    "[Pp]i": r"\pi",
-    "[Gg]amma": r"\gamma",
-    "[Ee]psilon": r"\epsilon",
-    "[Ss]igma": r"\sigma",
-    "[Tt]heta": r"\theta",
-    "[Vv]arepsilon": r"\epsilon",
-    "[Vv]arphi": r"\phi",
-    "[Vv]arsigma": r"\sigma",
-    "[Vv]artheta": r"\theta",
-    "[Ee]ll": r"\ell",
-}
 
 # These are templates that are hard to process and make sense to strip out.
 # "change": This creates a table, skip
