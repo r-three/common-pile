@@ -131,6 +131,8 @@ class ShardParallelProcessor(BaseParallelProcessor):
                             update_interval *= 2
                         document_count = 0
             except Exception as e:
-                logger.warning("Failed to process %s: %s", source_path, e)
+                logger.warning(
+                    "Failed to process %s:%s %s", source_path, i, e, exc_info=True
+                )
                 return
             cls.increment_progressbar(queue, shards=1, documents=document_count)

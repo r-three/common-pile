@@ -10,9 +10,9 @@ from tempfile import TemporaryDirectory
 import requests
 import tqdm
 
+import wiki
 from licensed_pile import logs, utils
 from licensed_pile.write import ShardParallelProcessor
-from wiki import adjust_indentation, format_document, parse_wikitext, replace_math_tags
 
 parser = argparse.ArgumentParser(description="Preprocess raw books in dolma format.")
 parser.add_argument(
@@ -57,24 +57,32 @@ class WTFWikipediaParallel(ShardParallelProcessor):
         logger = cls.get_logger()
         logger.warning(f"Processing example: {example['id']}")
         wikitext = example["text"]
+        # Should be fixed in the dolma generation script.
         if wikitext is None:
             wikitext = ""
         # Convert <math>
-        wikitext = replace_math_tags(wikitext)
+        wikitext = wiki.replace_math_tags(wikitext)
         # Adjust indentation to avoid reorderings.
-        wikitext = adjust_indentation(wikitext)
+        wikitext = wiki.adjust_indentation(wikitext)
         # Extract Templates
-        ...
+        wikitext, math_templates = wiki.extract_templates(
+            wikitext, ("math",), wiki.MATH_MARKER
+        )
         # Parse Wiki Text
-        document = parse_wikitext(wikitext, example["id"], example["source"])
+        document = wiki.parse_wikitext(wikitext, example["id"], example["source"])
         # Format plaintext into document
-        document = format_document(
+        document = wiki.format_document(
             document, example.get("metadata", {}).get("title", "")
         )
         # Process Templates
-        ...
+        math_templates = map(wiki.fix_math, math_templates)
+        parsed_templates = [
+            wiki.parse_wikitext(t, example["id"], example["source"])
+            for t in math_templates
+        ]
+        parsed_templates = [t.replace(wiki.ABS_MARKER, "|") for t in parsed_templates]
         # Reinsert Templates
-        ...
+        document = wiki.insert_templates(document, parsed_templates, wiki.MATH_MARKER)
         example["text"] = document
         return example
 
