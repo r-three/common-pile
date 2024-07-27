@@ -15,6 +15,8 @@ ABS_MARKER = "\u00A6\u00A6\u00A6"
 
 # WTF Wikipedia strips out most templates, which is where almost all the math is :(
 
+# Unclosed scopes, e.g. "An example with {{math|''x''" are removed -> "An example with ''x''"
+
 
 CHAR_SYMBOLS = {
     "[Pp]hi": r"\phi",
@@ -37,11 +39,12 @@ CHAR_SYMBOLS = {
 def insert_templates(text: str, templates: List[str], marker) -> str:
     """
 
-    Again, re.sub was being annoying about \'s in the replacements.'"""
+    Again, re.sub was being annoying about \'s in the replacements.'
+    """
     offset = 0
     new_text = []
     for t in templates:
-        if mark := re.search(marker, text[offset:]):
+        if mark := re.search(marker, text[offset:], re.IGNORECASE):
             new_text.append(text[offset : offset + mark.span()[0]])
             new_text.append(t)
             offset = offset + mark.span()[1]
@@ -63,12 +66,14 @@ def extract_templates(
     # {{ -> { when using an f-string, this creates a regex like {{(?:(...|...)) ?\|
     # Escaping the last | is important, otherwise you match everything as the "or"
     # is an empty string.
-    opening = rf"{{{{(?:{'|'.join(templates)}) ?\|"
+    opening = rf"{{{{(?:{'|'.join(templates)}) *?\|"
     new_text = []
     templates = []
     offset = 0
     # See `replace_math_tags`
-    while template := re.search(opening, text[offset:]):
+    while template := re.search(opening, text[offset:], re.IGNORECASE):
+        # Add everything before the template
+        new_text.append(text[offset : offset + template.span()[0]])
         # Find the closing }}, we expect there to be far more {{ openings inside
         # the template compared the the <math> tags, so we need to find the last
         # one. This will dispatch to the special curly parser.
@@ -77,9 +82,8 @@ def extract_templates(
         )
         # If a template is opened and never finished, we just include everything
         if end_start == -1:
-            break
-        # Add everything before the template
-        new_text.append(text[offset : offset + template.span()[0]])
+            offset = offset + template.span()[1]
+            continue
         # Add our template replacement
         new_text.append(replacement)
         # Add the template text to our list of templates.
@@ -104,16 +108,17 @@ def remove_template_brackets(text: str, templates: List[str]) -> str:
     Examples include: nobreak, nowrap, and var
     """
     for template in templates:
-        opening = rf"{{{{{template} ?\|"
+        opening = rf"{{{{{template} *?\|?"
         new_text = []
         offset = 0
-        while t := re.search(opening, text[offset:]):
+        while t := re.search(opening, text[offset:], re.IGNORECASE):
+            new_text.append(text[offset : offset + t.span()[0]])
             end_start, end_end = finish_template(
                 text[offset + t.span()[0] :], "{{", "}}"
             )
             if end_start == -1:
-                break
-            new_text.append(text[offset : offset + t.span()[0]])
+                offset = offset + t.span()[1]
+                continue
             template_text = text[
                 offset + t.span()[1] : offset + t.span()[0] + end_start
             ]
@@ -128,7 +133,7 @@ def remove_template_brackets(text: str, templates: List[str]) -> str:
 def fix_equals(text: str) -> str:
     """wtf_wikipedia can handle the {{math|1=...}} templates but not {{math| ... {{=}} ...}}"""
     # TODO: Does this replacement cause any issues?
-    if re.search(r"{{ ?= ?}}|<nowiki>=</nowiki>", text):
+    if re.search(r"{{ ?= ?}}|<nowiki>=</nowiki>", text, re.IGNORECASE):
         text = re.sub(r"{{math ?\|", "{{math|1=", text)
         return re.sub(r"{{ ?= ?}}|<nowiki>=</nowiki>", "=", text)
     return text
@@ -151,13 +156,14 @@ def replace_template(
     nest_close = nest_close if nest_close else closing
     offset = 0
     new_text = []
-    while m := re.search(opening, text[offset:]):
+    while m := re.search(opening, text[offset:], re.IGNORECASE):
+        new_text.append(text[offset : offset + m.span()[0]])
         end_start, end_end = finish_template(
             text[offset + m.span()[0] :], nest_open, nest_close
         )
         if end_start == -1:
-            break
-        new_text.append(text[offset : offset + m.span()[0]])
+            offset = offset + m.span()[1]
+            continue
         new_text.append(start)
         between = text[offset + m.span()[1] : offset + m.span()[0] + end_start]
         if recursive:
@@ -252,7 +258,9 @@ def replace_floor(text: str) -> str:
 
 def replace_norm(text: str) -> str:
     opening = r"{{[Nn]orm ?\|"
-    return replace_template(text, opening, "}}", r"\|", r"\|", nest_open="{{")
+    return replace_template(
+        text, opening, "}}", rf"\{ABS_MARKER}", rf"\{ABS_MARKER}", nest_open="{{"
+    )
 
 
 def replace_open_closed(text: str) -> str:
@@ -295,12 +303,16 @@ def replace_angle_bracket(text: str) -> str:
     return replace_template(text, opening, "}}", r"\langle", r"\rangle", nest_open="{{")
 
 
-def replace_symbols(text: str, symbols: Dict[str, str] = CHAR_SYMBOLS) -> str:
+def replace_symbols(
+    text: str, symbols: Dict[str, str] = CHAR_SYMBOLS, include_money: bool = False
+) -> str:
     for template, latex in symbols.items():
         # re.sub was being difficult about including something like \p in the
         # replacement string. So do it manually.
         # text = re.sub(rf"{{{{{template}}}}}", latex, text)
-        if m := re.search(rf"{{{{{template}}}}}", text):
+        if m := re.search(rf"{{{{{template}}}}}", text, re.IGNORECASE):
+            if include_money:
+                latex = f"${latex}$"
             text = "".join((text[: m.span()[0]], latex, text[m.span()[1] :]))
     return text
 
@@ -378,7 +390,10 @@ def replace_math_tags(text: str) -> str:
     # search to be after these <math></math> tags to find the next on.
     # All regex positions are based of the text[offset:] slice we we need to add
     # offset to them when using them to index the whole string
-    while math := re.search(math_opening, text[offset:]):
+    while math := re.search(math_opening, text[offset:], re.IGNORECASE):
+        # Add everything before the first match.
+        new_text.append(text[offset : offset + math.span()[0]])
+
         # Find the closing </math> associated with this tag. This index is relative
         # to the slice of text starting with the location of the opening tag match
         # so we need to add the start offset and the offset to index into the
@@ -389,10 +404,10 @@ def replace_math_tags(text: str) -> str:
         # This happens when there is a start tag but no end tag. For example,
         # in talk page 1-9564, they have `<math>` as a symbol (it is inside <nowiki>)
         if end_start == -1:
-            break
-
-        # Add everything before the first match.
-        new_text.append(text[offset : offset + math.span()[0]])
+            # TODO: Add logging
+            # Skip processing the scope for this one and then continue looking for more matches
+            offset = offset + math.span()[1]
+            continue
         # <math display="inline"> and <math display=inline> should use $
         # <math display="block"> and <math display=block> should use $$
         # <math> always uses $$ rendering (limits above and below sum for example)
@@ -468,7 +483,6 @@ MATH_TEMPLATES = (
     "Lg-start",
     "M/H",
     "Mapsto",
-    "math",
     "Math theorem",
     "Math proof",
     "math-link",
@@ -607,11 +621,11 @@ def finish_template(text, start="{{", end="}}"):
     i = 0
     templates = 0
     while i < len(text):
-        if m := re.search(f"^{start}", text[i:]):
+        if m := re.search(f"^{start}", text[i:], re.IGNORECASE):
             templates += 1
             # Note: .span is based on the slice so it is basically the length of the match
             i += m.span()[1] - 1
-        elif m := re.search(f"^{end}", text[i:]):
+        elif m := re.search(f"^{end}", text[i:], re.IGNORECASE):
             templates -= 1
             # Note: .span is based on the slice so it is basically the length of the match
             begin = i + m.span()[0]
@@ -622,18 +636,41 @@ def finish_template(text, start="{{", end="}}"):
     return -1, -1
 
 
+# def finish_mustache_template(text):
+#     """This is a special case of template finding where `{` and `}` are considered
+#     scopes that we must close before finding }}."""
+#     i = 0
+#     scopes = []
+#     while i < len(text) - 1:
+#         if text[i] == "{":
+#             if text[i + 1] == "{":
+#                 scopes.append("{{")
+#                 i += 1
+#             else:
+#                 scopes.append("{")
+#         elif text[i] == "}":
+#             if text[i + 1] == "}" and scopes[-1] == "{{":
+#                 scopes.pop()
+#                 i += 1
+#                 if not scopes:
+#                     return i - 1, i + 1
+#             else:
+#                 # This would result in a syntax error.
+#                 if scopes[-1] != "{":
+#                     pass
+#                 scopes.pop()
+#         i += 1
+#     return -1, -1
+
+
 def finish_mustache_template(text):
     """This is a special case of template finding where `{` and `}` are considered
     scopes that we must close before finding }}."""
-    i = 0
-    scopes = []
+    i = 2
+    scopes = ["{{"]
     while i < len(text) - 1:
         if text[i] == "{":
-            if text[i + 1] == "{":
-                scopes.append("{{")
-                i += 1
-            else:
-                scopes.append("{")
+            scopes.append("{")
         elif text[i] == "}":
             if text[i + 1] == "}" and scopes[-1] == "{{":
                 scopes.pop()
@@ -665,9 +702,13 @@ def wiki_to_dir(wiki_id, chars: int = 2, levels: int = 2):
 
 
 def parse_wikitext(text, doc_id, source):
-    return requests.post(
-        "http://localhost:5000", json={"wikitext": text, "id": doc_id, "source": source}
-    ).json()["document"]
+    r = requests.post(
+        "http://localhost:5000",
+        json={"wikitext": text, "id": doc_id, "source": source},
+    )
+    if r.status_code == 408:
+        raise requests.Timeout()
+    return r.json()["document"]
 
 
 def format_section(sec) -> str:
@@ -707,7 +748,7 @@ def adjust_indentation(text: str) -> str:
     recursion depth exceeded error when running within dolma).
     """
     result = []
-    while indent := re.search("^:+.+$", text, re.MULTILINE):
+    while indent := re.search("^:+.+$", text, re.MULTILINE | re.IGNORECASE):
         # The :ident is on the last line
         if indent.span()[1] == len(text):
             result.append(text)

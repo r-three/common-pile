@@ -48,18 +48,19 @@ parser.add_argument(
     help="Number of processors for multicore.",
 )
 
-logs.configure_logging("dolma.WTFWikipediaParallel")
+logs.configure_logging("dolma.WTFWikipediaParallel", level="DEBUG")
 
 
 class WTFWikipediaParallel(ShardParallelProcessor):
     @classmethod
     def process_example(cls, example, **kwargs):
         logger = cls.get_logger()
-        logger.warning(f"Processing example: {example['id']}")
+        logger.debug(f"Processing example: {example['id']}")
         wikitext = example["text"]
         # Should be fixed in the dolma generation script.
-        if wikitext is None:
-            wikitext = ""
+        if not wikitext:
+            logger.warning(f"Example {example['id']} is empty")
+            return example
         # Convert <math>
         wikitext = wiki.replace_math_tags(wikitext)
         # Adjust indentation to avoid reorderings.
@@ -68,8 +69,29 @@ class WTFWikipediaParallel(ShardParallelProcessor):
         wikitext, math_templates = wiki.extract_templates(
             wikitext, ("math",), wiki.MATH_MARKER
         )
+        if math_templates:
+            logger.debug(
+                f"Found {len(math_templates)} {{{{math|...}}}} templates in document {example['id']}."
+            )
+        wikitext, raw_templates = wiki.extract_templates(
+            wikitext, wiki.MATH_TEMPLATES, wiki.SECOND_MARKER
+        )
+        if raw_templates:
+            logger.debug(
+                f"Found {len(raw_templates)} more templates that appear to contain math in document {example['id']}."
+            )
+
+        # We replace these symbols after extracting any thare are part of other
+        # templates. Trying to extract these as their own templates (optional \)
+        # creates weird issues like {{Infobox ...}} getting extracted as {{In..}}
+        wikitext = wiki.replace_symbols(wikitext, include_money=True)
         # Parse Wiki Text
-        document = wiki.parse_wikitext(wikitext, example["id"], example["source"])
+        try:
+            document = wiki.parse_wikitext(wikitext, example["id"], example["source"])
+        except:
+            logger.error(f"Failed wikitext parsing for {example['id']}", exc_info=True)
+            example["text"] = ""
+            return example
         # Format plaintext into document
         document = wiki.format_document(
             document, example.get("metadata", {}).get("title", "")
@@ -80,9 +102,25 @@ class WTFWikipediaParallel(ShardParallelProcessor):
             wiki.parse_wikitext(t, example["id"], example["source"])[0]["text"]
             for t in math_templates
         ]
+        for mt, pt in zip(math_templates, parsed_templates):
+            if not pt:
+                logger.warning(f"Math template: {mt} was parsed to nothing.")
+
         parsed_templates = [t.replace(wiki.ABS_MARKER, "|") for t in parsed_templates]
         parsed_templates = [f"${t}$" for t in parsed_templates]
+
+        raw_templates = map(wiki.fix_math, raw_templates)
+        parsed_raw = [
+            wiki.parse_wikitext(t, example["id"], example["source"])[0]["text"]
+            for t in raw_templates
+        ]
+        for rt, pr in zip(raw_templates, parsed_templates):
+            if not pr:
+                logger.warning(f"Template: {rt} was parsed to nothing.")
+        parsed_raw = [t.replace(wiki.ABS_MARKER, "|") for t in parsed_raw]
+        parsed_raw = [f"${t}$" for t in parsed_raw]
         # Reinsert Templates
+        document = wiki.insert_templates(document, parsed_raw, wiki.SECOND_MARKER)
         document = wiki.insert_templates(document, parsed_templates, wiki.MATH_MARKER)
         example["text"] = document
         return example

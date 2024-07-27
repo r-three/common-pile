@@ -3,6 +3,7 @@
 import abc
 import copy
 import json
+import logging
 import multiprocessing as mp
 import os
 from contextlib import ExitStack
@@ -72,6 +73,16 @@ class ShardParallelProcessor(BaseParallelProcessor):
     @abc.abstractmethod
     def process_example(cls, example, **kwargs):
         """Code to process a single example in the dolma format, not the whole file."""
+
+    @classmethod
+    def get_logger(cls):
+        # Based on ...
+        if (proc_name := mp.current_process().name) == "MainProcess":
+            proc_name = "main"
+        proc_name = proc_name.replace(" ", "_")
+        # name = f"{proc_name}.dolma.{cls.__name__}"
+        name = f"dolma.{cls.__name__}"
+        return get_logger(name)
 
     @classmethod
     def process_single(

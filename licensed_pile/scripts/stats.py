@@ -66,7 +66,12 @@ class SizeStatsParallel(BaseParallelProcessor):
                         continue
 
                     # TODO: Make this configurable
-                    tokens = data["text"].split()
+                    if data["text"] is None:
+                        tokens = []
+                        document_count += 1
+                        continue
+                    else:
+                        tokens = data["text"].split()
                     document_count += 1
                     token_count += len(tokens)
                     char_count += len(data["text"])
@@ -109,6 +114,7 @@ def main():
         "--input",
         required=True,
         help="The dolma input directory, should be where the `documents` dir lives. Can also be a specific file.",
+        required=True,
     )
     parser.add_argument(
         "--processes",
