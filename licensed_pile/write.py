@@ -56,6 +56,20 @@ def to_dolma(
             wf.write(data + "\n")
 
 
+def smart_open_exists(path):
+    try:
+        with smart_open.open(path):
+            return True
+    except:
+        return False
+
+
+def create_shadow(path):
+    h, t = os.path.split(path)
+    # Add shadow at the start to not break any filename inference from smart_open
+    return os.path.join(h, f"shadow.{t}")
+
+
 class ShardParallelProcessor(BaseParallelProcessor):
     """Handle read/writes to jsonl.gz so our processor code only needs to processing a single example."""
 
@@ -93,10 +107,14 @@ class ShardParallelProcessor(BaseParallelProcessor):
         **kwargs,
     ):
         logger = cls.get_logger()
+        overwrite = kwargs.pop("overwrite", False)
         logger.debug("Processing %s into %s", source_path, destination_path)
-        with smart_open.open(source_path) as f, smart_open.open(
-            destination_path, "w"
-        ) as wf:
+        if not overwrite and smart_open_exists(destination_path):
+            logger.info("%s already exists, skipping", destination_path)
+            cls.increment_progressbar(queue, shards=1)
+            return
+        shadow_path = create_shadow(destination_path)
+        with smart_open.open(source_path) as f, smart_open.open(shadow_path, "w") as wf:
             document_count = 0
             update_interval = kwargs.pop("update_interval", 1)
             debug = kwargs.pop("debug", False)
@@ -126,6 +144,7 @@ class ShardParallelProcessor(BaseParallelProcessor):
                             source_path,
                             i,
                         )
+                        document_count += 1
                         continue
 
                     if debug and og == processed["text"]:
@@ -142,8 +161,10 @@ class ShardParallelProcessor(BaseParallelProcessor):
                             update_interval *= 2
                         document_count = 0
             except Exception as e:
-                logger.warning(
-                    "Failed to process %s:%s %s", source_path, i, e, exc_info=True
-                )
-                return
-            cls.increment_progressbar(queue, shards=1, documents=document_count)
+                e.add_note(f"Exception occured while processing {source_path}:{i}")
+                logger.warning("Failed to process %s:%s", source_path, i, exc_info=True)
+                raise
+                # return
+        # Move, only works on local atm
+        os.rename(shadow_path, destination_path)
+        cls.increment_progressbar(queue, shards=1, documents=document_count)

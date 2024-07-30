@@ -7,12 +7,12 @@ output_dir=${3:-"data/wiki/dump/raw"}
 output_dir=${output_dir%/}
 
 if [ -z ${DATE} ]; then
-    echo "usage: to_dolma.sh [date] dump/ data/wiki/raw/documents" 2> /dev/null
+    echo "usage: to_dolma.sh [date YYYYMMDD] dump/ data/wiki/raw/documents" 2> /dev/null
     exit 1
 fi
 
 declare -a wikis=(
-    # wiki
+    wiki
     wikibooks
     wikinews
     wikiquote

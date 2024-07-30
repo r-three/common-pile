@@ -14,7 +14,7 @@ import wiki
 from licensed_pile import logs, utils
 from licensed_pile.write import ShardParallelProcessor
 
-parser = argparse.ArgumentParser(description="Preprocess raw books in dolma format.")
+parser = argparse.ArgumentParser(description="Preprocess raw wikitext in dolma format.")
 parser.add_argument(
     "--input",
     default="dump/data/wiki/dump/raw",
@@ -48,19 +48,67 @@ parser.add_argument(
     help="Number of processors for multicore.",
 )
 
-logs.configure_logging("dolma.WTFWikipediaParallel", level="DEBUG")
+logs.configure_logging("dolma.WTFWikipediaParallel", level="INFO")
+
+
+# These are pages that often crashed the servers.
+DENYLIST = {
+    "Template:Attached KML/U.S. Route 62 in Kentucky",
+    "Template:Attached KML/U.S. Route 277",
+    "User:BeywheelzLetItRip/fonts.css",
+    "User:BeywheelzLetItRip/fonts2.cs",
+    "Template:Graph:Map/Inner/USA-json",
+}
 
 
 class WTFWikipediaParallel(ShardParallelProcessor):
     @classmethod
+    def parse_wikitext(cls, wikitext, ex_id, ex_src):
+        logger = cls.get_logger()
+        try:
+            return wiki.parse_wikitext(wikitext, ex_id, ex_src)
+        except requests.Timeout:
+            logger.error("Wikitext parsing for example: %s/%s timed out", ex_src, ex_id)
+            # Returning None for the whole example will filter it from the output.
+            return None
+        except (ValueError, requests.JSONDecodeError):
+            logger.error(
+                "Failed wikitext parsing for example: %s/%s",
+                ex_src,
+                ex_id,
+                exc_info=True,
+            )
+            # Returning None for the whole example will filter it from the output.
+            return None
+        except Exception as e:
+            e.add_note(f"Failed to parse wikitext for example: {ex_src}/{ex_id}")
+            logger.error("Failed to parse wikitext for example: %s/%s", ex_src, ex_id)
+            raise
+
+    @classmethod
     def process_example(cls, example, **kwargs):
         logger = cls.get_logger()
-        logger.debug(f"Processing example: {example['id']}")
+        logger.debug("Processing example: %s/%s", example["source"], example["id"])
+        if (title := example["metadata"]["title"]) in DENYLIST:
+            logger.warning(
+                "Skipping example: %s/%s (%s) from the deny list as the text is %d characters long.",
+                example["source"],
+                example["id"],
+                title,
+                len(example["text"]),
+            )
+            # Returning None for the whole example will filter it from the output.
+            return None
         wikitext = example["text"]
         # Should be fixed in the dolma generation script.
         if not wikitext:
-            logger.warning(f"Example {example['id']} is empty")
-            return example
+            logger.warning("Example %s/%s is empty", example["source"], example["id"])
+            # Returning None for the whole example will filter it from the output.
+            return None
+        # ...
+        # if len(wikitext) > 1_000_000:
+        #     logger.warning("Skipping example: %s/%s as the text is %d characters long.", example['source'], example['id'], len(wikitext))
+        #     return None
         # Convert <math>
         wikitext = wiki.replace_math_tags(wikitext)
         # Adjust indentation to avoid reorderings.
@@ -71,52 +119,86 @@ class WTFWikipediaParallel(ShardParallelProcessor):
         )
         if math_templates:
             logger.debug(
-                f"Found {len(math_templates)} {{{{math|...}}}} templates in document {example['id']}."
+                "Found %d {{math|...}} templates in example: %s/%s.",
+                len(math_templates),
+                example["source"],
+                example["id"],
             )
         wikitext, raw_templates = wiki.extract_templates(
             wikitext, wiki.MATH_TEMPLATES, wiki.SECOND_MARKER
         )
         if raw_templates:
             logger.debug(
-                f"Found {len(raw_templates)} more templates that appear to contain math in document {example['id']}."
+                "Found %d more templates that appear to contain math in example: %s/%s.",
+                len(raw_templates),
+                example["source"],
+                example["id"],
             )
 
         # We replace these symbols after extracting any thare are part of other
         # templates. Trying to extract these as their own templates (optional \)
         # creates weird issues like {{Infobox ...}} getting extracted as {{In..}}
         wikitext = wiki.replace_symbols(wikitext, include_money=True)
+
         # Parse Wiki Text
-        try:
-            document = wiki.parse_wikitext(wikitext, example["id"], example["source"])
-        except:
-            logger.error(f"Failed wikitext parsing for {example['id']}", exc_info=True)
-            example["text"] = ""
-            return example
+        document = cls.parse_wikitext(wikitext, example["id"], example["source"])
+        if document is None:
+            logger.warning(
+                "After parsing wikitext, %s/%s was empty",
+                example["source"],
+                example["id"],
+            )
+            # Returning None for the whole example will filter it from the output.
+            return None
+
         # Format plaintext into document
         document = wiki.format_document(
             document, example.get("metadata", {}).get("title", "")
         )
+        if not document:
+            logger.warning(
+                "After parsing wikitext, %s/%s was empty",
+                example["source"],
+                example["id"],
+            )
+            # Returning None for the whole example will filter it from the output.
+            return None
+
         # Process Templates
         math_templates = map(wiki.fix_math, math_templates)
         parsed_templates = [
-            wiki.parse_wikitext(t, example["id"], example["source"])[0]["text"]
+            cls.parse_wikitext(t, example["id"], example["source"])
             for t in math_templates
+        ]
+        parsed_templates = [
+            p[0]["text"] if p is not None else "" for p in parsed_templates
         ]
         for mt, pt in zip(math_templates, parsed_templates):
             if not pt:
-                logger.warning(f"Math template: {mt} was parsed to nothing.")
+                logger.warning(
+                    "Math template: %s in example: %s/%s was parsed to nothing.",
+                    mt,
+                    example["source"],
+                    example["id"],
+                )
 
         parsed_templates = [t.replace(wiki.ABS_MARKER, "|") for t in parsed_templates]
         parsed_templates = [f"${t}$" for t in parsed_templates]
 
         raw_templates = map(wiki.fix_math, raw_templates)
         parsed_raw = [
-            wiki.parse_wikitext(t, example["id"], example["source"])[0]["text"]
+            cls.parse_wikitext(t, example["id"], example["source"])
             for t in raw_templates
         ]
+        parsed_raw = [p[0]["text"] if p is not None else "" for p in parsed_raw]
         for rt, pr in zip(raw_templates, parsed_templates):
             if not pr:
-                logger.warning(f"Template: {rt} was parsed to nothing.")
+                logger.warning(
+                    "Template: %s in example: %s/%s was parsed to nothing.",
+                    rt,
+                    example["source"],
+                    example["id"],
+                )
         parsed_raw = [t.replace(wiki.ABS_MARKER, "|") for t in parsed_raw]
         parsed_raw = [f"${t}$" for t in parsed_raw]
         # Reinsert Templates
@@ -134,7 +216,7 @@ def main(args):
             metadata_prefix=tempdir,
             num_processes=args.processes,
         )
-        processor(debug=args.debug)
+        processor(debug=args.debug, overwrite=args.overwrite)
 
 
 if __name__ == "__main__":

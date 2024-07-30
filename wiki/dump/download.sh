@@ -5,7 +5,7 @@ data_dir=${2:-"data"}
 data_dir=${data_dir%/}
 
 if [ -z ${DATE} ]; then
-    echo "usage: download.sh [date] data/" 2> /dev/null
+    echo "usage: download.sh [date YYYYMMDD] data/" 2> /dev/null
     exit 1
 fi
 
@@ -19,6 +19,8 @@ declare -a wikis=(
     wikivoyage
     wiktionary
 )
+
+mkdir -p "${data_dir}/dumps"
 
 for wiki in ${wikis[@]}; do
     filename="en${wiki}-${DATE}-pages-meta-current.xml.bz2"

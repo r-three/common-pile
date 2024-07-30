@@ -13,11 +13,20 @@ SECOND_MARKER = "\u21ED\u21ED\u21ED"
 # ¦¦¦ "Broken Bar", `|` has a lot of meaning in wikitext so we to replace actual instances of it.
 ABS_MARKER = "\u00A6\u00A6\u00A6"
 
-# WTF Wikipedia strips out most templates, which is where almost all the math is :(
+# WTF Wikipedia strips out most templates, which is where almost all the math is
+# :( What we do is find the math templates (regex to find the start then iterate
+# forward to find the closing of the scope, allows for nesting) and replace them
+# with a symbol that doesn't appear anywhere else. We then clean each template
+# ourselves and insert them back, after wtf_wikipedia has been run on the main
+# article.
+#
+# Sometimes wtf_wikipdia converts a template to `1/undefined` and the `/` can
+# be an ascii slash or sometime various unicode verions. These are currently
+# left in.
 
-# Unclosed scopes, e.g. "An example with {{math|''x''" are removed -> "An example with ''x''"
 
-
+# Characters that appear in wikimath templates and how to translate them into
+# how they would appear in latex.
 CHAR_SYMBOLS = {
     "[Pp]hi": r"\phi",
     r"\)": ")",
@@ -37,9 +46,9 @@ CHAR_SYMBOLS = {
 
 
 def insert_templates(text: str, templates: List[str], marker) -> str:
-    """
+    """Replace each instance of marker in text with a template.
 
-    Again, re.sub was being annoying about \'s in the replacements.'
+    re.sub was being annoying about \'s in the replacements.'
     """
     offset = 0
     new_text = []
@@ -49,7 +58,8 @@ def insert_templates(text: str, templates: List[str], marker) -> str:
             new_text.append(t)
             offset = offset + mark.span()[1]
         else:
-            # This should be an error
+            # This should be an error, but the logger isn't plumbed into this
+            # function atm, just let it go for v0
             pass
     if trailing := text[offset:]:
         new_text.append(trailing)
@@ -132,7 +142,6 @@ def remove_template_brackets(text: str, templates: List[str]) -> str:
 
 def fix_equals(text: str) -> str:
     """wtf_wikipedia can handle the {{math|1=...}} templates but not {{math| ... {{=}} ...}}"""
-    # TODO: Does this replacement cause any issues?
     if re.search(r"{{ ?= ?}}|<nowiki>=</nowiki>", text, re.IGNORECASE):
         text = re.sub(r"{{math ?\|", "{{math|1=", text)
         return re.sub(r"{{ ?= ?}}|<nowiki>=</nowiki>", "=", text)
@@ -152,6 +161,13 @@ def replace_template(
     nest_close=None,
     recursive: bool = False,
 ) -> str:
+    """Replace templates found in text with a marker. See replace_math_templates
+    for an explaination of the main parsing code.
+
+    Note: This function *always* allows for the nesting of *different* templates
+          i.e., {{math|{{overline|...}}}}, but recursive=True must be set to
+          allow for the nesting of the *same* template, i.e. X<sub>i<sub>j</sub></sub>
+    """
     nest_open = nest_open if nest_open else opening
     nest_close = nest_close if nest_close else closing
     offset = 0
@@ -188,6 +204,10 @@ def replace_template(
     return "".join(new_text)
 
 
+##
+# These are for ease of use, giving names to the common templates we replace in
+# the conversion from wikitext to latex.
+#
 def replace_sub(text: str) -> str:
     return replace_template(text, r"<sub>", r"</sub>", "_{", "}", recursive=True)
 
@@ -209,7 +229,7 @@ def replace_prime(text: str) -> str:
 
 
 def replace_fraction(text: str) -> str:
-    """{{Function|...}} isn't handled by wtf_wikipedia but {{sfrac|...}} is."""
+    """{{Fraction|}} isn't handled by wtf_wikipedia but {{sfrac|...}} is."""
     text = re.sub(r"{{[Ff]ract(?:ion)?(?:/sandbox)? ?\|", "{{sfrac|", text)
     return re.sub(r"{{sfrac/sandbox ?\|", "{{sfrac|", text)
 
@@ -306,6 +326,7 @@ def replace_angle_bracket(text: str) -> str:
 def replace_symbols(
     text: str, symbols: Dict[str, str] = CHAR_SYMBOLS, include_money: bool = False
 ) -> str:
+    """Replace templates that evaulate to a symbol {{pi}} -> 𝛑 with the latex version."""
     for template, latex in symbols.items():
         # re.sub was being difficult about including something like \p in the
         # replacement string. So do it manually.
@@ -318,6 +339,12 @@ def replace_symbols(
 
 
 def replace_abs(text: str) -> str:
+    """Convert absolute value from wikitext to latex.
+
+    The | symbol is used in the wikitext template syntax, so they uses various
+    different ways to escape them. This tries to standadize them all to the latex
+    format.
+    """
     text = text.replace("{{!}}", ABS_MARKER)
     text = text.replace("<nowiki>|</nowiki>", ABS_MARKER)
     text = text.replace("<nowiki>||</nowiki>", f"{ABS_MARKER}{ABS_MARKER}")
@@ -329,6 +356,11 @@ def replace_abs(text: str) -> str:
 
 
 def replace_mset(text: str) -> str:
+    """Convert set notation from wikitext to latex.
+
+    Where are some cases where wtf_wikipedia deletes msets that have | bars in
+    them despite that being legal in wikitext, those are not handled well atm.
+    """
     opening = r"{{[Mm]set\|?"
     closing = r"}}"
     return replace_template(
@@ -336,12 +368,14 @@ def replace_mset(text: str) -> str:
     )
 
 
-# TODO: Make sure to stripoff |undefined
-
-
 ##
 # This joins together all the text processing we do.
 def fix_math(text):
+    """Convert wikitext math to latex.
+
+    Note: The order of these fixes can be important, some latex output can get
+          caught by regex's for other tempaltes.
+    """
     text = remove_template_brackets(
         text,
         ("var", "nobreak", "nowrap", "mvar", "linktext", "em", "italics correction"),
@@ -375,13 +409,16 @@ def fix_math(text):
     return text
 
 
-##
-# This ...
 def extract_math_templates(text: str) -> Tuple[str, List[str]]:
+    """Pull all math out of the page to handle later."""
     return extract_templates(text, ("math",), MATH_MARKER)
 
 
 def replace_math_tags(text: str) -> str:
+    """Replace <math></math> with $$ for latex.
+
+    We try to pick $...$ or $$...$$ based on the wikitext.
+    """
     math_opening = r'<math(?: display="?(?P<type>inline|block)"?)?>'
     math_closing = r"</math>"
     offset = 0
@@ -471,6 +508,8 @@ MATH_TEMPLATES = (
     "Fe/H",
     "floor",
     "Function",
+    "Fraction",
+    "Frac",
     "gamma",
     "hub",
     "intmath",
@@ -526,6 +565,7 @@ MATH_TEMPLATES = (
     "subsup",
     "sup",
     "sup sub",
+    "sfrac",
     "tau",
     "theta",
     "tmath",
@@ -595,16 +635,6 @@ SKIP_SECTIONS = frozenset(
 )
 
 
-def test_request(text, latex: bool = False):
-    import requests
-
-    r = requests.post(
-        "http://localhost:5000",
-        json={"wikitext": text, "source": "test", "id": "test", "latex": latex},
-    )
-    return r.json()
-
-
 ##
 # These function look ahead in the text to find the end of a scope.
 def finish_template(text, start="{{", end="}}"):
@@ -636,52 +666,31 @@ def finish_template(text, start="{{", end="}}"):
     return -1, -1
 
 
-# def finish_mustache_template(text):
-#     """This is a special case of template finding where `{` and `}` are considered
-#     scopes that we must close before finding }}."""
-#     i = 0
-#     scopes = []
-#     while i < len(text) - 1:
-#         if text[i] == "{":
-#             if text[i + 1] == "{":
-#                 scopes.append("{{")
-#                 i += 1
-#             else:
-#                 scopes.append("{")
-#         elif text[i] == "}":
-#             if text[i + 1] == "}" and scopes[-1] == "{{":
-#                 scopes.pop()
-#                 i += 1
-#                 if not scopes:
-#                     return i - 1, i + 1
-#             else:
-#                 # This would result in a syntax error.
-#                 if scopes[-1] != "{":
-#                     pass
-#                 scopes.pop()
-#         i += 1
-#     return -1, -1
-
-
 def finish_mustache_template(text):
     """This is a special case of template finding where `{` and `}` are considered
-    scopes that we must close before finding }}."""
+    scopes that we must close before finding }}.
+
+    If there are } without preceding {, they are ignored.
+
+    In ambiguous cases like {{{, it parses to {{, { for opening the scopes.
+    """
     i = 2
     scopes = ["{{"]
     while i < len(text) - 1:
         if text[i] == "{":
             scopes.append("{")
         elif text[i] == "}":
-            if text[i + 1] == "}" and scopes[-1] == "{{":
-                scopes.pop()
-                i += 1
+            if text[i + 1] == "}":
+                if scopes and scopes[-1] == "{{":
+                    scopes.pop()
+                    i += 1
+                elif scopes and scopes[-1] == "{":
+                    scopes.pop()
                 if not scopes:
                     return i - 1, i + 1
             else:
-                # This would result in a syntax error.
-                if scopes[-1] != "{":
-                    pass
-                scopes.pop()
+                if scopes and scopes[-1] == "{":
+                    scopes.pop()
         i += 1
     return -1, -1
 
@@ -701,17 +710,46 @@ def wiki_to_dir(wiki_id, chars: int = 2, levels: int = 2):
     return os.path.join(*parts)
 
 
-def parse_wikitext(text, doc_id, source):
+def parse_wikitext(
+    text, doc_id, source, host: str = "http://localhost", port: int = 5000
+):
+    """Parse wikitext by hitting a server endpoint."""
     r = requests.post(
-        "http://localhost:5000",
+        f"{host}:{port}",
         json={"wikitext": text, "id": doc_id, "source": source},
     )
+    # This is technaially for the server to send the client when the client has
+    # timed out, but there isn't a server side timeout code. 504 is for when the
+    # server is a proxy, not just long running.
     if r.status_code == 408:
         raise requests.Timeout()
-    return r.json()["document"]
+    # This happens when HAProxy times out
+    if r.status_code == 504:
+        message = r.text
+        raise ValueError(f"{r}, {r.text}, probably from an HAProxy timeout.")
+    if r.status_code == 200:
+        try:
+            return r.json()["document"]
+        except requests.JSONDecodeError as e:
+            e.add_note(f"JSON Decoding failed for request {r}:{r.text}")
+            raise
+    try:
+        # Our server returns errors with json information, but if there is a non
+        # 200 code because of the load balancer, it might not be as JSON.
+        message = r.json()["error"]
+    except requests.JSONDecodeError:
+        message = r.text
+    raise ValueError(message)
 
 
 def format_section(sec) -> str:
+    """Convert a section dict into a string like:
+
+    title
+    text...
+    more text...
+    ...
+    """
     match sec:
         case {"title": "", "text": ""}:
             return ""
@@ -728,6 +766,7 @@ def filter_section(sec, blocklist: Set[str] = SKIP_SECTIONS) -> bool:
 
 
 def format_document(doc, title: str = "") -> str:
+    """Convert the list of sections into a string, filtering out boilerplate sections."""
     sections = filter(filter_section, doc)
     sections = (sec for s in sections if (sec := format_section(s)))
     return "\n\n".join(itertools.chain((title,), sections)).strip()
@@ -749,8 +788,8 @@ def adjust_indentation(text: str) -> str:
     """
     result = []
     while indent := re.search("^:+.+$", text, re.MULTILINE | re.IGNORECASE):
-        # The :ident is on the last line
-        if indent.span()[1] == len(text):
+        # The :ident is on the last line, "\n" isn't matched so subtract 1
+        if indent.span()[1] >= (len(text) - 1):
             result.append(text)
             break
 
