@@ -136,7 +136,9 @@ class ShardParallelProcessor(BaseParallelProcessor):
                     if debug:
                         og = copy.deepcopy(data["text"])
 
-                    processed = cls.process_example(data, **kwargs)
+                    processed = cls.process_example(
+                        data, source_file=source_path, line_number=i, **kwargs
+                    )
 
                     if processed is None:
                         logger.warning(
