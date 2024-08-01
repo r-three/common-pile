@@ -2,6 +2,7 @@
 
 import argparse
 import multiprocessing as mp
+import re
 from tempfile import TemporaryDirectory
 
 import bs4
@@ -43,10 +44,57 @@ parser.add_argument(
     help="Number of processors for multicore.",
 )
 
-logs.configure_logging("dolma.RemoveHTMLParallel", level="INFO")
+logs.configure_logging("dolma.RegexRemoveHTMLParallel", level="DEBUG")
 
 
-class RemoveHTMLParallel(ShardParallelProcessor):
+class CaptureMatches:
+    def __init__(self):
+        self.matches = []
+
+    def __call__(self, m):
+        try:
+            self.matches.append(m.group(1))
+        except IndexError:
+            self.matches.append(m)
+        return ""
+
+    def __iter__(self):
+        yield from self.matches
+
+    def __bool__(self):
+        return bool(self.matches)
+
+
+class RegexRemoveHTMLParallel(ShardParallelProcessor):
+    @classmethod
+    def process_example(cls, example, **kwargs):
+        logger = cls.get_logger()
+        cm = CaptureMatches()
+        # Capture the smallest amount of text between <div or <font and >
+        # This would not be ok if we cared about malicious input.
+        cleaned_text = re.sub(r"(<(?:div|font).*?>)", cm, example["text"])
+
+        if cm:
+            for m in cm:
+                logger.debug(
+                    "Removed %s based on regex",
+                    m,
+                    extra={
+                        "file": kwargs.get("source_file"),
+                        "line": kwargs.get("line_number"),
+                        "source": example["source"],
+                        "example_id": example["id"],
+                        "match": m,
+                    },
+                )
+
+        example["text"] = cleaned_text
+        return example
+
+
+class BS4RemoveHTMLParallel(ShardParallelProcessor):
+    """There are issues with using bs4 to remove partial html."""
+
     @classmethod
     def process_example(cls, example, **kwargs):
         try:
@@ -88,7 +136,7 @@ class RemoveHTMLParallel(ShardParallelProcessor):
 
 def main(args):
     with TemporaryDirectory() as tempdir:
-        processor = RemoveHTMLParallel(
+        processor = RegexRemoveHTMLParallel(
             source_prefix=utils.dolma_input(args.input, args.filename),
             destination_prefix=utils.dolma_output(args.output),
             metadata_prefix=tempdir,
