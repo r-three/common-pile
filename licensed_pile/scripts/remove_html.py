@@ -73,7 +73,7 @@ class RegexRemoveHTMLParallel(ShardParallelProcessor):
         # Capture the smallest amount of text between <div or <font and >
         # This would not be ok if we cared about malicious input.
         # cleaned_text = re.sub(r"(<(?:div|font).*?>)", cm, example["text"])
-        cleaned_text = re.sub(r"(<[^>]+?>)", cm, example["text"])
+        cleaned_text = re.sub(r"(<[^ >][^>]*?>)", cm, example["text"])
 
         if cm:
             for m in cm:
