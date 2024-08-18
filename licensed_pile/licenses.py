@@ -29,6 +29,7 @@ class PermissiveLicenses(StringEnum):
     GFDL = "GNU Free Documentation License"
     APACHE_2 = "Apache 2 License - https://www.apache.org/licenses/LICENSE-2.0"
     MIT = "MIT License"
+    OPL = "Open Parliament Licence - https://www.parliament.uk/site-information/copyright-parliament/open-parliament-licence/"
     BSD_2 = "BSD 2-Clause"
     BSD_3 = "BSD 3-Clause"
 
