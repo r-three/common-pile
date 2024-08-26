@@ -37,6 +37,9 @@ class PermissiveLicenses(StringEnum):
 
     # Not in the Blue Oak Council list, but open source compliant.
     CDLA_P = "Community Data License Agreement - Permissive 1.0 - https://cdla.dev/"
+    # Test
+    MPL = "MPL 2.0"
+    EPL = "EPL 1.0"
 
     # TODO: Fill out this function to match in more cases.
     # Note: This kind of function will always be messy and probably require
@@ -69,6 +72,7 @@ class RestrictiveLicenses(StringEnum):
     CC_BY_ND = "Creative Commons - Attribution No Derivatives"
     CC_BY_NC_ND = "Creative Commons - Attribution Non-Commercial No Derivatives"
     GPL = "GNU General Public License"
+    ARXIV = "arXiv.org - Non-exclusive license to distribute - http://arxiv.org/licenses/nonexclusive-distrib/1.0/"
 
     # TODO: Fill this in if we ever need to process restrictive license information.
     @classmethod
