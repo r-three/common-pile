@@ -10,7 +10,7 @@ import gzip
 import multiprocessing as mp
 import xml.etree.ElementTree as ET
 import multiprocessing as mp
-import functools
+import hashlib
 
 import jsonlines
 import boto3
@@ -32,6 +32,8 @@ parser.add_argument("--aws-profile", default="Eleuther-User", help="Name of prof
 parser.add_argument("--n-procs", default=48, type=int, help="Number of processes")
 parser.add_argument("--clean", default=False, action="store_true", help="Clean up extracted paper directories after run")
 parser.add_argument("--binding-paths", nargs="+", default=["/fruitbasket/users/nkandpa2/projects/ar5iv-bindings/bindings", "/fruitbasket/users/nkandpa2/projects/ar5iv-bindings/supported_originals"], help="Paths to LaTeXML bindings")
+parser.add_argument("--shard", type=int, required=True, help="Shard to process")
+parser.add_argument("--num-shards", type=int, required=True, help="Number of shards to split job into")
 parser.add_argument("--output-dir", required=True, help="Path to output directory")
 
 
@@ -50,7 +52,14 @@ def get_permissive_ids(metadata_path):
     return ids_to_parse
 
 
-def get_manifest_files(endpoint_url, bucket_name, manifest_path, output_dir, arxiv_ids=set(), aws_profile=None):
+def get_shard_num(s, num_shards):
+    h = hashlib.sha256(s.encode())
+    h_bytes = h.digest()
+    h_int = int.from_bytes(h_bytes, byteorder="big")
+    return h_int % num_shards
+
+
+def get_manifest_files(endpoint_url, bucket_name, manifest_path, shard, num_shards, output_dir, arxiv_ids=set(), aws_profile=None):
     logger = logs.get_logger("arxiv-papers")
 
     session = boto3.Session(profile_name=aws_profile)
@@ -68,7 +77,9 @@ def get_manifest_files(endpoint_url, bucket_name, manifest_path, output_dir, arx
     for file_element in root.findall(".//file"):
         yymm = file_element.find("yymm").text
         if yymm in yymms:
-            manifest_files.append(file_element.find("filename").text)
+            filename = file_element.find("filename").text
+            if get_shard_num(filename, num_shards) == shard:
+                manifest_files.append(filename)
     return manifest_files 
 
 
