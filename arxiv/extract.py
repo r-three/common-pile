@@ -40,7 +40,7 @@ def extract_papers(path, output_dir, filter_ids=set()):
                 continue
 
             extracted_paper = tarball.extractfile(member=member)
-            paper_dir = os.path.join(output_dir, arxiv_id.yymm, arxiv_id.id)
+            paper_dir = os.path.join(output_dir, arxiv_id.yymm, f"{arxiv_id}")
             try:
                 decompress_tgz(extracted_paper, paper_dir)
             except tarfile.ReadError as e1:

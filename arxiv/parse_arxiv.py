@@ -146,7 +146,7 @@ def main(args):
     os.makedirs(txt_dir, exist_ok=True)
 
     ids_to_parse = get_permissive_ids(args.metadata_path)
-    file_paths = get_manifest_files(args.s3_endpoint_url, args.bucket_name, args.manifest_path, scratch_dir, aws_profile=args.aws_profile, arxiv_ids=ids_to_parse)
+    file_paths = get_manifest_files(args.s3_endpoint_url, args.bucket_name, args.manifest_path, args.shard, args.num_shards, scratch_dir, aws_profile=args.aws_profile, arxiv_ids=ids_to_parse)
     
     logger.info(f"Processing {len(file_paths)} tarballs with {args.n_procs} processes")
     if args.n_procs == 1:
