@@ -1,19 +1,15 @@
 import subprocess
-import tempfile
 import os
 from glob import glob
-import subprocess
 import re
 from contextlib import contextmanager
 from typing import List, Optional
-import pylatexenc.latex2text
-import cchardet
 
 import html2text
 from bs4 import BeautifulSoup
+import pylatexenc.latex2text
 
 from licensed_pile import logs
-import utils
 from arxiv_id import ArXivID
 
 
@@ -85,7 +81,7 @@ class LaTeXMLParser(LaTeXParser):
         log_file = os.path.join(latexml_dir, "latexml.log")
         os.makedirs(latexml_dir, exist_ok=True)
 
-        base_command = ["latexmlc", \
+        base_command = ["/u/nkandpa2/LaTeXML-0.8.8/blib/script/latexmlc", \
                         f"--source={input_file}", f"--dest={latexml_file}", \
                         "--preload=[nobibtex,ids,localrawstyles,nobreakuntex,magnify=1.8,zoomout=1.8,tokenlimit=249999999,iflimit=3599999,absorblimit=1299999,pushbacklimit=599999]latexml.sty", \
                         "--preload=ar5iv.sty", \
@@ -268,10 +264,10 @@ class PyLaTeXEncParser(LaTeXParser):
     def parse_latex(self, path: str) -> str:
         logger = logs.get_logger("arxiv-papers")
 
-        with open(path) as f:
-            latex = f.read()
-        
         try:
+            with open(path) as f:
+                latex = f.read()
+        
             latex = self.process_bibliography(latex, path) 
         
             _, body = latex.split(r"\begin{document}", 1)

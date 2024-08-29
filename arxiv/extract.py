@@ -1,8 +1,6 @@
 import tarfile
 import gzip
-from tqdm.auto import tqdm
 import os
-import re
 
 from licensed_pile import logs
 from arxiv_id import ArXivID
@@ -41,6 +39,7 @@ def extract_papers(path, output_dir, filter_ids=set()):
 
             extracted_paper = tarball.extractfile(member=member)
             paper_dir = os.path.join(output_dir, arxiv_id.yymm, f"{arxiv_id}")
+            logger.info(f"Extracting {arxiv_id} from {path} to {paper_dir}")
             try:
                 decompress_tgz(extracted_paper, paper_dir)
             except tarfile.ReadError as e1:
@@ -54,5 +53,5 @@ def extract_papers(path, output_dir, filter_ids=set()):
 
     os.remove(path)
 
-    logger.info(f"Extracted {len(extracted_paper_dirs)} papers to {paper_dir}")
+    logger.info(f"Extracted {len(extracted_paper_dirs)} papers from {path}")
     return extracted_paper_dirs

@@ -41,10 +41,10 @@ class ArXivID:
         if match is not None:
             return cls(None, match.group("yymm"), match.group("id"))
 
-        match = re.match(r"(?P<field>[a-z\-]+)/(?P<yymm>\d{4})(?P<id>\d+)", id_string)
+        match = re.match(r"(?P<field>[a-z\-]+)[/|_]?(?P<yymm>\d{4})(?P<id>\d+)", id_string)
         if match is not None:
             return cls(match.group("field"), match.group("yymm"), match.group("id"))
-        
+
         logger.error(f"Failed to parse arXiv ID from string {id_string}")
         return None
     
