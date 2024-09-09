@@ -21,7 +21,6 @@ from licensed_pile.logs import configure_logging, get_logger
 from licensed_pile.write import to_dolma
 
 LICENSE_MAPPER = {
-    "MPL 2.0": PermissiveLicenses.MPL,
     "CDLA Permissive 1.0": PermissiveLicenses.CDLA_P,
     "MIT License": PermissiveLicenses.MIT,
     "CC BY 4.0": PermissiveLicenses.CC_BY,
@@ -30,7 +29,6 @@ LICENSE_MAPPER = {
     "BSD 3-Clause License": PermissiveLicenses.BSD_3,
     "Apache License 2.0": PermissiveLicenses.APACHE_2,
     "ISC License": PermissiveLicenses.ISC,
-    "EPL 1.0": PermissiveLicenses.EPL,
     "CC BY-SA": PermissiveLicenses.CC_BY_SA,
     "CC BY 3.0": PermissiveLicenses.CC_BY_3,
     "CC BY-SA 3.0": PermissiveLicenses.CC_BY_SA_3,
