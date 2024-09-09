@@ -1,13 +1,17 @@
+import argparse
+import gzip
 import os
 import shutil
-import gzip
-import argparse
+
 from huggingface_hub import snapshot_download
 
 from licensed_pile.logs import configure_logging, get_logger
 
+
 def parse_args():
-    parser = argparse.ArgumentParser(description="Data Provenance Hugging Face Data Downloader")
+    parser = argparse.ArgumentParser(
+        description="Data Provenance Hugging Face Data Downloader"
+    )
     parser.add_argument(
         "--hf_dataset",
         default="DataProvenanceInitiative/common_pile_ultra_permissive",
@@ -36,13 +40,13 @@ def main(args):
         repo_id=args.hf_dataset,
         repo_type="dataset",
         local_dir=args.top_dir,
-        allow_patterns='*.jsonl',
+        allow_patterns="*.jsonl",
         token=args.hf_token,
     )
 
     logger.info(f"Saving {args.hf_dataset}")
 
-    hugging_dir = os.path.join(args.top_dir, '.huggingface')
+    hugging_dir = os.path.join(args.top_dir, ".huggingface")
     if os.path.exists(hugging_dir):
         shutil.rmtree(hugging_dir)
 
@@ -50,13 +54,13 @@ def main(args):
         for file in files:
             source_path = os.path.join(root, file)
             dest_path = os.path.join(args.top_dir, file)
-            
-            while os.path.exists(dest_path) or os.path.exists(dest_path + '.gz'):
+
+            while os.path.exists(dest_path) or os.path.exists(dest_path + ".gz"):
                 name, ext = os.path.splitext(file)
                 dest_path = os.path.join(args.top_dir, f"{name}_{ext}")
 
-            with open(source_path, 'rb') as f_in:
-                with gzip.open(dest_path + '.gz', 'wb') as f_out:
+            with open(source_path, "rb") as f_in:
+                with gzip.open(dest_path + ".gz", "wb") as f_out:
                     shutil.copyfileobj(f_in, f_out)
 
             os.remove(source_path)
