@@ -92,7 +92,7 @@ def file_to_dolma(path: str, include_df: str, source_name: str = SOURCE_NAME):
     logger = get_logger()
     logger.info(f"Converting {path} to the dolma format.")
 
-    valid_ids = set(include_df['Dataset ID'])
+    valid_ids = set(include_df["Dataset ID"])
 
     dset_to_licenses = {
         row["Dataset ID"]: extract_licenses(row["Licenses"], row["GitHub License"])
@@ -114,10 +114,11 @@ def file_to_dolma(path: str, include_df: str, source_name: str = SOURCE_NAME):
 
     results = []
     for i, ex in enumerate(dset_collection):
-
         dataset_id = ex["dataset"]
 
-        assert dataset_id in valid_ids, f"Dataset ID '{dataset_id}' not found in include.csv"
+        assert (
+            dataset_id in valid_ids
+        ), f"Dataset ID '{dataset_id}' not found in include.csv"
 
         license_names = dset_to_licenses[dataset_id]
         langs = dset_to_langs[dataset_id]
