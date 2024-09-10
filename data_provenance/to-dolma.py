@@ -91,6 +91,9 @@ def extract_licenses(license_list, gh_license):
 def file_to_dolma(path: str, include_df: str, source_name: str = SOURCE_NAME):
     logger = get_logger()
     logger.info(f"Converting {path} to the dolma format.")
+
+    valid_ids = set(include_df['Dataset ID'])
+
     dset_to_licenses = {
         row["Dataset ID"]: extract_licenses(row["Licenses"], row["GitHub License"])
         for _, row in include_df.iterrows()
@@ -111,10 +114,16 @@ def file_to_dolma(path: str, include_df: str, source_name: str = SOURCE_NAME):
 
     results = []
     for i, ex in enumerate(dset_collection):
-        license_names = dset_to_licenses[ex["dataset"]]
-        langs = dset_to_langs[ex["dataset"]]
-        url = dset_to_urls[ex["dataset"]]
-        license_urls = dset_to_license_urls[ex["dataset"]]
+
+        dataset_id = ex["dataset"]
+
+        assert dataset_id in valid_ids, f"Dataset ID '{dataset_id}' not found in include.csv"
+
+        license_names = dset_to_licenses[dataset_id]
+        langs = dset_to_langs[dataset_id]
+        url = dset_to_urls[dataset_id]
+        license_urls = dset_to_license_urls[dataset_id]
+
         input_text = ex["inputs"]
         target_text = ex.get("labels", ex.get("targets", ""))
         # If target_text isn't found, the strip will remove the extra newline
@@ -130,11 +139,12 @@ def file_to_dolma(path: str, include_df: str, source_name: str = SOURCE_NAME):
                     "license_url": license_urls,
                     "language": langs,
                     "url": url,
-                    "dataset_id": ex["dataset"],
+                    "dataset_id": dataset_id,
                     "response": target_text,
                 },
             }
         )
+
     return results
 
 
