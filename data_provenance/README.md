@@ -15,6 +15,6 @@ The specific filter settings are here: https://github.com/Data-Provenance-Initia
 
 Here is the process to download the data, from inside the `data_provenance` dir:
 
-1. Run `python3 hf_downloader.py`
+1. Run `python hf_downloader.py`
 
-2. Run `python3 to-dolma.py --include include.csv`
+2. Run `python to-dolma.py --include include.csv`

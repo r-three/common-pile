@@ -93,6 +93,7 @@ def file_to_dolma(path: str, include_df: str, source_name: str = SOURCE_NAME):
     logger.info(f"Converting {path} to the dolma format.")
 
     valid_ids = set(include_df["Dataset ID"])
+    seen_dataset_ids = set()
 
     dset_to_licenses = {
         row["Dataset ID"]: extract_licenses(row["Licenses"], row["GitHub License"])
@@ -120,6 +121,9 @@ def file_to_dolma(path: str, include_df: str, source_name: str = SOURCE_NAME):
             dataset_id in valid_ids
         ), f"Dataset ID '{dataset_id}' not found in include.csv"
 
+        if dataset_id in valid_ids:
+            seen_dataset_ids.add(dataset_id)
+
         license_names = dset_to_licenses[dataset_id]
         langs = dset_to_langs[dataset_id]
         url = dset_to_urls[dataset_id]
@@ -145,6 +149,9 @@ def file_to_dolma(path: str, include_df: str, source_name: str = SOURCE_NAME):
                 },
             }
         )
+
+    unseen_ids = valid_ids - seen_dataset_ids
+    print(f"Unseen Datasets: {len(unseen_ids)} | {unseen_ids}")
 
     return results
 
