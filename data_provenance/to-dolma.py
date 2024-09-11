@@ -10,11 +10,13 @@ import gzip
 import itertools
 import json
 import os
+import re
 from datetime import datetime
 
 import jsonlines
 import pandas as pd
 from constants import HF_MAPPING
+from tqdm import tqdm
 
 from licensed_pile.licenses import PermissiveLicenses
 from licensed_pile.logs import configure_logging, get_logger
@@ -64,6 +66,22 @@ parser.add_argument(
 SOURCE_NAME = "Data Provenance Initiative"
 
 
+def get_unique_ids(folder_path):
+    unique_doc_ids = set()
+
+    jsonl_files = [f for f in os.listdir(folder_path) if f.endswith(".jsonl.gz")]
+
+    for filename in tqdm(jsonl_files, desc="Processing files"):
+        file_path = os.path.join(folder_path, filename)
+        with gzip.open(file_path, "rt") as f:
+            for line in f:
+                data = json.loads(line)
+                doc_id = data.get("id")
+                stripped_id = re.sub(r"-\d+$", "", doc_id)
+                unique_doc_ids.add(stripped_id)
+    return unique_doc_ids
+
+
 def listdir_nohidden(path):
     """Returns all non-hidden files within a directory, raises ValueError if the path is invalid."""
     if not os.path.exists(path) or not os.path.isdir(path):
@@ -93,7 +111,6 @@ def file_to_dolma(path: str, include_df: str, source_name: str = SOURCE_NAME):
     logger.info(f"Converting {path} to the dolma format.")
 
     valid_ids = set(include_df["Dataset ID"])
-    seen_dataset_ids = set()
 
     dset_to_licenses = {
         row["Dataset ID"]: extract_licenses(row["Licenses"], row["GitHub License"])
@@ -121,9 +138,6 @@ def file_to_dolma(path: str, include_df: str, source_name: str = SOURCE_NAME):
             dataset_id in valid_ids
         ), f"Dataset ID '{dataset_id}' not found in include.csv"
 
-        if dataset_id in valid_ids:
-            seen_dataset_ids.add(dataset_id)
-
         license_names = dset_to_licenses[dataset_id]
         langs = dset_to_langs[dataset_id]
         url = dset_to_urls[dataset_id]
@@ -150,9 +164,6 @@ def file_to_dolma(path: str, include_df: str, source_name: str = SOURCE_NAME):
             }
         )
 
-    unseen_ids = valid_ids - seen_dataset_ids
-    print(f"Unseen Datasets: {len(unseen_ids)} | {unseen_ids}")
-
     return results
 
 
@@ -166,6 +177,12 @@ def main(args):
         *(file_to_dolma(path, include_df=include_df) for path in paths)
     )
     to_dolma(examples, args.outdir, args.filename, args.shard_size)
+
+    valid_ids = set(include_df["Dataset ID"])
+    unique_doc_ids = get_unique_ids(args.outdir)
+    unseen_ids = valid_ids - unique_doc_ids
+    print(f"Unseen Datasets: {len(unseen_ids)} | {unseen_ids}")
+    print(f"Total Unique Datasets: {len(unique_doc_ids)}")
 
 
 if __name__ == "__main__":
