@@ -32,6 +32,17 @@ def main(args):
     logger = get_logger()
     logger.info(f"Filtering to just the datasets in {args.hf_dataset}")
 
+    assert args.top_dir not in ["~/.cache/huggingface", "~"], (
+        f"Directory '{args.top_dir}' is the default Hugging Face cache directory. "
+        "Choose a different directory to avoid potential data loss."
+    )
+
+    hugging_dir = os.path.join(args.top_dir, ".huggingface")
+    assert not os.path.exists(hugging_dir), (
+        f"Directory '{args.top_dir}' contains a .huggingface folder. "
+        "Choose a different directory to avoid potential data loss."
+    )
+
     os.makedirs(args.top_dir, exist_ok=True)
 
     logger.info(f"Downloading {args.hf_dataset}")
@@ -46,7 +57,6 @@ def main(args):
 
     logger.info(f"Saving {args.hf_dataset}")
 
-    hugging_dir = os.path.join(args.top_dir, ".huggingface")
     if os.path.exists(hugging_dir):
         shutil.rmtree(hugging_dir)
 
