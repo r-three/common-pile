@@ -6,6 +6,7 @@ preparing for dolma, in this file.
 
 import argparse
 import functools
+import glob
 import gzip
 import itertools
 import json
@@ -66,13 +67,13 @@ parser.add_argument(
 SOURCE_NAME = "Data Provenance Initiative"
 
 
-def get_unique_ids(folder_path):
+def unique_dpi_dataset_names(folder_path):
     unique_doc_ids = set()
 
-    jsonl_files = [f for f in os.listdir(folder_path) if f.endswith(".jsonl.gz")]
+    jsonl_paths = os.path.join(folder_path, "**/*.jsonl.gz")
+    jsonl_files = glob.glob(jsonl_paths, recursive=True)
 
-    for filename in tqdm(jsonl_files, desc="Processing files"):
-        file_path = os.path.join(folder_path, filename)
+    for file_path in tqdm(jsonl_files, desc="Processing files"):
         with gzip.open(file_path, "rt") as f:
             for line in f:
                 data = json.loads(line)
@@ -168,6 +169,8 @@ def file_to_dolma(path: str, include_df: str, source_name: str = SOURCE_NAME):
 
 
 def main(args):
+    logger = get_logger()
+
     os.makedirs(args.outdir, exist_ok=True)
 
     include_df = pd.read_csv(args.include).fillna("")
@@ -178,11 +181,11 @@ def main(args):
     )
     to_dolma(examples, args.outdir, args.filename, args.shard_size)
 
-    valid_ids = set(include_df["Dataset ID"])
-    unique_doc_ids = get_unique_ids(args.outdir)
-    unseen_ids = valid_ids - unique_doc_ids
-    print(f"Unseen Datasets: {len(unseen_ids)} | {unseen_ids}")
-    print(f"Total Unique Datasets: {len(unique_doc_ids)}")
+    valid_dpi_ids = set(include_df["Dataset ID"])
+    unique_dpi_ids = unique_dpi_dataset_names(args.outdir)
+    unseen_dpi_ids = valid_dpi_ids - unique_dpi_ids
+    logger.info(f"Unseen Datasets: {len(unseen_dpi_ids)} | {unseen_dpi_ids}")
+    logger.info(f"Total Unique Datasets: {len(unique_dpi_ids)}")
 
 
 if __name__ == "__main__":
