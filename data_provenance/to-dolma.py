@@ -77,9 +77,8 @@ def unique_dpi_dataset_names(folder_path):
         with gzip.open(file_path, "rt") as f:
             for line in f:
                 data = json.loads(line)
-                doc_id = data.get("id")
-                stripped_id = re.sub(r"-\d+$", "", doc_id)
-                unique_doc_ids.add(stripped_id)
+                doc_id = data["metadata"]['dataset_id']
+                unique_doc_ids.add(doc_id)
     return unique_doc_ids
 
 
