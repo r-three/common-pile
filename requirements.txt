@@ -8,6 +8,7 @@ pre-commit
 rdflib
 requests>=2.13
 smart_open
+streamlit
 tenacity
 pandas
 jsonlines
