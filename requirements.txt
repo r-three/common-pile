@@ -1,5 +1,6 @@
 beautifulsoup4
 charset_normalizer
+contextual-logger>=0.0.2
 datasets
 dolma
 google-cloud-storage
@@ -9,6 +10,7 @@ markdown-it-py
 pandas
 patool
 pre-commit
+pylatexenc
 pyunpack
 rdflib
 requests>=2.13
@@ -17,4 +19,3 @@ streamlit
 tenacity
 tqdm
 ultimate-sitemap-parser
-contextual-logger>=0.0.2
