@@ -160,3 +160,6 @@ cython_debug/
 #.idea/
 .python-version
 **/licensed_pile_log.txt
+
+node_modules
+package-lock.json

@@ -29,6 +29,7 @@ def get_page(
     resp = requests.get(url, params=params, headers=headers)
     logging.debug(f"Sending GET to {resp.url}")
     if resp.status_code != 200:
+        # TODO: Update logger
         logging.warning(
             f"Failed request to {resp.url}: {resp.status_code}, {resp.reason}"
         )
