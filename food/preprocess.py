@@ -14,7 +14,7 @@ from tempfile import TemporaryDirectory
 import bs4
 import tqdm
 
-from licensed_pile import logs
+from licensed_pile import logs, utils
 from licensed_pile.write import ShardParallelProcessor
 
 parser = argparse.ArgumentParser(
@@ -47,10 +47,14 @@ parser.add_argument(
     default=mp.cpu_count(),
     help="Number of processors for multicore.",
 )
+parser.add_argument(
+    "--meta",
+    help="Location to store Dolma Metadata information.",
+)
 
 # Dolma later sets the log level to error, need to override cls.get_logger() if
 # we want to see info methods.
-logs.configure_logging("dolma.FoodistaParallel")
+logs.configure_logging()
 
 
 class FoodistaParallel(ShardParallelProcessor):
@@ -67,7 +71,10 @@ class FoodistaParallel(ShardParallelProcessor):
 
         html = example["text"]
 
-        text, authors, date = parse_page(html, example["id"])
+        with logger(id=example["id"]):
+            text, authors, date = parse_page(html)
+            if text is None:
+                return None
 
         example["text"] = text
         example["created"] = date
@@ -86,17 +93,22 @@ def clean_date(date: str) -> str:
     return date.strip()
 
 
-def clean_text(text: str) -> str:
-    text = text.strip()
+def clean_text(html) -> str:
+    for step in html.find_all("div", class_=("step-number")):
+        if step.string == "1":
+            step.string = f"{step.string} "
+        else:
+            step.string = f" {step.string} "
+    text = html.get_text().strip()
     # Remove when the text is only the section header.
-    if text in ("Tools", "Ingredients", "Preparation"):
+    if text in ("Tools", "Ingredients", "Preparation", "About", "Information"):
         return ""
     return text
 
 
-def parse_page(html, idx, include_user_id: bool = False):
+def parse_page(html, include_user_id: bool = False):
     """Convert a page's html to plain text for LLM training."""
-    logger = logs.get_logger("dolma.FoodistaParallel")
+    logger = logs.get_logger()
     soup = bs4.BeautifulSoup(html, "html.parser")
 
     result = []
@@ -107,7 +119,7 @@ def parse_page(html, idx, include_user_id: bool = False):
         title = title.get_text().strip()
         result.append(title)
     else:
-        logger.warning(f"Failed to find title for example: {idx}")
+        logger.warning("Failed to find title.")
 
     # Find the author's name (which is included in the text) and the user id (which
     # will be included in the metadata).
@@ -115,9 +127,7 @@ def parse_page(html, idx, include_user_id: bool = False):
         if user_id := author.find("a", class_="username"):
             user_id = user_id.get("href")
         else:
-            logger.warning(
-                f"Failed to find the user_id for the author in example: {idx}"
-            )
+            logger.warning("Failed to find the user_id for the author.")
         author = clean_author(author.get_text()).strip()
         result.append(f"By: {author}")
         if include_user_id:
@@ -125,17 +135,17 @@ def parse_page(html, idx, include_user_id: bool = False):
         else:
             authors.append(author)
     else:
-        logger.warning(f"Failed to find author for example: {idx}")
+        logger.warning("Failed to find author.")
 
     # Find the date it was published.
     if date := soup.find("div", class_="pane-node-created"):
         date = clean_date(date.get_text()).strip()
         result.append(f"Published: {date}")
     else:
-        logger.warning(f"Failed to find date for example: {idx}")
+        logger.warning("Failed to find date.")
 
     # Find the text of the page.
-    if text := soup.find_all(
+    if text_tags := soup.find_all(
         "div",
         class_=(
             "pane-node-body",
@@ -145,13 +155,18 @@ def parse_page(html, idx, include_user_id: bool = False):
             "pane-node-field-about",
         ),
     ):
+        text = []
         # Create an empty line between the header and the body text.
-        for t in text:
-            t = clean_text(t.get_text()).strip()
+        for t in text_tags:
+            t = clean_text(t).strip()
             if t:
-                result.append(f"\n{t}")
+                text.append(f"\n{t}")
+        if not text:
+            logger.warning(f"Cleaned text was empty.")
+            return None, None, None
+        result.extend(text)
     else:
-        logger.warning(f"Failed to find text for example: {idx}")
+        logger.warning("Failed to find text for example.")
 
     # Collect all comments first as we may filter them out later.
     comments = []
@@ -177,16 +192,16 @@ def parse_page(html, idx, include_user_id: bool = False):
                         user_id = comment_author["href"]
                     comment_author = comment_author.get_text().strip()
                 else:
-                    logger.warning(f"Failed to find comment author in example: {idx}")
+                    logger.warning(f"Failed to find comment author.")
                 # The date follows a <br> which bs4 wraps in <br>...</br>
                 if comment_date := comment_submitted.find("br"):
                     comment_date = comment_date.get_text().strip()
                 else:
-                    logger.warning(f"Failed to find comment date in example: {idx}")
+                    logger.warning(f"Failed to find comment date.")
             if comment_text := comment.find("div", class_="content"):
                 comment_text = comment_text.get_text().strip()
             else:
-                logger.warning(f"Failed to find comment text in example: {idx}")
+                logger.warning(f"Failed to find comment text.")
 
             # Some comments seems to be snippets from other sites, ignore those
             if comment_text.startswith("[...]") or comment_text.endswith("[...]"):
@@ -201,7 +216,7 @@ def parse_page(html, idx, include_user_id: bool = False):
             )
     else:
         # Not all articles have comments, so we don't call this an error.
-        logger.info(f"Didn't find comments for example: {idx}")
+        logger.info(f"Didn't find comments.")
 
     # Add non-filtered comments into the text.
     if comments:
@@ -230,17 +245,17 @@ def parse_date(date: str) -> datetime.datetime:
             return datetime.datetime.strptime(date, fmt).isoformat()
         except:
             pass
-    logger = logs.get_logger("dolma.FoodistaParallel")
+    logger = logs.get_logger()
     logger.warning(f"Filed to parse date: {date}")
     return date
 
 
 def main(args):
-    with TemporaryDirectory() as tempdir:
+    with utils.maybe_temp_dir(path=args.meta) as meta_dir:
         processor = FoodistaParallel(
-            source_prefix=os.path.join(args.input, "documents", "*.jsonl.gz"),
-            destination_prefix=os.path.join(args.output, "documents"),
-            metadata_prefix=tempdir,
+            source_prefix=utils.dolma_input(args.input, "*.jsonl.gz"),
+            destination_prefix=utils.dolma_output(args.output),
+            metadata_prefix=meta_dir,
             num_processes=args.processes,
         )
         processor(debug=args.debug)
