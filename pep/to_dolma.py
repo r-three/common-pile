@@ -6,6 +6,8 @@ import os
 import re
 from datetime import datetime
 
+import docutils.core
+
 from licensed_pile import logs
 from licensed_pile.licenses import PermissiveLicenses
 from licensed_pile.write import to_dolma
@@ -32,9 +34,37 @@ def extract_pep_number(file_name):
         return m.group("num")
 
 
+def check_for_open_pub_license(text):
+    doc = docutils.core.publish_doctree(
+        text,
+        settings_overrides={
+            "file_insertion_enabled": False,
+            "report_level": 5,
+            "halt_level": 5,
+        },
+    )
+    for cr in doc.findall(
+        lambda s: s.tagname == "section"
+        and "copyright" in [name.lower() for name in s["names"]]
+    ):
+        for paragraph in cr.findall(lambda p: p.tagname == "paragraph"):
+            copyright_text = paragraph.rawsource.lower()
+            if "open publication license" in copyright_text:
+                return True
+            if "https://spdx.org/licenses/OPUBL-1.0.html" in copyright_text:
+                return True
+            if "http://www.opencontent.org/openpub/" in copyright_text:
+                return True
+    return False
+
+
 def format_dolma(path, source_name: str = SOURCE_NAME):
     with open(path) as f:
         text = f.read()
+    if check_for_open_pub_license(text):
+        logger = logs.get_logger()
+        logger.warning(f"Skipping {path} as it is Open Publication License.")
+        return None
     pep_number = extract_pep_number(os.path.basename(path))
     return {
         "id": pep_number,
@@ -54,6 +84,7 @@ def format_dolma(path, source_name: str = SOURCE_NAME):
 def main(args):
     pep_files = glob.iglob(os.path.join(args.peps, "peps", "pep-*.rst"))
     pep_files = map(format_dolma, pep_files)
+    pep_files = (p for p in pep_files if p is not None)
     to_dolma(pep_files, args.output_dir, args.filename, args.shard_size)
 
 
