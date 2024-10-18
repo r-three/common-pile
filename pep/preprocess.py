@@ -3,8 +3,9 @@
 import argparse
 import multiprocessing as mp
 import re
-import subprocess
 from datetime import datetime
+
+import pypandoc
 
 from licensed_pile import logs, utils
 from licensed_pile.write import ShardParallelProcessor
@@ -66,28 +67,8 @@ def process_pep(text):
     return re.sub(r":pep:`(\d{1,4})`", r"PEP \1", text)
 
 
-# I tried to use docutils and rst2txt as they have some smarter processing for
-# python specific rst parsing (things like the `process_pep` function i added
-# above) but the rst2txt writer was so slow things never finished.
-# def clean_rst(text):
-#     from docutils.core import publish_string
-#     import rst2txt
-#     try:
-#         return publish_string(source=text, writer=rst2txt.Writer()).decode("utf-8")
-#     except:
-#         logger = logs.get_logger()
-#         logger.error("Failed to parse rst", exc_info=True)
-#         return text
-
-
 def clean_rst(text):
-    out = subprocess.run(
-        ["pandoc", "-f", "rst", "-t", "plain"],
-        input=text,
-        text=True,
-        capture_output=True,
-    )
-    return out.stdout.strip()
+    return pypandoc.convert_text(text, "plain", format="rst").strip()
 
 
 class PEPParallel(ShardParallelProcessor):
@@ -105,6 +86,9 @@ class PEPParallel(ShardParallelProcessor):
 
             authors = extract_authors(pep)
             example["metadata"]["authors"] = parse_authors(authors)
+
+            # Update this if the implementation of clean_rst changes.
+            example["metadata"]["pandoc_version"] = pypandoc.get_pandoc_version()
 
             pep = process_pep(pep)
             example["text"] = clean_rst(pep)
