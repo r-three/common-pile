@@ -28,8 +28,10 @@ def removesuffix(s: str, suffix: str) -> str:
 def dolma_input(input_path: str, filepattern: str = "*.jsonl.gz") -> str:
     # If the input is directly to a file, or it is a glob that returns matches,
     # use as is.
-    if (os.path.exists(input_path) and os.path.isfile(input_path)) or glob.glob(
-        input_path, recursive=True
+    if (
+        (os.path.exists(input_path) and os.path.isfile(input_path))
+        or not os.path.isdir(input_path)
+        and glob.glob(input_path, recursive=True)
     ):
         return input_path
     # Otherwise it is probably meant as a directory, so add the ../documents/${filepattern}
