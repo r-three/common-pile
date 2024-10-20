@@ -80,6 +80,8 @@ def parse_hansard_xml_file(root: ET._Element) -> str:
         elif element.tag in ["oral-heading", "minor-heading"]:
             text = ET.tostring(element, method="text", encoding="unicode").strip()
             parsed_text.append(f"{text}")
+        elif element.tag in ["division"]:
+            continue
         elif element.tag in [
             "speech",
             "ques",
@@ -96,7 +98,8 @@ def parse_hansard_xml_file(root: ET._Element) -> str:
                 .strip()
                 .replace("    ", "")
             )
-            parsed_text.append(f"{speaker + speech_text}")
+            if not "table" in [x.tag for x in element]:
+                parsed_text.append(f"{speaker + speech_text}")
 
     return "\n\n".join(parsed_text).replace(" ", "")
 
