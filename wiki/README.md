@@ -12,6 +12,13 @@ Insturctions for downloading and processing all the WikiMedia wikis can be found
 
 The Internet Archive WikiTeam scrapes many wikis across the net and publishes them to the Internet Archive. Of these many are openly licensed. The insturctions for downloading and processing those can be found in the `archive/` directory.
 
+#### Versions
+
+* `raw`: The original wikitext.
+* `v0`: Plain text from wtf\_wikipedia with special handling of math symbols.
+* `v1`: Removal of some errant html.
+* `v2`: Filtering of obvious license laundred content (transcripts).
+
 ### Wiki Scaping
 
 We currently do not do wiki scraping, we just use published dumps or scrapes published by the Internet Archive. The `scrape/` directory has some tools to start scraping in the future. If we plan to do more scraping in the future, we should probably use [wikiteam3](https://github.com/saveweb/wikiteam3) instead of writing our own tools.
