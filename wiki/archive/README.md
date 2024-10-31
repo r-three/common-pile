@@ -6,8 +6,12 @@
 2. Use `python download_archive.py` to download and extract the actual wikis. In the future, this will also handle other wiki fetching methods like dump downloading and scraping.
 3. Use `python to_dolma.py` from **this** directory to convert the IA archive wikis to the dolma format. This will save them as dolma formatted files with wikitext in the `text` field at `../data/...` by default. We need to use the `to_dolma.py` script from here as many IA wikis are in an old format that the generic dolma conversion script doesn't support.
 4. Use the shared preprocessing pipeline to convert to plain text.
+5. Use the `scripts/filter_transcripts.py` script to remove some license laundered text.
+6. Use the `scripts/filter_lyrics.py` script to remove verbatim lyric pages.
 
 ## Notes
+
+The wikiteam3 scraping tool, which is what most of the wiki's on the internet archive use, doesn't format page revision correctly. It creates the same xml format that the mediawiki format uses (`<page><revision>...</revision></page>`), but when there are multiple revisions to a single page it creates multiple `<page>...</page>` elements (one for each revision) instead of folding them into a single page with multiple revisions (`<page><revision>...</revision><revision>...</revision>...</page>`). We though about reducing these multiple edits into a single document, but we didn't as it would have been hard to tell which edits are useful to keep as full documents and which are small enough that they should be absorbed. Thresholding some kind of edit distance is basically what the (eventual) dedup process will be so it didn't seem worth it.
 
 We need to download 4.4 TB from the Internet Archive.
 

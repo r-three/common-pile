@@ -66,6 +66,8 @@ def format_old(
         authors = set(metadata["Author"])
         # Use .discard instead of .remove in case None isn't in the author set.
         authors.discard(None)
+        # Update the author format to match the [(name, id), ...] format the new .xml has.
+        authors = [(str(a), "") for a in authors]
 
         # The date column is formatted as "Date (timezone)". Here we find which timezone
         # it is. Unclear if the tz is the same for all dumps so we infer it here.
