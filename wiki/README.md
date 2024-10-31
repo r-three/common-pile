@@ -17,7 +17,8 @@ The Internet Archive WikiTeam scrapes many wikis across the net and publishes th
 * `raw`: The original wikitext.
 * `v0`: Plain text from wtf\_wikipedia with special handling of math symbols.
 * `v1`: Removal of some errant html.
-* `v2`: Filtering of obvious license laundred content (transcripts).
+* `v2`: Filtering of obvious license laundered content (transcripts).
+* `v3`: Filtering of more laundered content (lyrics).
 
 ### Wiki Scaping
 

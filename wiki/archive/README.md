@@ -6,7 +6,8 @@
 2. Use `python download_archive.py` to download and extract the actual wikis. In the future, this will also handle other wiki fetching methods like dump downloading and scraping.
 3. Use `python to_dolma.py` from **this** directory to convert the IA archive wikis to the dolma format. This will save them as dolma formatted files with wikitext in the `text` field at `../data/...` by default. We need to use the `to_dolma.py` script from here as many IA wikis are in an old format that the generic dolma conversion script doesn't support.
 4. Use the shared preprocessing pipeline to convert to plain text.
-5. Use the `scripts/filter_transcripts.py` file to remove some license laundered text.
+5. Use the `scripts/filter_transcripts.py` script to remove some license laundered text.
+6. Use the `scripts/filter_lyrics.py` script to remove verbatim lyric pages.
 
 ## Notes
 
