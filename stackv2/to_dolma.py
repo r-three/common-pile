@@ -25,6 +25,7 @@ BLUEOAK_KEYS = frozenset(BLUEOAK_LICENSES.keys())
 def format_dolma(row):
     # Convert Polars row to dict for processing
     item = row
+    content = item["content"]
     
     metadata = {
         "license": ",".join(item["detected_licenses"]),
@@ -41,7 +42,7 @@ def format_dolma(row):
 
     return {
         "id": item["blob_id"],
-        "text": item["content"],
+        "text": item["content"] or "",
         "source": SOURCE_NAME,
         "added": datetime.datetime.now(datetime.UTC).isoformat(),
         "created": item["revision_date"].isoformat(),
@@ -78,6 +79,20 @@ def process_parquet(file_path, output_dir):
     to_dolma(dolma_generator(), output_dir, dolma_name, args.shard_size, quiet=True)
     
     logger.info(f"Parquet {parquet_stem}: finished processing")
+    
+def custom_sort(file_path):
+    stem = file_path.stem.split('.')[0]  # Gets name without .jsonl.gz
+    parquet_stem = stem.split('-')[1]  # Gets part after stackv2-
+    counter = stem.split('-')[0][:5]  # Gets first 5 chars of filename
+    return (parquet_stem, counter)
+    
+def rename_dolma_files(output_dir):
+    dolma_files = list(Path(output_dir).rglob("*.jsonl.gz"))
+    dolma_files.sort(key=custom_sort)
+    for i, file in enumerate(dolma_files):
+        new_name = f"{str(i).zfill(5)}_stackv2.jsonl.gz"
+        file.rename(file.parent / new_name)
+
 
 def main(args):
     documents_dir = Path(args.output_dir) / "documents"
@@ -94,29 +109,53 @@ def main(args):
             functools.partial(process_parquet, output_dir=documents_dir),
             parquet_files
         )
+        
+    logger.info("All parquet files processed.")
+    logger.info("Renaming dolma files.")
+    rename_dolma_files(documents_dir)
+    logger.info("All dolma files renamed.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Convert HF data to dolma.")
-    parser.add_argument(
+    subparsers = parser.add_subparsers(dest='command', help='Command to execute')
+    
+    # Convert command
+    convert_parser = subparsers.add_parser('convert', help='Convert parquet files to dolma format')
+    convert_parser.add_argument(
         "--output_dir",
         default="data/stackv2",
         help="Where the dolma formatted data goes.",
     )
-    parser.add_argument(
+    convert_parser.add_argument(
         "--data_path",
         help="Input folder with parquet files",
+        required=True
     )
-    parser.add_argument(
+    convert_parser.add_argument(
         "--shard_size",
         type=int,
-        default=4,
+        default=8,
         help="Size, in GB, for each shard."
     )
-    parser.add_argument(
+    convert_parser.add_argument(
         "--workers",
         type=int,
         default=4,
         help="Number of workers."
     )
+
+    # Rename command
+    rename_parser = subparsers.add_parser('rename', help='Rename existing dolma files')
+    rename_parser.add_argument(
+        "--output_dir",
+        default="data/stackv2",
+        help="Where the dolma formatted files are located.",
+    )
+
     args = parser.parse_args()
-    main(args)
+    
+    if args.command == 'rename':
+        documents_dir = Path(args.output_dir) / "documents"
+        rename_dolma_files(documents_dir)
+    else:
+        main(args)
