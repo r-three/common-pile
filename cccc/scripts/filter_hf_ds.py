@@ -17,10 +17,7 @@ logger = logging.getLogger(__name__)
 class ShardCCProcessor(ShardParallelProcessor):
     @classmethod
     def process_example(cls, example, **kwargs):
-        if filter_condition(example, kwargs["urls"]):
-            return example
-        else:
-            return None
+        return example if filter_condition(example, kwargs["urls"]) else None
 
 
 def read_file_to_list(file_path: str) -> list[str]:
@@ -38,9 +35,7 @@ def read_file_to_list(file_path: str) -> list[str]:
 
 
 def extract_suburls(url: str) -> str:
-    parsed_url = urlparse(url)
-    domain = parsed_url.netloc
-    return domain
+    return urlparse(url).netloc
 
 
 def filter_condition(item: dict, urls: set) -> bool:
@@ -76,6 +71,11 @@ def setup_argparser() -> argparse.ArgumentParser:
         default=os.cpu_count() - 1,
         help="Number of processes to use. Default is (CPU count - 1).",
     )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Should we log when documents are not changed by preprocessing.",
+    )
     return parser
 
 
@@ -85,14 +85,8 @@ def main():
     URLS = set(read_file_to_list(args.urls_file))
     source_dir = Path(args.source_dir)
     dest_dir = Path(args.dest_dir)
-
-    # Collect all json.gz files from the source directory and subdirectories
-    files_to_process = list(source_dir.rglob("*.json.gz*"))
-
     num_processes = args.num_processes
 
-    logger.info(f"Starting processing with {num_processes} processes...")
-    logger.info(f"Total files to process: {len(files_to_process)}")
     with TemporaryDirectory() as tempdir:
         processor = ShardCCProcessor(
             source_prefix=str(source_dir / "*" / "*.json.gz"),
