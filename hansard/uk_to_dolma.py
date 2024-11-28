@@ -26,8 +26,6 @@ parser.add_argument(
     "--shard_size", type=int, default=1, help="Size, in GB, for each shard."
 )
 
-parser.add_argument("--count", action="store_true", help="Count the number of words.")
-
 FILE_NAMES = {
     "debates": {"source": "commons-debates"},
     "london-mayors-questions": {
@@ -55,8 +53,6 @@ FILE_NAMES = {
         "source": "senedd",
     },
 }
-WHITESPACE = regex.compile(r"\w+|[^\w\s]+")
-COUNT = 0
 
 PARSER = lxml.etree.XMLParser(
     encoding="utf-8",
@@ -101,14 +97,14 @@ def parse_hansard_xml_file(root: ET._Element) -> str:
             if not "table" in [x.tag for x in element]:
                 parsed_text.append(f"{speaker + speech_text}")
 
-    # The space character in the text is a non-breaking space character "NBSP"
+    # The space character in the text is a non-breaking space character "NBSP" (U+00A0)
     return "\n\n".join(parsed_text).replace(" ", "")
 
 
 def process_files_in_folder(
-    folder_path: Path, source: str, count: bool = False
+    folder_path: Path,
+    source: str,
 ) -> dict:
-    global COUNT
     language = "en" if not source == "senedd-cy" else "cy"
     date_match = re.compile(r"\d{4}-\d{2}-\d{2}")
     for file in folder_path.iterdir():
@@ -116,8 +112,6 @@ def process_files_in_folder(
             root = ET.parse(file, parser=PARSER).getroot()
             parsed_text = parse_hansard_xml_file(root)
             if parsed_text:
-                if count:
-                    COUNT += len(WHITESPACE.split(parsed_text))
                 date_ = date_match.search(file.stem)
                 if date_:
                     date = date_.group()
@@ -137,16 +131,14 @@ def process_files_in_folder(
                 }
 
 
-def process_folder(folder_path: Path, count: bool = False) -> Iterator[dict]:
+def process_folder(folder_path: Path) -> Iterator[dict]:
     for subfolder in get_subfolders(folder_path):
         if subfolder.name in FILE_NAMES:
             source = FILE_NAMES[subfolder.name]["source"]
             if source == "senedd":
                 for nested_subfolder in get_subfolders(subfolder):
                     source = FILE_NAMES["senedd"][nested_subfolder.name]["source"]
-                    yield from process_files_in_folder(
-                        nested_subfolder, source, count=count
-                    )
+                    yield from process_files_in_folder(nested_subfolder, source)
             else:
                 yield from process_files_in_folder(subfolder, source)
 
@@ -154,7 +146,7 @@ def process_folder(folder_path: Path, count: bool = False) -> Iterator[dict]:
 def main(args):
     base_folder = Path(args.base_folder)
     to_dolma(
-        examples=process_folder(base_folder, count=args.count),
+        examples=process_folder(base_folder),
         path=args.output_dir,
         shard_size=args.shard_size,
         filename="ukhansard.jsonl.gz",
@@ -164,5 +156,3 @@ def main(args):
 if __name__ == "__main__":
     args = parser.parse_args()
     main(args)
-    if args.count:
-        print(COUNT)
