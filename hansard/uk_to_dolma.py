@@ -101,6 +101,7 @@ def parse_hansard_xml_file(root: ET._Element) -> str:
             if not "table" in [x.tag for x in element]:
                 parsed_text.append(f"{speaker + speech_text}")
 
+    # The space character in the text is a non-breaking space character "NBSP"
     return "\n\n".join(parsed_text).replace(" ", "")
 
 
