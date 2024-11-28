@@ -1,13 +1,14 @@
 import argparse
-import logging
 import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from urllib.parse import urlparse
 
+from licensed_pile import logs
 from licensed_pile.write import ShardParallelProcessor
 
-logger = logging.getLogger(__name__)
+logger = logs.get_logger("CC")
+
 
 # Filters the data to only include the URLs in the urls.txt file
 # Requires a local copy of https://huggingface.co/datasets/allenai/dolma-cccc
