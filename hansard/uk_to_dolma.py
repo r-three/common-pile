@@ -19,7 +19,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--output_dir",
-    default="hansard/dolma_outputs",
+    default="data/hansard/v0",
     help="Where the dolma formatted data goes.",
 )
 parser.add_argument(
@@ -70,12 +70,9 @@ def get_subfolders(folder_path: str | Path) -> list[Path]:
 def parse_hansard_xml_file(root: ET._Element) -> str:
     parsed_text = []
     for element in root.iter():
-        if element.tag == "major-heading":
+        if element.tag in ["major-heading", "oral-heading", "minor-heading"]:
             text = ET.tostring(element, method="text", encoding="unicode").strip()
-            parsed_text.append(f"{text}")
-        elif element.tag in ["oral-heading", "minor-heading"]:
-            text = ET.tostring(element, method="text", encoding="unicode").strip()
-            parsed_text.append(f"{text}")
+            parsed_text.append(text)
         elif element.tag in ["division"]:
             continue
         elif element.tag in [
