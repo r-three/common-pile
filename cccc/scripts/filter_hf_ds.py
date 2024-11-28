@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 class ShardCCProcessor(ShardParallelProcessor):
     @classmethod
-    def process_example(cls, example, **kwargs):
+    def process_example(cls, example: dict, **kwargs) -> dict | None:
         return example if filter_condition(example, kwargs["urls"]) else None
 
 
