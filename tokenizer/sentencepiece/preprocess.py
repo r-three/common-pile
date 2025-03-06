@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
 
 import argparse
+import json
+import logging
 import multiprocessing as mp
+import os
 import re
+from queue import Queue
+
+import smart_open
+from dolma.core.parallel import BaseParallelProcessor
 
 from licensed_pile import logs, utils
-from licensed_pile.write import ShardParallelProcessor
 
 parser = argparse.ArgumentParser(
     description="Preprocess Dolma Data for SentencePiece tokenizer training."
@@ -22,6 +28,11 @@ parser.add_argument(
     help="The filename to match with globs, probably needs to be escaped.",
 )
 parser.add_argument(
+    "--overwrite",
+    action="store_true",
+    help="Should we overwrite previously processed examples?",
+)
+parser.add_argument(
     "--processes",
     type=int,
     default=mp.cpu_count(),
@@ -30,6 +41,12 @@ parser.add_argument(
 parser.add_argument("--meta", help="Location to save dolma processing metadata.")
 
 logs.configure_logging(level="DEBUG")
+
+
+def create_shadow(path):
+    h, t = os.path.split(path)
+    # Add shadow at the start to not break any filename inference from smart_open
+    return os.path.join(h, f"shadow.{t}")
 
 
 class SentencePieceProcessor(BaseParallelProcessor):
@@ -45,7 +62,7 @@ class SentencePieceProcessor(BaseParallelProcessor):
 
     @classmethod
     def get_logger(cls):
-        return get_logger()
+        return logs.get_logger()
 
     @classmethod
     def process_single(
@@ -59,12 +76,12 @@ class SentencePieceProcessor(BaseParallelProcessor):
         overwrite = kwargs.pop("overwrite", False)
         shadow = kwargs.pop("shadow", True)
         with logger(file=source_path):
+            destination_path = re.sub(r"\.jsonl?.gz$", ".txt", destination_path)
             logger.debug("Processing %s into %s", source_path, destination_path)
-            if not overwrite and smart_open_exists(destination_path):
+            if not overwrite and os.path.exists(destination_path):
                 logger.info("%s already exists, skipping", destination_path)
                 cls.increment_progressbar(queue, shards=1)
                 return
-            destination_path = re.sub(r"\.json.gz$", ".txt", destination_path)
             output_path = (
                 create_shadow(destination_path) if shadow else destination_path
             )
@@ -131,7 +148,7 @@ def main(args):
             metadata_prefix=meta_dir,
             num_processes=args.processes,
         )
-        processor(debug=args.debug, overwrite=args.overwrite)
+        processor(overwrite=args.overwrite)
 
 
 if __name__ == "__main__":
