@@ -3,6 +3,7 @@ charset_normalizer
 contextual-logger>=0.0.2
 datasets
 dolma
+ghapi
 google-cloud-storage
 internetarchive
 logging_json
