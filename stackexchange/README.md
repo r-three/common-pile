@@ -15,6 +15,12 @@ Stack Exchange posts are distributed as posts, comments, and answers that need t
 
 Note: In addition to the questions, the comments and answers come with license information. Currently we only consider the question license.
 
+### Community Dumps
+
+After 2024-04, Stack Exchange has decided to stop uploading dumps to the internet archive. The community has continued to upload them (they download the dumps using stack exchanges new convoluted process and then upload to the internet archive). To use this dump, you will need to pass the url to the download index (click "view all" and then copy the url)
+
+The new way stack exchange wants to you download dumps means that defunct "windowsphone" stackexchange dump is not accessible. If you are downloading a community dump, make sure to download and extract them from the most recent official dump. [windowsphone.stackexchange.com.7z](https://archive.org/download/stackexchange/windowsphone.stackexchange.com.7z) and [windowsphone.meta.stackexchange.com.7z](https://archive.org/download/stackexchange/windowsphone.meta.stackexchange.com.7z) as of 2025/03/11.
+
 ## Data details
 
 | # Sites | # documents |

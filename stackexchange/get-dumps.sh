@@ -30,5 +30,19 @@ wget "${site_url}" -P "${data_dir}"
 # Note: The progress bars from the different wget processes overwrite each other
 # They are still useful to ensure that progress is being made.
 python list-sites.py --sites "${site_path}" --format "${format}" --base_url "${base_url}" | shuf | xargs -n10 -P4 wget -w 2 -t 10 -c -nc -P ${data_dir}/dump --show-progress
+
+# Community dumps don't include the windowsphone site (as it is defunct). Download them
+# from the most recent offical dump (updated 2025/03/11)
+if [[ "${format}" == "index" ]]; then
+    echo "Downloading last office windowsphone dump as you are using a community dump"
+    wget "https://archive.org/download/stackexchange/windowsphone.stackexchange.com.7z" -P "${data_dir}"
+    wget "https://archive.org/download/stackexchange/windowsphone.meta.stackexchange.com.7z" -P "${data_dir}"
+fi
+
 ./extract.sh ${data_dir}
-./get-stackoverflow.sh ${data_dir} ${base_url}
+# Official dumps have stack overflow (the largest site) split into multiple files
+# This script downloads each one. Community dumps have a single .7z for it.
+if [[ "${format}" == "xml" ]]; then
+    echo "Downloading each part of stackoverflow was you are using an official dump."
+    ./get-stackoverflow.sh ${data_dir} ${base_url}
+fi
