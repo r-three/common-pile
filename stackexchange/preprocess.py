@@ -15,6 +15,10 @@ import urllib.parse
 from dataclasses import dataclass
 from typing import Dict, List, Sequence
 
+import copyreg
+from io import StringIO
+from lxml import etree
+
 import bs4
 import tqdm
 from markdown_it import MarkdownIt
@@ -61,6 +65,30 @@ LICENSES = {
     "CC BY-SA 3.0": PermissiveLicenses.CC_BY_SA_3,
     "CC BY-SA 4.0": PermissiveLicenses.CC_BY_SA,
 }
+
+
+def element_unpickler(data):
+    return etree.fromstring(data)
+
+
+def element_pickler(element):
+    data = etree.tostring(element)
+    return element_unpickler, (data,)
+
+
+def elementtree_unpickler(data):
+    data = StringIO(data)
+    return etree.parse(data)
+
+
+def elementtree_pickler(tree):
+    data = StringIO()
+    tree.write(data)
+    return elementtree_unpickler, (data.getvalue(),)
+
+
+copyreg.pickle(etree._Element, element_pickler, element_unpickler)
+copyreg.pickle(etree._ElementTree, elementtree_pickler, elementtree_unpickler)
 
 
 @dataclass
