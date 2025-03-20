@@ -50,6 +50,11 @@ parser.add_argument(
 parser.add_argument(
     "--shard_size", type=int, default=1, help="Size, in GB, for each shard."
 )
+parser.add_argument(
+    "--fetch_license",
+    action="store_true",
+    help="Should you try to get license infomation from github when it is missing?",
+)
 
 
 KNOWN_BOTS = frozenset({"Dependabot", "zulipbot"})
@@ -80,6 +85,7 @@ class LicenseSnapshot:
 @dataclasses.dataclass
 class LicenseInfo:
     licenses: LicenseSnapshot
+    license_type: str = ""
 
     def license(self, time):
         for l in licenses:
