@@ -23,12 +23,14 @@ def shard_name(filename: str, shard: str, padding: int = 5):
     """Convert a shard count into a name with leading zeros for easy sorting."""
     return f"{shard:>0{padding}}_{filename}"
 
+
 def serialize_datetime(obj):
     """Convert datetime.datetime to ISO format string for JSON serialization."""
     if isinstance(obj, datetime.datetime):
         return obj.isoformat()
     else:
         raise ValueError(f"Object of type {type(obj)} is not serializable.")
+
 
 # TODO: Add overwrite protection
 def to_dolma(
