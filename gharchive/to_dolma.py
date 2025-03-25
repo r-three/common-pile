@@ -202,8 +202,9 @@ def format_dolma(
         #     return None
 
         # Format comments into thread while removing authors that are bots.
-        text = [thread["thread_title"], thread["thread_body"]]
-        authors = {thread["thread_author_username"]}
+        text = [thread.get("thread_title", ""), thread.get("thread_body", "")]
+        if "thread_author_username" in thread:
+            authors = {thread["thread_author_username"]}
 
         for author, comment, ts in zip(
             thread["comment_author_username"],
@@ -259,9 +260,7 @@ def read_threads(path: str, delimiter: str = "⇭⇭⇭") -> Iterator[dict]:
                         "comment_body",
                         "comment_timestamp",
                     ):
-                        data[key] = [
-                            json.loads(c) for c in data.get(key, "").split(delimiter)
-                        ]
+                        data[key] = data.get(key, "").split(delimiter)
                     yield data
 
 
