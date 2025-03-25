@@ -118,7 +118,8 @@ def get_license_info(
         )
     except HTTP404NotFoundError:
         license_info = LicenseInfo(
-            licenses=[LicenseSnapshot(license="unlicensed", start=alpha, end=omega)]
+            licenses=[LicenseSnapshot(license="unlicensed", start=alpha, end=omega)],
+            license_type="restrictive",
         )
     except HTTP403ForbiddenError as e:
         error = json.loads(re.sub(r".*=*Error Body=*", "", e.msg, flags=re.DOTALL))
@@ -127,13 +128,15 @@ def get_license_info(
             license_info = LicenseInfo(
                 licenses=[
                     LicenseSnapshot(license="tos-violation", start=alpha, end=omega)
-                ]
+                ],
+                license_type="restrictive",
             )
         elif reason == "sensitive_data":
             license_info = LicenseInfo(
                 licenses=[
                     LicenseSnapshot(license="sensitive-data", start=alpha, end=omega)
-                ]
+                ],
+                license_type="restrictive",
             )
         elif reason == "private_information":
             license_info = LicenseInfo(
@@ -141,14 +144,16 @@ def get_license_info(
                     LicenseSnapshot(
                         license="private-information", start=alpha, end=omega
                     )
-                ]
+                ],
+                license_type="restrictive",
             )
         else:
             logger.exception("error when fetching repo information.")
             raise
     except HTTP451LegalReasonsError:
         license_info = LicenseInfo(
-            licenses=[LicenseSnapshot(license="dmca", start=alpha, end=omega)]
+            licenses=[LicenseSnapshot(license="dmca", start=alpha, end=omega)],
+            license_type="restrictive",
         )
     license_cache[repo] = license_info
     return license_info
