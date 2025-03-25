@@ -10,7 +10,7 @@ import os
 import re
 import shelve
 from datetime import datetime
-from typing import Iterator, Sequence
+from typing import Iterator, Optional, Sequence
 
 import bs4
 import smart_open
@@ -79,11 +79,11 @@ class LicenseSnapshot:
 
 @dataclasses.dataclass
 class LicenseInfo:
-    licenses: LicenseSnapshot
+    licenses: list[LicenseSnapshot]
     license_type: str = ""
 
     def license(self, time):
-        for l in licenses:
+        for l in self.licenses:
             if l.active(time):
                 return True
         return False
@@ -95,7 +95,7 @@ def get_license_info(
     github_api: GhApi,
     fetch_license: bool = False,
     **kwargs,
-) -> str:
+) -> Optional[LicenseInfo]:
     alpha = datetime(1900, 1, 1)
     omega = datetime(9999, 1, 1)
     logger = logs.get_logger()
