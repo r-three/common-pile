@@ -7,6 +7,7 @@ import json
 import shelve
 import time
 
+import smart_open
 from ghapi.all import GhApi
 from to_dolma import LicenseInfo, LicenseSnapshot, get_license_info, read_threads
 
@@ -22,7 +23,7 @@ def main():
     args = parser.parse_args()
     api = GhApi()
     logger = logs.configure_logging(level="INFO")
-    with open(args.repo_list) as f:
+    with smart_open.open(args.repo_list) as f:
         repos = json.load(f)
     wait = 10
     with shelve.open(f"{args.repo_list}.licenses") as license_cache:
