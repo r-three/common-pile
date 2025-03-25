@@ -167,9 +167,7 @@ class ShardParallelProcessor(BaseParallelProcessor):
                                     update_interval *= 2
                                 document_count = 0
                 except Exception as e:
-                    e.add_note(
-                        f"Exception occured while processing {source_path}:{i}"
-                    )
+                    e.add_note(f"Exception occured while processing {source_path}:{i}")
                     logger.warning(
                         "Exception occured while processing example",
                         exc_info=True,
