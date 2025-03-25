@@ -2,6 +2,7 @@
 
 import abc
 import copy
+import datetime
 import json
 import logging
 import multiprocessing as mp
@@ -21,6 +22,14 @@ from licensed_pile.logs import configure_logging, get_logger
 def shard_name(filename: str, shard: str, padding: int = 5):
     """Convert a shard count into a name with leading zeros for easy sorting."""
     return f"{shard:>0{padding}}_{filename}"
+
+
+def serialize_datetime(obj):
+    """Convert datetime.datetime to ISO format string for JSON serialization."""
+    if isinstance(obj, datetime.datetime):
+        return obj.isoformat()
+    else:
+        raise ValueError(f"Object of type {type(obj)} is not serializable.")
 
 
 # TODO: Add overwrite protection
@@ -44,7 +53,7 @@ def to_dolma(
             smart_open.open(os.path.join(path, shard_name(filename, shard_idx)), "w")
         )
         for example in tqdm.tqdm(examples, disable=quiet):
-            data = json.dumps(example)
+            data = json.dumps(example, default=serialize_datetime)
             # Assume one character is about 1 bytes, good enough as we use utf-8
             size += len(data)
             if size >= max_bytes:
