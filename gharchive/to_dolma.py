@@ -12,6 +12,7 @@ import shelve
 from datetime import datetime
 from typing import Iterator, Sequence
 
+import bs4
 import smart_open
 from ghapi.all import GhApi
 from ghapi.core import (
@@ -20,12 +21,14 @@ from ghapi.core import (
     HTTP429TooManyRequestsError,
     HTTP451LegalReasonsError,
 )
+from markdown_it import MarkdownIt
 
 from licensed_pile import logs
 from licensed_pile.licenses import PermissiveLicenses
 from licensed_pile.write import to_dolma
 
 SOURCE_NAME = "gharchive-threads"
+MD = MarkdownIt("gfm-like", {"breaks": True, "html": True})
 
 parser = argparse.ArgumentParser(description="Convert threads to dolma.")
 parser.add_argument(
@@ -57,14 +60,6 @@ parser.add_argument(
 )
 
 
-KNOWN_BOTS = frozenset({"Dependabot", "zulipbot"})
-
-BOT_ENDINGS = (
-    "-[bot]",
-    "-bot",
-    "[bot]",
-)
-
 ALLOWED_LICENSES = frozenset(
     {
         "MIT",
@@ -95,7 +90,11 @@ class LicenseInfo:
 
 
 def get_license_info(
-    repo: str, license_cache: dict, github_api: GhApi, **kwargs
+    repo: str,
+    license_cache: dict,
+    github_api: GhApi,
+    fetch_license: bool = False,
+    **kwargs,
 ) -> str:
     alpha = datetime(1900, 1, 1)
     omega = datetime(9999, 1, 1)
@@ -103,6 +102,9 @@ def get_license_info(
     if repo in license_cache:
         logger.info("cache hit, reusing license info")
         return license_cache[repo]
+    if not fetch_license:
+        logger.debug(f"license not found and --fetch_license not set, skipping.")
+        return None
     owner, repo_name = repo.split("/")
     logger.info("cache miss, fetching license info")
     try:
@@ -115,29 +117,36 @@ def get_license_info(
             ]
         )
     except HTTP404NotFoundError:
-        logger.exception("license not found, unlicensed repo")
         license_info = LicenseInfo(
             licenses=[LicenseSnapshot(license="unlicensed", start=alpha, end=omega)]
         )
     except HTTP403ForbiddenError as e:
-        logger.exception("error when fetching repo information.")
         error = json.loads(re.sub(r".*=*Error Body=*", "", e.msg, flags=re.DOTALL))
-        if error.get("block", {}).get("reason") == "tos":
+        reason = error.get("block", {}).get("reason")
+        if reason == "tos":
             license_info = LicenseInfo(
                 licenses=[
                     LicenseSnapshot(license="tos-violation", start=alpha, end=omega)
                 ]
             )
-        elif error.get("block", {}).get("reason") == "sensitive_data":
+        elif reason == "sensitive_data":
             license_info = LicenseInfo(
                 licenses=[
                     LicenseSnapshot(license="sensitive-data", start=alpha, end=omega)
                 ]
             )
+        elif reason == "private_information":
+            license_info = LicenseInfo(
+                licenses=[
+                    LicenseSnapshot(
+                        license="private-information", start=alpha, end=omega
+                    )
+                ]
+            )
         else:
+            logger.exception("error when fetching repo information.")
             raise
     except HTTP451LegalReasonsError:
-        logger.exception("error when fetch repo license")
         license_info = LicenseInfo(
             licenses=[LicenseSnapshot(license="dmca", start=alpha, end=omega)]
         )
@@ -149,21 +158,6 @@ def license_check(license_info, time, allowed_licenses: set[str]) -> bool:
     return license_info.license(time) in allowed_licenses
 
 
-def bot_check(
-    username: str,
-    known_bots: set[str] = KNOWN_BOTS,
-    bot_endings: Sequence[str] = BOT_ENDINGS,
-    **kwargs,
-) -> bool:
-    # The bot check in the sql query seems to not have worked very well, so we redo it here.
-    if username in known_bots:
-        return True
-    for ending in bot_endings:
-        if username.endswith(ending):
-            return True
-    return False
-
-
 def infer_source(thread_url: str) -> str:
     if "issues/" in thread_url:
         return "issue"
@@ -171,7 +165,13 @@ def infer_source(thread_url: str) -> str:
 
 
 def clean_text(text: str) -> str:
-    return text
+    # Simple markdown cleaning.
+    try:
+        return bs4.BeautifulSoup(MD.render(text), "html.parser").get_text()
+    except:
+        logger = logs.get_logger()
+        logger.exception("Parsing failed.", extra={"text": text})
+        return ""
 
 
 def format_dolma(
@@ -181,6 +181,7 @@ def format_dolma(
     source_name: str = "gharchive",
     keep_bots: bool = False,
     allowed_licenses: set[str] = ALLOWED_LICENSES,
+    fetch_license: bool = False,
     **kwargs,
 ):
     logger = logs.get_logger()
@@ -190,38 +191,34 @@ def format_dolma(
         repo=thread["repo_name"],
         thread_author=thread["thread_author_username"],
     ):
-        license_info = get_license_info(thread["repo_name"], license_cache, github_api)
+        # license_info = get_license_info(thread["repo_name"], license_cache, github_api, fetch_license)
+        # if license_info is None:
+        #     logger.warning("License not found, skipping.")
+        #     return None
 
         # Format comments into thread while removing authors that are bots.
-        text = []
-        authors = set()
-        if not keep_bots and bot_check(thread["thread_author_username"]):
-            logger.warning("Thread Created by a Bot")
-        else:
-            text.extend([thread["thread_title"], thread["thread_body"]])
-            authors.add(thread["thread_author_username"])
+        text = [thread["thread_title"], thread["thread_body"]]
+        authors = {thread["thread_author_username"]}
+
         for author, comment, ts in zip(
             thread["comment_author_username"],
             thread["comment_body"],
             thread["comment_timestamp"],
         ):
-            if not keep_bots and bot_check(author):
-                logger.warning(
-                    "Comment Created by a bot", extra={"comment_author": author}
-                )
-                continue
             text.append(comment)
             authors.add(author)
 
         text = map(clean_text, text)
+        # Remove empty strings.
+        text = filter(lambda t: t, text)
         text = "\n\n".join(text)
 
         if not text:
-            logger.warning("Bot Filtering has reduced text to nothing, skipping...")
+            logger.warning("Cleaning has reduced text to nothing, skipping...")
             return None
 
         # TODO: update licenses
-        metadata = format_metadata(thread, authors, license_info.licenses[0].license)
+        metadata = format_metadata(thread, authors, "")
         return {
             "id": thread["thread_id"],
             "text": text,
@@ -243,32 +240,13 @@ def format_metadata(thread, authors: Sequence[str], license: str = "") -> dict:
 
 def read_threads(path: str, delimiter: str = "⇭⇭⇭") -> Iterator[dict]:
     logger = logs.get_logger()
-    with logger(path=path):
+    with logger(file=path):
+        logger.info(f"Reading from file {path}")
         with smart_open.open(path, compression=".gz") as f:
             for i, line in enumerate(f):
                 logger.debug("Processing Line", extra={"line": i})
                 if line:
                     data = json.loads(line)
-                    # Some columns seem to have json serialized strings vs normal strings
-                    # in them so load them here so they are consistent down the line.
-                    for key in (
-                        "thread_title",
-                        "thread_body",
-                        "thread_author_username",
-                        "thread_timestamp",
-                        "thread_url",
-                    ):
-                        data[key] = json.loads(v) if (v := data.get(key, "")) else v
-                    # I accidentally called it "comment_timestep" in my query, rename
-                    # if it exists so that this script will work with old and new
-                    # versions of the data (where this is corrected).
-                    # If comment_timestep exists, it is popped and set for comment_timestamp
-                    # If comment_timestep doesn't exists, it is set to the value in
-                    #   comment_timestamp so things aren't changed.
-                    # If neither exist, you're running this script on the wrong data.
-                    data["comment_timestamp"] = data.pop(
-                        "comment_timestep", data.get("comment_timestamp")
-                    )
                     # Aggregated columns are joined with delimiter as the overhead
                     # from storing it as an array was too large.
                     for key in (
@@ -297,6 +275,7 @@ def main():
                 keep_bots=args.keep_bots,
                 license_cache=license_cache,
                 github_api=api,
+                fetch_license=args.fetch_license,
             ),
             threads,
         )

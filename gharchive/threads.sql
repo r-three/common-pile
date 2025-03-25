@@ -22,16 +22,16 @@ FROM (
     --   is some issue with edited events so we are just including these comments as they are
     --   in the table which seems to be exclusively "created".
     repo.name as repo_name,
-    JSON_EXTRACT(payload, '$.issue.id') as issue_id,
-    JSON_EXTRACT(payload, '$.issue.user.login') as issue_username,
-    JSON_EXTRACT(payload, '$.issue.title') as issue_title,
-    JSON_EXTRACT(payload, '$.issue.body') as issue_body,
-    JSON_EXTRACT(payload, '$.issue.created_at') as issue_ts,
-    JSON_EXTRACT(payload, '$.issue.html_url') as url,
-    IFNULL(JSON_EXTRACT(payload, '$.comment.user.login'), "") as username,
-    IFNULL(JSON_EXTRACT(payload, '$.comment.user.html_url'), "") as user_url,
-    IFNULL(JSON_EXTRACT(payload, '$.comment.body'), "") as comment_body,
-    IFNULL(JSON_EXTRACT(payload, '$.comment.updated_at'), "") as comment_ts
+    JSON_VALUE(payload, '$.issue.id') as issue_id,
+    JSON_VALUE(payload, '$.issue.user.login') as issue_username,
+    JSON_VALUE(payload, '$.issue.title') as issue_title,
+    JSON_VALUE(payload, '$.issue.body') as issue_body,
+    JSON_VALUE(payload, '$.issue.created_at') as issue_ts,
+    JSON_VALUE(payload, '$.issue.html_url') as url,
+    IFNULL(JSON_VALUE(payload, '$.comment.user.login'), "") as username,
+    IFNULL(JSON_VALUE(payload, '$.comment.user.html_url'), "") as user_url,
+    IFNULL(JSON_VALUE(payload, '$.comment.body'), "") as comment_body,
+    IFNULL(JSON_VALUE(payload, '$.comment.updated_at'), "") as comment_ts
   FROM `githubarchive.year.*`
   WHERE type = 'IssueCommentEvent'
   -- We order groups (by the issue_id) based on the comment_ts before the aggregation (STRING_AGG)
@@ -41,8 +41,12 @@ FROM (
 )
 -- Simple filtering of bots.
 WHERE
-  (NOT ENDS_WITH(username, "-[bot]"))
+      (NOT ENDS_WITH(username, "-[bot]"))
+  AND (NOT ENDS_WITH(username, "[bot]"))
   AND (NOT ENDS_WITH(username, "-bot"))
+  AND (NOT ENDS_WITH(username, "bot"))
   AND (NOT ENDS_WITH(issue_username, "-[bot]"))
+  AND (NOT ENDS_WITH(issue_username, "[bot]"))
   AND (NOT ENDS_WITH(issue_username, "-bot"))
+  AND (NOT ENDS_WITH(issue_username, "bot"))
 GROUP BY issue_id
