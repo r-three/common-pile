@@ -4,7 +4,6 @@ data_dir=${1:-"data"}
 data_dir=${data_dir%/}
 
 site_url=${2:-"https://archive.org/download/stackexchange/Sites.xml"}
-base_url=`python -c "import os; print(os.path.dirname('${site_url}'))"`
 site_file=`python -c "import os, urllib; print(os.path.basename(urllib.parse.urlparse('${site_url}').path))"`
 if [[ -z "${site_file}" ]]; then
     site_file="index.html"
@@ -12,8 +11,10 @@ fi
 site_path="${data_dir}/${site_file}"
 if [[ "${site_path}" == *.xml ]]; then
     format="xml"
+    base_url=`python -c "import os; print(os.path.dirname('${site_url}'))"`
 else
     format="index"
+    base_url="${site_url}"
 fi
 
 echo "Downloading Sites map from ${site_url} and saving to ${data_dir}."

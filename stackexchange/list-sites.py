@@ -1,6 +1,7 @@
 """Convert the site list xml to download urls."""
 
 import argparse
+import functools
 import os
 import sys
 import urllib.parse
@@ -62,7 +63,7 @@ def main(args):
         raise ValueError(f"Unknown site format, got --format {args.format}")
 
     urls = parse_urls(args.sites)
-    dl = map(to_download, urls)
+    dl = map(functools.partial(to_download, base_url=args.base_url), urls)
     for link in dl:
         # Write to stdout so this is pipe-able, see the Python docs on handling
         # broken pipes from things like head.
