@@ -24,7 +24,7 @@ def main():
     logger = logs.configure_logging(level="INFO")
     with open(args.repo_list) as f:
         repos = json.load(f)
-    wait = 10
+    wait = 60
     with shelve.open(f"{args.repo_list}.licenses") as license_cache:
         i = 0
         while True:
@@ -37,7 +37,7 @@ def main():
                         repos[i], license_cache, api, fetch_license=True
                     )
                     i += 1
-                    wait = max(10, wait // 8)
+                    wait = max(60, wait // 8)
             except Exception as e:
                 if "API rate limit exceeded" in e.msg:
                     wait = min(wait * 4, 60 * 60)
