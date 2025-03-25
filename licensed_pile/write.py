@@ -39,12 +39,12 @@ def to_dolma(
     filename: str,
     shard_size: int = 1,
     quiet: bool = False,
+    shard_idx: int = 0,
 ):
     """Write `examples` to `path` in the dolma format with `shard_size`GB shards."""
     logger = get_logger()
     logger.info("Writing Dolma Shards to %s", path)
     os.makedirs(path, exist_ok=True)
-    shard_idx = 0
     size = 0
     # Gigabytes, not Gibibytes
     max_bytes = shard_size * 1000 * 1000 * 1000
@@ -129,9 +129,9 @@ class ShardParallelProcessor(BaseParallelProcessor):
                 update_interval = kwargs.pop("update_interval", 1)
                 debug = kwargs.pop("debug", False)
 
-                for i, line in enumerate(f):
-                    with logger(line=i):
-                        try:
+                try:
+                    for i, line in enumerate(f):
+                        with logger(line=i):
                             try:
                                 data = json.loads(line)
                             except json.JSONDecodeError as e:
@@ -166,15 +166,13 @@ class ShardParallelProcessor(BaseParallelProcessor):
                                 if queue.qsize() >= mp.cpu_count():
                                     update_interval *= 2
                                 document_count = 0
-                        except Exception as e:
-                            e.add_note(
-                                f"Exception occured while processing {source_path}:{i}"
-                            )
-                            logger.warning(
-                                "Exception occured while processing example",
-                                exc_info=True,
-                            )
-                            raise
+                except Exception as e:
+                    e.add_note(f"Exception occured while processing {source_path}:{i}")
+                    logger.warning(
+                        "Exception occured while processing example",
+                        exc_info=True,
+                    )
+                    raise
                 # Cloud Storage generally doesn't have a cheap way to rename files. So
                 # shadow paging should generally only be used for local data.
                 if shadow:

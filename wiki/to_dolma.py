@@ -7,11 +7,9 @@ import glob
 import os
 import urllib.parse
 
-from utils import get_wiki_name, make_wiki_url
-
 from licensed_pile.licenses import PermissiveLicenses
 from licensed_pile.logs import configure_logging, get_logger
-from licensed_pile.utils import dolma_output
+from licensed_pile.utils import dolma_output, removeprefix, removesuffix
 from licensed_pile.write import to_dolma
 from licensed_pile.xml import iterate_xmls
 
@@ -44,6 +42,21 @@ parser.add_argument(
     action="store_true",
     help="Should we skip pages that are redirects to others?",
 )
+
+
+def get_wiki_name(url: str) -> str:
+    """Use a wiki's url as it's name.
+
+    This functions is to abstract into a semantic unit, even though it doesn't do much.
+    """
+    return urllib.parse.urlparse(url).netloc
+
+
+def make_wiki_url(base_url: str, title: str, url_prefix: str = "wiki/") -> str:
+    """Create a wiki url from the wiki url and the page name."""
+    url_prefix = removesuffix(url_prefix, "/")
+    url = urllib.parse.urljoin(base_url, f"{url_prefix}/{title.replace(' ', '_')}")
+    return urllib.parse.quote(url, safe=":/")
 
 
 def main(args):
