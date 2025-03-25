@@ -4,7 +4,7 @@ We use the dolma format and a server running `wtf_wikipedia` for wikitext parsin
 
 ## Starting the Parser Server
 
-1. Install HAProxy `sudo apt install haproxy`
+1. Install HAProxy `sudo apt install haproxy` You need at least version 2.2, we used 2.4
 2. Install nvm and node
 3. Install dependencies `npm install`
 4. edit `haproxy.cfg` to include one `server ${name} 127.0.0.1:${port} check` line for each server you plan to run.

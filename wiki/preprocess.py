@@ -100,7 +100,7 @@ class WTFWikipediaParallel(ShardParallelProcessor):
                 logger.warning(
                     "Skipping example from deny list as the text is %d characters long.",
                     len(example["text"]),
-                    extras={"title": title},
+                    extra={"title": title},
                 )
                 # Returning None for the whole example will filter it from the output.
                 return None
