@@ -2,26 +2,25 @@
 
 import argparse
 import collections
+import copyreg
 import dataclasses
 import datetime
 import functools
 import itertools
-import pickle
 import multiprocessing as mp
 import operator as op
 import os
+import pickle
 import re
 import shelve
 import urllib.parse
 from dataclasses import dataclass
-from typing import Dict, List, Sequence
-
-import copyreg
 from io import StringIO
-from lxml import etree
+from typing import Dict, List, Sequence
 
 import bs4
 import tqdm
+from lxml import etree
 from markdown_it import MarkdownIt
 
 import licensed_pile.xml as xml
@@ -47,7 +46,7 @@ parser.add_argument(
 parser.add_argument(
     "--cache",
     action="store_true",
-    help="Should we save the parsed lookup tables for re-use between runs?"
+    help="Should we save the parsed lookup tables for re-use between runs?",
 )
 parser.add_argument(
     "--skip_comments",
@@ -401,7 +400,9 @@ def main(args):
                 post_authors = pickle.load(f)
         else:
             logger.info("Building Lookup from post id -> authors")
-            history_xml = xml.iterate_xml(find_file(args.input, "PostHistory.xml"), "row")
+            history_xml = xml.iterate_xml(
+                find_file(args.input, "PostHistory.xml"), "row"
+            )
             # It would probably be better/faster to use a database to store these
             # intermediate lookups instead of a shelve (which requires multiple
             # pickle serialization/deserialization) but I didn't want to implement
@@ -443,7 +444,9 @@ def main(args):
                 comments = {}
             if args.include_comments:
                 logger.info("Building Lookup from post/answer id -> comments")
-                comment_xml = xml.iterate_xml(find_file(args.input, "Comments.xml"), "row")
+                comment_xml = xml.iterate_xml(
+                    find_file(args.input, "Comments.xml"), "row"
+                )
                 for post_id, user_id, text, date, license in pool.imap_unordered(
                     process_comment, comment_xml, chunksize=100
                 ):
@@ -512,7 +515,6 @@ def main(args):
                 with open(cache_path(args.input, "questions"), "wb") as wf:
                     pickle.dump(parsed_dump, wf)
 
-
         logger.info("Parsing Answers")
         # Reinitialize the iterator over the Posts as it was consumed when
         # looking for questions. We do this as a second pass so we know that
@@ -530,7 +532,7 @@ def main(args):
             if question_id not in parsed_dump:
                 logger.warning(
                     f"Failed to find question {question_id} assocaited with answer: {answer_id}",
-                    extra={"file": args.input}
+                    extra={"file": args.input},
                 )
                 continue
             question = parsed_dump[question_id]
