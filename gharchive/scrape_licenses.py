@@ -39,7 +39,8 @@ def main():
                     i += 1
                     wait = max(60, wait // 8)
             except Exception as e:
-                if "API rate limit exceeded" in e.msg:
+                error = str(e)
+                if "API rate limit exceeded" in error:
                     wait = min(wait * 4, 60 * 60)
                     logger.info(f"API rate limit exceeded. Waiting {wait} seconds.")
                     time.sleep(wait)
