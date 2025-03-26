@@ -157,6 +157,7 @@ def batched_get_license_info(
     rate_limit=None,
     max_retries=3,
     retry_delay=2,
+    timeout=20,
     **kwargs,
 ) -> Optional[Tuple[list[LicenseInfo], dict, Union[dict, None]]]:
     logger = logs.get_logger()
@@ -176,7 +177,10 @@ def batched_get_license_info(
     while retries <= max_retries:
         try:
             response = requests.post(
-                "https://api.github.com/graphql", json={"query": full_query}, headers=headers
+                "https://api.github.com/graphql",
+                json={"query": full_query},
+                headers=headers,
+                timeout=timeout,
             ).json()
             for r in response["data"]:
                 if r == "rateLimit":
