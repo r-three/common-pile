@@ -1,6 +1,7 @@
 """Convert the Aggregated Threads to the dolma format."""
 
 import argparse
+import asyncio
 import dataclasses
 import functools
 import glob
@@ -151,13 +152,14 @@ def check_github_graphql_rate_limit():
         return None
 
 
-def batched_get_license_info(
+async def batched_get_license_info(
     repos: list[str],
     license_cache,
-    rate_limit=None,
-    max_retries=3,
-    retry_delay=2,
-    timeout=20,
+    client=None,
+    rate_limit: int=None,
+    max_retries: int=3,
+    retry_delay: int=2,
+    timeout: int=20,
     **kwargs,
 ) -> Optional[Tuple[list[LicenseInfo], dict, Union[dict, None]]]:
     logger = logs.get_logger()
@@ -172,16 +174,15 @@ def batched_get_license_info(
         return [], {}, rate_limit
     queries_, index = build_graphql_query(queries)
     full_query = "query {" + "\n".join(queries_) + "\n}"
-    headers = {"Authorization": f"Bearer {os.environ['GITHUB_TOKEN']}"}
     retries = 0
     while retries <= max_retries:
         try:
-            response = requests.post(
+            response_obj = await client.post(
                 "https://api.github.com/graphql",
                 json={"query": full_query},
-                headers=headers,
-                timeout=timeout,
-            ).json()
+            )
+            response_obj.raise_for_status()
+            response = response_obj.json()
             for r in response["data"]:
                 if r == "rateLimit":
                     rate_limit = response["data"]["rateLimit"]
@@ -244,7 +245,7 @@ def batched_get_license_info(
             logger.warning(
                 f"Error occurred: {e}. Retrying ({retries}/{max_retries}) in {retry_delay} seconds..."
             )
-            time.sleep(retry_delay)
+            await asyncio.sleep(retry_delay)
 
 
 def get_license_info(
