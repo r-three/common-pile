@@ -1,6 +1,7 @@
 """Convert the Aggregated Threads to the dolma format."""
 
 import argparse
+import asyncio
 import dataclasses
 import functools
 import glob
@@ -9,10 +10,12 @@ import json
 import os
 import re
 import shelve
+import time
 from datetime import datetime
-from typing import Iterator, Optional, Sequence
+from typing import Iterator, Optional, Sequence, Tuple, Union
 
 import bs4
+import requests
 import smart_open
 from ghapi.all import GhApi
 from ghapi.core import (
@@ -87,6 +90,162 @@ class LicenseInfo:
             if l.active(time):
                 return True
         return False
+
+def build_graphql_query(repos: list[str]) -> Tuple[list[str], dict]:
+    query_parts = []
+    index = {}
+    for idx, repo in enumerate(repos):
+        owner, name = repo.split("/")
+        alias = f"repo{idx + 1}"
+        index[alias] = repo
+        query_parts.append(f"""
+        {alias}: repository(owner: "{owner}", name: "{name}") {{
+            name
+            owner {{
+                login
+            }}
+            licenseInfo {{
+                spdxId
+                name
+                url
+                key
+                id
+            }}
+        }}
+        """)
+    query_parts.append("""
+    rateLimit {
+        cost
+        remaining
+        resetAt
+    }
+    """)
+    return query_parts, index
+
+def check_github_graphql_rate_limit():
+    logger = logs.get_logger()
+    query = """
+    query {
+      rateLimit {
+        limit
+        cost
+        remaining
+        resetAt
+      }
+    }
+    """
+
+    response = requests.post(
+        "https://api.github.com/graphql",
+        json={"query": query},
+        headers={
+            "Authorization": f"Bearer {os.environ['GITHUB_TOKEN']}",
+            "Content-Type": "application/json",
+        },
+    )
+
+    if response.status_code == 200:
+        data = response.json()
+        return data["data"]["rateLimit"]
+    else:
+        logger.error(f"Error: {response.status_code}, {response.text}")
+        return None
+
+
+async def batched_get_license_info(
+    repos: list[str],
+    license_cache,
+    client=None,
+    rate_limit: int=None,
+    max_retries: int=3,
+    retry_delay: int=2,
+    timeout: int=20,
+    **kwargs,
+) -> Optional[Tuple[list[LicenseInfo], dict, Union[dict, None]]]:
+    logger = logs.get_logger()
+    res = []
+    if isinstance(repos, str):
+        repos = [repos]
+    alpha = datetime(1900, 1, 1)
+    omega = datetime(9999, 1, 1)
+    queries = [repo for repo in repos if repo not in license_cache]
+    if not queries:
+        logger.info("cache hit, reusing past license info")
+        return [], {}, rate_limit
+    queries_, index = build_graphql_query(queries)
+    full_query = "query {" + "\n".join(queries_) + "\n}"
+    retries = 0
+    while retries <= max_retries:
+        try:
+            response_obj = await client.post(
+                "https://api.github.com/graphql",
+                json={"query": full_query},
+            )
+            response_obj.raise_for_status()
+            response = response_obj.json()
+            for r in response["data"]:
+                if r == "rateLimit":
+                    rate_limit = response["data"]["rateLimit"]
+                else:
+                    repo = response["data"][r]
+                    if repo is None:
+                        license_info = LicenseInfo(
+                            licenses=[
+                                LicenseSnapshot(license="unlicensed", start=alpha, end=omega)
+                            ],
+                            license_type="restrictive",
+                        )
+                    else:
+                        license = repo.get("licenseInfo", None)
+                        if license:
+                            license_info = (
+                                LicenseInfo(
+                                    licenses=[
+                                        LicenseSnapshot(
+                                            license=repo["licenseInfo"]["spdxId"],
+                                            start=alpha,
+                                            end=omega,
+                                        )
+                                    ]
+                                )
+                                if license.get("spdxId")
+                                else LicenseInfo(
+                                    licenses=[
+                                        LicenseSnapshot(
+                                            license="unlicensed", start=alpha, end=omega
+                                        )
+                                    ],
+                                    license_type="restrictive",
+                                )
+                            )
+                        else:
+                            license_info = LicenseInfo(
+                                licenses=[
+                                    LicenseSnapshot(
+                                        license="unlicensed", start=alpha, end=omega
+                                    )
+                                ],
+                                license_type="restrictive",
+                            )
+
+                    license_cache[index[r]] = license_info
+                    res.append(license_info)
+
+            logger.info(
+                f"Fetching license info for {len(queries)} repos. Cost: {response['data']['rateLimit']['cost']}. Remaining: {response['data']['rateLimit']['remaining']}."
+            )
+            return res, index, rate_limit
+
+        except Exception as e:
+            if retries == max_retries:
+                logger.error(f"Max retries reached. Last error: {e}")
+                raise e
+            logger.info("Error. Retrying")
+            retries += 1
+            logger.warning(
+                f"Error occurred: {e}. Retrying ({retries}/{max_retries}) in {retry_delay} seconds..."
+            )
+            await asyncio.sleep(retry_delay)
 
 
 def get_license_info(
