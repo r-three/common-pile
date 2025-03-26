@@ -113,7 +113,7 @@ class ShardParallelProcessor(BaseParallelProcessor):
             output_path = (
                 create_shadow(destination_path) if shadow else destination_path
             )
-            with smart_open.open(source_path) as f, smart_open.open(
+            with smart_open.open(source_path, compression=".gz") as f, smart_open.open(
                 output_path, "w"
             ) as wf:
                 document_count = 0
