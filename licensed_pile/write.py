@@ -114,7 +114,7 @@ class ShardParallelProcessor(BaseParallelProcessor):
                 create_shadow(destination_path) if shadow else destination_path
             )
             with smart_open.open(source_path, compression=".gz") as f, smart_open.open(
-                output_path, "w"
+                output_path, "w", compression=".gz"
             ) as wf:
                 document_count = 0
                 update_interval = kwargs.pop("update_interval", 1)

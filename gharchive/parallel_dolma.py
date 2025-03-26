@@ -47,6 +47,8 @@ parser.add_argument(
 )
 parser.add_argument("--meta", help="Location to save dolma processing metadata.")
 
+logs.configure_logging()
+
 
 def infer_source(thread_url: str) -> str:
     if "issues/" in thread_url:
