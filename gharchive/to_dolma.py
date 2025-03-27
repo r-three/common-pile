@@ -8,6 +8,7 @@ import glob
 import itertools
 import json
 import os
+import random
 import re
 import shelve
 import time
@@ -95,7 +96,11 @@ def build_graphql_query(repos: list[str]) -> Tuple[list[str], dict]:
     query_parts = []
     index = {}
     for idx, repo in enumerate(repos):
-        owner, name = repo.split("/")
+        try:
+            owner, name = repo.split("/")
+        except ValueError:
+            spl = repo.split("/")
+            owner, name = spl[0], spl[-1]
         alias = f"repo{idx + 1}"
         index[alias] = repo
         query_parts.append(f"""
@@ -157,7 +162,7 @@ async def batched_get_license_info(
     license_cache,
     client=None,
     rate_limit: int=None,
-    max_retries: int=3,
+    max_retries: int=8,
     retry_delay: int=2,
     timeout: int=20,
     **kwargs,
@@ -243,9 +248,9 @@ async def batched_get_license_info(
             logger.info("Error. Retrying")
             retries += 1
             logger.warning(
-                f"Error occurred: {e}. Retrying ({retries}/{max_retries}) in {retry_delay} seconds..."
+                f"Error occurred: {e}. Retrying ({retries}/{max_retries}) in {retry_delay*retries} seconds..."
             )
-            await asyncio.sleep(retry_delay)
+            await asyncio.sleep(retry_delay*retries+(1 + random.random() * 0.5))
 
 
 def get_license_info(
