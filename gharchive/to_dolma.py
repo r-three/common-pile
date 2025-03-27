@@ -168,6 +168,7 @@ async def batched_get_license_info(
     **kwargs,
 ) -> Optional[Tuple[list[LicenseInfo], dict, Union[dict, None]]]:
     logger = logs.get_logger()
+    num = random.randint(1, 100)
     res = []
     if isinstance(repos, str):
         repos = [repos]
@@ -248,7 +249,7 @@ async def batched_get_license_info(
             logger.info("Error. Retrying")
             retries += 1
             logger.warning(
-                f"Error occurred: {e}. Retrying ({retries}/{max_retries}) in {retry_delay*retries} seconds..."
+                f"({num}) Error occurred: {e}. Retrying ({retries}/{max_retries}) in {retry_delay*retries} seconds..."
             )
             await asyncio.sleep(retry_delay*retries+(1 + random.random() * 0.5))
 

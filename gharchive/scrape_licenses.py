@@ -71,7 +71,7 @@ async def batch_main(args, logger, rate_limit, repos, license_cache) -> None:
 
                 while (
                     current_index < len(repos)
-                    and len(batches) < (args.concurrent_batches)
+                    and len(batches) < (args.concurrent_batches + 10)
                 ):
                     batch_end = min(current_index + args.batch_size, len(repos))
                     batch = repos[current_index:batch_end]
