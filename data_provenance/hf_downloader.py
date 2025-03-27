@@ -14,7 +14,7 @@ def parse_args():
     )
     parser.add_argument(
         "--hf_dataset",
-        default="DataProvenanceInitiative/common_pile_ultra_permissive",
+        default="DataProvenanceInitiative/common_pile_set",
         help="The label for the HuggingFace dataset that can be used in HuggingFace's load_dataset()",
     )
     parser.add_argument(
