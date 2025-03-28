@@ -2,8 +2,6 @@
 
 import argparse
 import asyncio
-import glob
-import itertools
 import json
 import os
 import shelve
@@ -11,21 +9,17 @@ import time
 from datetime import datetime, timezone
 
 import httpx
+import tqdm.asyncio as tqdm_async
 from dateutil.parser import parse
 from ghapi.all import GhApi
-import tqdm.asyncio as tqdm_async
 from tqdm import tqdm
 
+from licensed_pile import logs
 from to_dolma import (
-    LicenseInfo,
-    LicenseSnapshot,
     get_license_info,
-    read_threads,
     check_github_graphql_rate_limit,
     batched_get_license_info,
 )
-
-from licensed_pile import logs
 
 parser = argparse.ArgumentParser(description="Scrape Licenses.")
 parser.add_argument(

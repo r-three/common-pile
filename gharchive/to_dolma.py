@@ -11,7 +11,6 @@ import os
 import random
 import re
 import shelve
-import time
 from datetime import datetime
 from typing import Iterator, Optional, Sequence, Tuple, Union
 
@@ -22,13 +21,11 @@ from ghapi.all import GhApi
 from ghapi.core import (
     HTTP403ForbiddenError,
     HTTP404NotFoundError,
-    HTTP429TooManyRequestsError,
     HTTP451LegalReasonsError,
 )
 from markdown_it import MarkdownIt
 
 from licensed_pile import logs
-from licensed_pile.licenses import PermissiveLicenses
 from licensed_pile.write import to_dolma
 
 SOURCE_NAME = "gharchive-threads"
@@ -164,12 +161,11 @@ async def batched_get_license_info(
     rate_limit: int=None,
     max_retries: int=8,
     retry_delay: int=1,
-    timeout: int=20,
     **kwargs,
-) -> Optional[Tuple[list[LicenseInfo], dict, Union[dict, None]]]:
+) -> Optional[Tuple[dict[str, LicenseInfo], Union[dict, None]]]:
     logger = logs.get_logger()
     num = random.randint(1, 100)
-    res = []
+    res = {}
     if isinstance(repos, str):
         repos = [repos]
     alpha = datetime(1900, 1, 1)
@@ -177,7 +173,7 @@ async def batched_get_license_info(
     queries = [repo for repo in repos if repo not in license_cache]
     if not queries:
         logger.info("cache hit, reusing past license info")
-        return [], {}, rate_limit
+        return {}, rate_limit
     queries_, index = build_graphql_query(queries)
     full_query = "query {" + "\n".join(queries_) + "\n}"
     retries = 0
@@ -235,12 +231,12 @@ async def batched_get_license_info(
                             )
 
                     license_cache[index[r]] = license_info
-                    res.append(license_info)
+                    res[index[r]] = license_info
 
             logger.info(
                 f"Fetching license info for {len(queries)} repos. Cost: {response['data']['rateLimit']['cost']}. Remaining: {response['data']['rateLimit']['remaining']}."
             )
-            return res, index, rate_limit
+            return res, rate_limit
 
         except Exception as e:
             if retries == max_retries:
