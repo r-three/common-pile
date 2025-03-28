@@ -35,7 +35,7 @@ parser.add_argument(
     "--batch_size", help="Batch requests using GraphQL API.", required=False, default=200, type=int
 )
 parser.add_argument(
-    "--concurrent_batches", help="Number of concurrent", required=False, default=2, type=int
+    "--concurrent_batches", help="Number of concurrent", required=False, default=3, type=int
 )
 
 
@@ -71,7 +71,7 @@ async def batch_main(args, logger, rate_limit, repos, license_cache) -> None:
 
                 while (
                     current_index < len(repos)
-                    and len(batches) < (args.concurrent_batches + 10)
+                    and len(batches) < (args.concurrent_batches * 3)
                 ):
                     batch_end = min(current_index + args.batch_size, len(repos))
                     batch = repos[current_index:batch_end]
@@ -91,7 +91,8 @@ async def batch_main(args, logger, rate_limit, repos, license_cache) -> None:
                 # Update rate limit from the last result
                 for result in batch_results:
                     *_, batch_rate_limit = result
-                    rate_limit = batch_rate_limit
+                    if batch_rate_limit:
+                        rate_limit = batch_rate_limit
                 processed_count = current_index - i
                 progress_bar.update(processed_count)
 
@@ -110,7 +111,7 @@ def main():
         i = 0
         # Initial rate limit check only needed for the first iteration
         rate_limit = check_github_graphql_rate_limit() if args.batch_size > 1 else None
-        logger.info(f"Rate limit: {rate_limit}")
+        logger.warning(f"Rate limit: {rate_limit}")
         if args.batch_size > 1:
             asyncio.run(batch_main(args, logger, rate_limit, repos, license_cache))
         else:

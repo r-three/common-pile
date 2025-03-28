@@ -163,7 +163,7 @@ async def batched_get_license_info(
     client=None,
     rate_limit: int=None,
     max_retries: int=8,
-    retry_delay: int=2,
+    retry_delay: int=1,
     timeout: int=20,
     **kwargs,
 ) -> Optional[Tuple[list[LicenseInfo], dict, Union[dict, None]]]:
