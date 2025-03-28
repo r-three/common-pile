@@ -16,10 +16,10 @@ from ghapi.all import GhApi
 from to_dolma import (
     LicenseInfo,
     LicenseSnapshot,
+    batched_get_license_info,
+    check_github_graphql_rate_limit,
     get_license_info,
     read_threads,
-    check_github_graphql_rate_limit,
-    batched_get_license_info,
 )
 
 from licensed_pile import logs
@@ -29,10 +29,18 @@ parser.add_argument(
     "--repo_list", help="Path to a file that has a list of repos (JSON).", required=True
 )
 parser.add_argument(
-    "--batch_size", help="Batch requests using GraphQL API.", required=False, default=200, type=int
+    "--batch_size",
+    help="Batch requests using GraphQL API.",
+    required=False,
+    default=200,
+    type=int,
 )
 parser.add_argument(
-    "--concurrent_batches", help="Number of concurrent", required=False, default=2, type=int
+    "--concurrent_batches",
+    help="Number of concurrent",
+    required=False,
+    default=2,
+    type=int,
 )
 
 
@@ -40,12 +48,15 @@ async def batch_main(args, logger, rate_limit, repos, license_cache) -> None:
     i = 0
     if args.batch_size > 1:
         async with httpx.AsyncClient(
-                timeout=httpx.Timeout(30.0),
-                limits=httpx.Limits(max_keepalive_connections=args.concurrent_batches, max_connections=args.concurrent_batches),
-                headers={
-                    "User-Agent": "GitHub-License-Checker",
-                    "Authorization": f"token {os.environ['GITHUB_TOKEN']}"
-                }
+            timeout=httpx.Timeout(30.0),
+            limits=httpx.Limits(
+                max_keepalive_connections=args.concurrent_batches,
+                max_connections=args.concurrent_batches,
+            ),
+            headers={
+                "User-Agent": "GitHub-License-Checker",
+                "Authorization": f"token {os.environ['GITHUB_TOKEN']}",
+            },
         ) as client:
             while i < len(repos):
                 # Check if we need to wait for rate limit reset
@@ -108,6 +119,8 @@ def main():
             asyncio.run(batch_main(args, logger, rate_limit, repos, license_cache))
         else:
             while True:
+                if i >= len(repos):
+                    break
                 while api.limit_rem == 0:
                     logger.info(f"Waiting as API quota is low, {api.limit_rem}.")
                     time.sleep(1)
