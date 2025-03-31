@@ -63,7 +63,7 @@ def clean_text(text: str) -> str:
     except:
         logger = logs.get_logger()
         logger.exception("Parsing failed.", extra={"text": text})
-        return ""
+        return text
 
 
 def format_dolma(
