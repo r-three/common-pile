@@ -2,10 +2,13 @@
 
 import argparse
 import dataclasses
+import glob
+import json
 
 import datasets
+import smart_open
 
-from licensed_pile import logs
+from licensed_pile import logs, utils
 
 parser = argparse.ArgumentParser(description="Train a common-pile tokenizer.")
 parser.add_argument(
@@ -16,8 +19,11 @@ parser.add_argument(
 )
 parser.add_argument(
     "--dataset",
-    default="nkandpa2/common-pile-filtered",
-    help="The dataset to train on.",
+    help="A huggingface dataset to train on.",
+)
+parser.add_argument("--data_pattern", help="A glob of jsonl.gz files to train on.")
+parser.add_argument(
+    "--subset", default="default", help="The subset of the dataset to us."
 )
 parser.add_argument(
     "--vocab_size", default=32_000, type=int, help="The size of the vocab to use."
@@ -34,8 +40,17 @@ parser.add_argument(
     help="The name of the resulting tokenizer output.",
 )
 parser.add_argument(
+    "--data_limit",
+    type=int,
+    default=-1,
+    help="The size to limit the training dataset (in GB). Use -1 for whole dataset.",
+)
+parser.add_argument(
     "--streaming", action="store_true", help="Should we stream the dataset?"
 )
+
+
+BYTES_PER_GIGABYTE = 1000 * 1000 * 1000
 
 
 @dataclasses.dataclass
@@ -50,14 +65,53 @@ class SpecialTokens:
     eos_id: int = 3
 
 
-def training_generator(dataset: str, batch_size: int, streaming: bool = False):
-    dataset = datasets.load_dataset(dataset, split="train", streaming=streaming)
-    # Don't return [${text}] if you have a batch size of 1.
-    if batch_size == 1:
-        yield from (d["text"] for d in dataset)
-    else:
-        for i in range(0, len(dataset), batch_size):
-            yield dataset[i : i + batch_size]["text"]
+def load_hf_data(
+    dataset: str, batch_size: int, subset: str = "default", streaming: bool = False
+):
+    data_str = "whole" if data_limit < 0 else f"{data_limit}GB of"
+    subset_str = "" if subset == "default" else f"{subset},"
+    logger.info(
+        f"Loading {data_str} dataset {dataset}[{subset_str}split=train] in batches of {batch_size}."
+    )
+    dataset = datasets.load_dataset(
+        dataset, name=subset, split="train", streaming=streaming
+    )
+    for i in range(0, len(dataset), batch_size):
+        yield dataset[i : i + batch_size]["text"]
+
+
+def load_jsonl_data(pattern: str, batch_size: int, **kwargs):
+    batch = []
+    for file_path in glob.iglob(pattern):
+        with smart_open.open(file_path) as f:
+            for line in f:
+                if line:
+                    batch.append(json.loads(line)["text"])
+                if len(batch) == batch_size:
+                    yield batch
+                    batch = []
+    if batch:
+        logger.warning("Yielding final ragged batch")
+        yield batch
+
+
+def training_generator(data, batch_size: int, data_limit: int = -1):
+    logger = logs.get_logger()
+    data_size = 0
+
+    for batch in data:
+        # Lets us limit the size of data we want to train on.
+        if data_limit > 0 and (data_size / BYTES_PER_GIGABYTE) > data_limit:
+            logger.info("Stopping dataset loading as size limit was reached.")
+            break
+        # Underestimate of size, but faster and close enough for english.
+        data_size += sum(len(b) for b in batch)
+        # Don't return [${text}] if you have a batch size of 1.
+        if batch_size == 1:
+            yield batch[0]
+        else:
+            yield batch
+    logger.info(f"Yielded {data_size / BYTES_PER_GIGABYTE}GB of text.")
 
 
 def train_bpe(data_iter, output_path: str, vocab_size: int = 32_000):
@@ -71,6 +125,8 @@ def train_bpe(data_iter, output_path: str, vocab_size: int = 32_000):
         trainers,
     )
 
+    logger = logs.get_logger()
+    logger.info(f"Training BPE Tokenizer with vocab_size={vocab_size}")
     tokenizer = Tokenizer(
         models.BPE(
             unk_token=SpecialTokens.unk,
@@ -98,6 +154,7 @@ def train_bpe(data_iter, output_path: str, vocab_size: int = 32_000):
     tokenizer.train_from_iterator(data_iter, trainer=trainer)
     tokenizer.post_processor = processors.ByteLevel(trim_offsets=False)
     tokenizer.decoder = decoders.ByteLevel()
+    logger.info(f"Saving tokenizer to {output_path}")
     tokenizer.save(output_path)
 
 
@@ -110,6 +167,8 @@ def train_unigram(
 ):
     import sentencepiece as spm
 
+    logger = logs.get_logger()
+    logger.info(f"Training Unigram Tokenizer with vocab_size={vocab_size}")
     spm.SentencePieceTrainer.train(
         sentence_iterator=data_iter,
         model_prefix=output_path,
@@ -139,12 +198,14 @@ def train_unigram(
         unk_surface=SpecialTokens.unk,
         train_extremely_large_corpus=True,
     )
+    logger.info(f"Saving tokenizer to {output_path}.model")
 
 
 def main():
     args = parser.parse_args()
     logger = logs.configure_logging()
 
+    # Adjust settings based on the type of tokenizer.
     if args.algo == "unigram":
         if args.batch_size != 1:
             logger.warning("Unigram selected as training algo, setting --batch_size=1")
@@ -156,7 +217,17 @@ def main():
             args.output_path = f"{args.output_path}.bpe"
         train_tokenizer = train_bpe
 
-    data_iter = training_generator(args.dataset, args.batch_size, args.streaming)
+    # Load data from either huggingface or raw jsonl files.
+    if (args.dataset is None) == (args.data_pattern is None):
+        raise ValueError("One of --dataset or --data_pattern must be set.")
+    if args.dataset is not None:
+        data = load_hf_data(
+            args.dataset, args.batch_size, subset=args.subset, streaming=args.streaming
+        )
+    if args.data_pattern is not None:
+        data = load_jsonl_data(args.data_pattern, args.batch_size)
+
+    data_iter = training_generator(data, args.batch_size, data_limit=args.data_limit)
     train_tokenizer(data_iter, args.output_path, args.vocab_size)
 
 
