@@ -8,8 +8,8 @@ from datetime import datetime
 from typing import Iterator
 
 import smart_open
-from to_dolma import LicenseInfo, LicenseSnapshot
 from tqdm import tqdm
+from utils import LicenseInfo, LicenseSnapshot
 
 parser = argparse.ArgumentParser(description="Prepopulate repo license cache.")
 parser.add_argument(
@@ -36,6 +36,7 @@ def main():
     args = parser.parse_args()
     alpha = datetime(1900, 1, 1)
     omega = datetime(9999, 1, 1)
+    source = "bigquery"
     with shelve.open(args.license_cache) as license_cache:
         for repo_data in tqdm(read_repo_data(args.bq)):
             repo = repo_data["repo_name"]
@@ -45,7 +46,10 @@ def main():
             license_info = LicenseInfo(
                 licenses=[
                     LicenseSnapshot(
-                        license=repo_data["license"], start=alpha, end=omega
+                        license=repo_data["license"],
+                        start=alpha,
+                        end=omega,
+                        license_source=source,
                     )
                 ]
             )

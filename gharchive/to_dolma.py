@@ -8,6 +8,7 @@ from typing import Sequence
 import bs4
 import smart_open
 from markdown_it import MarkdownIt
+from utils import LicenseInfo, LicenseSnapshot
 
 from licensed_pile import logs, utils
 from licensed_pile.write import ShardParallelProcessor

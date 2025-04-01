@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Collect all the license information from the stack v2."""
 
 import argparse
 import shelve
@@ -9,8 +9,16 @@ from tqdm import tqdm
 parser = argparse.ArgumentParser(
     description="Collect License Information from the StackV2."
 )
-parser.add_argument("--dataset", default="nkandpa2/common-pile-filtered", help="")
-parser.add_argument("--output", default="data/stack_licenses", help="")
+parser.add_argument(
+    "--dataset",
+    default="nkandpa2/common-pile-filtered",
+    help="The dataset with the stack v2 in it.",
+)
+parser.add_argument(
+    "--output",
+    default="data/stack_licenses",
+    help="Where to save the license information.",
+)
 
 
 def main():

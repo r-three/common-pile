@@ -4,16 +4,22 @@ import argparse
 import shelve
 from datetime import datetime
 
-from to_dolma import LicenseInfo, LicenseSnapshot
 from tqdm import tqdm
+from utils import LicenseInfo, LicenseSnapshot
 
 from licensed_pile import logs
 
 parser = argparse.ArgumentParser(
     description="Combine the raw license info from the stack v2 with github scrapped data."
 )
-parser.add_argument("--github", default="data/license_cache")
-parser.add_argument("--stack", default="data/stack_licenses")
+parser.add_argument(
+    "--github",
+    default="data/license_cache",
+    help="Licenses from Github scraping as shelve.",
+)
+parser.add_argument(
+    "--stack", default="data/stack_licenses", help="Licenses from the Stack v2 shelve."
+)
 
 
 def process_licenses(license_info):
@@ -21,7 +27,9 @@ def process_licenses(license_info):
     omega = datetime(9999, 1, 1)
     licenses = []
     for license in license_info["detected_licenses"]:
-        licenses.append(LicenseSnapshot(license, start=alpha, end=omega))
+        licenses.append(
+            LicenseSnapshot(license, start=alpha, end=omega, license_source="stackv2")
+        )
     return LicenseInfo(licenses, license_info["license_type"])
 
 

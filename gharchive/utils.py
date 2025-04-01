@@ -15,6 +15,10 @@ class LicenseSnapshot:
     def active(self, time):
         return self.start <= time <= self.end
 
+    @classmethod
+    def from_json(cls, json):
+        return cls(**json)
+
 
 @dataclasses.dataclass
 class LicenseInfo:
@@ -26,3 +30,8 @@ class LicenseInfo:
             if l.active(time):
                 return True
         return False
+
+    @classmethod
+    def from_json(cls, json):
+        licenses = [LicenseSnapshot(**d) for d in json.pop("licenses")]
+        return cls(licenses=licenses, **json)

@@ -123,13 +123,23 @@ def get_license_info(
         license_info = LicenseInfo(
             licenses=[
                 LicenseSnapshot(
-                    license=resp["license"]["spdx_id"], start=alpha, end=omega
+                    license=resp["license"]["spdx_id"],
+                    start=alpha,
+                    end=omega,
+                    license_source="github-api",
                 )
             ]
         )
     except HTTP404NotFoundError:
         license_info = LicenseInfo(
-            licenses=[LicenseSnapshot(license="unlicensed", start=alpha, end=omega)],
+            licenses=[
+                LicenseSnapshot(
+                    license="unlicensed",
+                    start=alpha,
+                    end=omega,
+                    license_source="github-api",
+                )
+            ],
             license_type="restrictive",
         )
     except HTTP403ForbiddenError as e:
@@ -138,14 +148,24 @@ def get_license_info(
         if reason == "tos":
             license_info = LicenseInfo(
                 licenses=[
-                    LicenseSnapshot(license="tos-violation", start=alpha, end=omega)
+                    LicenseSnapshot(
+                        license="tos-violation",
+                        start=alpha,
+                        end=omega,
+                        license_source="github-api",
+                    )
                 ],
                 license_type="restrictive",
             )
         elif reason == "sensitive_data":
             license_info = LicenseInfo(
                 licenses=[
-                    LicenseSnapshot(license="sensitive-data", start=alpha, end=omega)
+                    LicenseSnapshot(
+                        license="sensitive-data",
+                        start=alpha,
+                        end=omega,
+                        license_source="github-api",
+                    )
                 ],
                 license_type="restrictive",
             )
@@ -153,7 +173,10 @@ def get_license_info(
             license_info = LicenseInfo(
                 licenses=[
                     LicenseSnapshot(
-                        license="private-information", start=alpha, end=omega
+                        license="private-information",
+                        start=alpha,
+                        end=omega,
+                        license_source="github-api",
                     )
                 ],
                 license_type="restrictive",
@@ -163,7 +186,11 @@ def get_license_info(
             raise
     except HTTP451LegalReasonsError:
         license_info = LicenseInfo(
-            licenses=[LicenseSnapshot(license="dmca", start=alpha, end=omega)],
+            licenses=[
+                LicenseSnapshot(
+                    license="dmca", start=alpha, end=omega, license_source="github-api"
+                )
+            ],
             license_type="restrictive",
         )
     license_cache[repo] = license_info
@@ -276,7 +303,10 @@ async def batched_get_license_info(
                         license_info = LicenseInfo(
                             licenses=[
                                 LicenseSnapshot(
-                                    license="unlicensed", start=alpha, end=omega
+                                    license="unlicensed",
+                                    start=alpha,
+                                    end=omega,
+                                    license_source="github-api",
                                 )
                             ],
                             license_type="restrictive",
@@ -291,6 +321,7 @@ async def batched_get_license_info(
                                             license=repo["licenseInfo"]["spdxId"],
                                             start=alpha,
                                             end=omega,
+                                            license_source="github-api",
                                         )
                                     ]
                                 )
@@ -298,7 +329,10 @@ async def batched_get_license_info(
                                 else LicenseInfo(
                                     licenses=[
                                         LicenseSnapshot(
-                                            license="unlicensed", start=alpha, end=omega
+                                            license="unlicensed",
+                                            start=alpha,
+                                            end=omega,
+                                            license_source="github-api",
                                         )
                                     ],
                                     license_type="restrictive",
@@ -308,7 +342,10 @@ async def batched_get_license_info(
                             license_info = LicenseInfo(
                                 licenses=[
                                     LicenseSnapshot(
-                                        license="unlicensed", start=alpha, end=omega
+                                        license="unlicensed",
+                                        start=alpha,
+                                        end=omega,
+                                        license_source="github-api",
                                     )
                                 ],
                                 license_type="restrictive",
