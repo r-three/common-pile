@@ -1,6 +1,7 @@
 """Combine the stackv2 license info with the scrapped info from github."""
 
 import argparse
+import itertools
 import shelve
 from datetime import datetime
 
@@ -26,7 +27,11 @@ def process_licenses(license_info):
     alpha = datetime(1900, 1, 1)
     omega = datetime(9999, 1, 1)
     licenses = []
-    for license in license_info["detected_licenses"]:
+    for license in set(
+        itertools.chain(
+            license_info["detected_licenses"], [license_info["gha_license_id"]]
+        )
+    ):
         licenses.append(
             LicenseSnapshot(license, start=alpha, end=omega, license_source="stackv2")
         )

@@ -43,6 +43,8 @@ def main():
         for repo, license_info in tqdm(license_cache.items()):
             if license_info.license_type != "":
                 continue
+            if not license_info.licenses:
+                raise ValueError(f"Repo {repo} has no license information.")
             if all(l.license.lower() in blue_oak for l in license_info.licenses):
                 license_info.license_type = "permissive"
             else:
