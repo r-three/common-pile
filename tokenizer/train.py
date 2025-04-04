@@ -41,7 +41,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--data_limit",
-    type=int,
+    type=float,
     default=-1,
     help="The size to limit the training dataset (in GB). Use -1 for whole dataset.",
 )
@@ -68,16 +68,24 @@ class SpecialTokens:
 def load_hf_data(
     dataset: str, batch_size: int, subset: str = "default", streaming: bool = False
 ):
-    data_str = "whole" if data_limit < 0 else f"{data_limit}GB of"
+    logger = logs.get_logger()
     subset_str = "" if subset == "default" else f"{subset},"
     logger.info(
-        f"Loading {data_str} dataset {dataset}[{subset_str}split=train] in batches of {batch_size}."
+        f"Loading dataset {dataset}[{subset_str}split=train] in batches of {batch_size}."
     )
     dataset = datasets.load_dataset(
         dataset, name=subset, split="train", streaming=streaming
     )
-    for i in range(0, len(dataset), batch_size):
-        yield dataset[i : i + batch_size]["text"]
+    batch = []
+    for example in dataset:
+        batch.append(example["text"])
+        if len(batch) == batch_size:
+            yield batch
+            batch = []
+    if batch:
+        logger = logs.get_logger()
+        logger.warning("Yielding final ragged batch")
+        yield batch
 
 
 def load_jsonl_data(pattern: str, batch_size: int, **kwargs):
@@ -91,11 +99,12 @@ def load_jsonl_data(pattern: str, batch_size: int, **kwargs):
                     yield batch
                     batch = []
     if batch:
+        logger = logs.get_logger()
         logger.warning("Yielding final ragged batch")
         yield batch
 
 
-def training_generator(data, batch_size: int, data_limit: int = -1):
+def training_generator(data, batch_size: int, data_limit: float = -1):
     logger = logs.get_logger()
     data_size = 0
 
