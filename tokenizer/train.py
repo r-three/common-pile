@@ -40,6 +40,17 @@ parser.add_argument(
     help="The name of the resulting tokenizer output.",
 )
 parser.add_argument(
+    "--pattern_string",
+    choices=["none", "tiktoken", "gpt2", "tiktoken+digits"],
+    default="none",
+    help="Should we use a regex to pre-split some text.",
+)
+parser.add_argument(
+    "--nosplit_digits",
+    action="store_true",
+    help="Should we split numbers into individual digits, i.e., 1234 -> 1 2 3 4",
+)
+parser.add_argument(
     "--data_limit",
     type=float,
     default=-1,
@@ -51,23 +62,31 @@ parser.add_argument(
 
 
 BYTES_PER_GIGABYTE = 1000 * 1000 * 1000
+PATTERN_STRINGS = {
+    "tiktoken": r"""(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+""",
+    "tiktoken+digits": r"""(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+""",
+    "gpt2": r"""'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+""",
+}
 
 
 @dataclasses.dataclass
 class SpecialTokens:
+    """List of special tokens we want to include and their token id."""
+
     pad: str = "<pad>"
     pad_id: int = 0
     unk: str = "<unk>"
     unk_id: int = 1
-    bos: str = "<bos>"
+    bos: str = "<|begin_of_text|>"  # Use the symbols from tiktoken for easier interopt
     bos_id: int = 2
-    eos: str = "</s>"
+    eos: str = "<|end_of_text|>"  # Use the symbols from tiktoken for easier interopt
     eos_id: int = 3
 
 
 def load_hf_data(
     dataset: str, batch_size: int, subset: str = "default", streaming: bool = False
-):
+) -> Iterator[List[str]]:
+    """Load training data from a huggingface dataset."""
     logger = logs.get_logger()
     subset_str = "" if subset == "default" else f"{subset},"
     logger.info(
@@ -76,6 +95,7 @@ def load_hf_data(
     dataset = datasets.load_dataset(
         dataset, name=subset, split="train", streaming=streaming
     )
+    # Batch as iterating because the for loop idiom doesn't work on stream data.
     batch = []
     for example in dataset:
         batch.append(example["text"])
@@ -88,9 +108,12 @@ def load_hf_data(
         yield batch
 
 
-def load_jsonl_data(pattern: str, batch_size: int, **kwargs):
+def load_jsonl_data(pattern: str, batch_size: int, **kwargs) -> Iterator[List[str]]:
+    """Load training data from a collection of .jsonl.gz files."""
+    logger = logs.get_logger()
     batch = []
     for file_path in glob.iglob(pattern):
+        logger.info(f"Reading examples from {file_path}")
         with smart_open.open(file_path) as f:
             for line in f:
                 if line:
@@ -99,12 +122,12 @@ def load_jsonl_data(pattern: str, batch_size: int, **kwargs):
                     yield batch
                     batch = []
     if batch:
-        logger = logs.get_logger()
         logger.warning("Yielding final ragged batch")
         yield batch
 
 
 def training_generator(data, batch_size: int, data_limit: float = -1):
+    """Unify data format and add limits to training data size."""
     logger = logs.get_logger()
     data_size = 0
 
@@ -123,8 +146,16 @@ def training_generator(data, batch_size: int, data_limit: float = -1):
     logger.info(f"Yielded {data_size / BYTES_PER_GIGABYTE}GB of text.")
 
 
-def train_bpe(data_iter, output_path: str, vocab_size: int = 32_000):
+def train_bpe(
+    data_iter,
+    output_path: str,
+    vocab_size: int = 32_000,
+    pattern_string: str | None = None,
+    split_digits: bool = True,
+):
+    """Train a BPE model using HuggingFace Tokenizers."""
     from tokenizers import (
+        Regex,
         Tokenizer,
         decoders,
         models,
@@ -143,12 +174,23 @@ def train_bpe(data_iter, output_path: str, vocab_size: int = 32_000):
         )
     )
     tokenizer.normalizer = normalizers.NFKC()
-    tokenizer.pre_tokenizer = pre_tokenizers.Sequence(
-        [
+    # We don't use the gpt2 regex built into the ByteLevel pretokenizer, if we
+    # want that we use the explicit split pretokenzier with regex.
+    pretokenizers = [
+        pre_tokenizers.ByteLevel(add_prefix_space=False, use_regex=False),
+    ]
+    if pattern_string is not None:
+        logger.info(f"Pre-split text based on regex: {pattern_string}")
+        pretokenizers = [
+            pre_tokenizers.Split(Regex(pattern_string), behavior="isolated")
+        ] + pretokenizers
+
+    if split_digits:
+        logger.info("Spliting numbers into individual digits.")
+        pretokenizers = [
             pre_tokenizers.Digits(individual_digits=True),
-            pre_tokenizers.ByteLevel(add_prefix_space=False),
-        ]
-    )
+        ] + pretokenizers
+    tokenizer.pre_tokenizer = pre_tokenizers.Sequence(pretokenizers)
     trainer = trainers.BpeTrainer(
         vocab_size=vocab_size,
         special_tokens=[
@@ -173,18 +215,30 @@ def train_unigram(
     vocab_size: int = 32_000,
     character_coverage: float = 0.99,
     max_sentence_length: int = 50_000,
+    pattern_string: str | None = None,
+    split_digits: bool = True,
 ):
+    """Train a Unigram model with SentencePiece."""
     import sentencepiece as spm
 
     logger = logs.get_logger()
     logger.info(f"Training Unigram Tokenizer with vocab_size={vocab_size}")
+
+    if pattern_string is not None:
+        logger.warning(
+            "Regex pattern string supplied but not supported for unigram yet. Ignoring."
+        )
+
+    if split_digits:
+        logger.info("Spliting numbers into individual digits.")
+
     spm.SentencePieceTrainer.train(
         sentence_iterator=data_iter,
         model_prefix=output_path,
         vocab_size=vocab_size,
         character_coverage=character_coverage,
         model_type="unigram",
-        split_digits=True,
+        split_digits=split_digits,
         # For formatting, allows newlines to appear.
         # Also, preallocating space symboles helps to
         # not have a bunch of spaces in a row.
@@ -211,6 +265,7 @@ def train_unigram(
 
 
 def main():
+    """Train a tokenizer."""
     args = parser.parse_args()
     logger = logs.configure_logging()
 
@@ -228,7 +283,7 @@ def main():
 
     # Load data from either huggingface or raw jsonl files.
     if (args.dataset is None) == (args.data_pattern is None):
-        raise ValueError("One of --dataset or --data_pattern must be set.")
+        raise ValueError("Only one of --dataset or --data_pattern must be set.")
     if args.dataset is not None:
         data = load_hf_data(
             args.dataset, args.batch_size, subset=args.subset, streaming=args.streaming
@@ -236,8 +291,24 @@ def main():
     if args.data_pattern is not None:
         data = load_jsonl_data(args.data_pattern, args.batch_size)
 
+    if args.pattern_string == "tiktoken+digits":
+        logger.warning(
+            "tiktoken+digits regex used and splitting digits requested, this is redundant, skipping explicit digit splitting pretokenizer."
+        )
+        args.nosplit_digits = True
+    # Convert nice names into ugly regex strings.
+    pattern_string = PATTERN_STRINGS.get(args.pattern_string, None)
+
+    # Setup the input data.
     data_iter = training_generator(data, args.batch_size, data_limit=args.data_limit)
-    train_tokenizer(data_iter, args.output_path, args.vocab_size)
+    # Train the tokenizer.
+    train_tokenizer(
+        data_iter,
+        args.output_path,
+        args.vocab_size,
+        pattern_string=pattern_string,
+        split_digits=not args.nosplit_digits,
+    )
 
 
 if __name__ == "__main__":
