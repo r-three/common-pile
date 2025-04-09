@@ -49,19 +49,47 @@ def extract_special_tokens(config):
     return special_tokens
 
 
-def to_spaces(s: str, space_char: str = "Ġ") -> str:
-    """Handle HuggingFace's use of Ġ to mean space."""
-    return s.replace(space_char, " ")
+# Copied from transformers.models.gpt2.tokenization_gpt2.bytes_to_unicode
+def bytes_to_unicode():
+    """
+    Returns list of utf-8 byte and a mapping to unicode strings. We specifically avoids mapping to whitespace/control
+    characters the bpe code barfs on.
+
+    The reversible bpe codes work on unicode strings. This means you need a large # of unicode characters in your vocab
+    if you want to avoid UNKs. When you're at something like a 10B token dataset you end up needing around 5K for
+    decent coverage. This is a significant percentage of your normal, say, 32K bpe vocab. To avoid that, we want lookup
+    tables between utf-8 bytes and unicode strings.
+    """
+    bs = (
+        list(range(ord("!"), ord("~") + 1))
+        + list(range(ord("¡"), ord("¬") + 1))
+        + list(range(ord("®"), ord("ÿ") + 1))
+    )
+    cs = bs[:]
+    n = 0
+    for b in range(2**8):
+        if b not in bs:
+            bs.append(b)
+            cs.append(2**8 + n)
+            n += 1
+    cs = [chr(n) for n in cs]
+    return dict(zip(bs, cs))
 
 
 def extract_merges(config):
     """Create the merges from the vocabulary."""
+    unicode_to_bytes = {v: k for k, v in bytes_to_unicode().items()}
+
     merges = {}
-    for v in config["model"]["vocab"]:
-        merges[to_spaces(v).encode("utf-8")] = len(merges)
-    # for t1, t2 in config["model"]["merges"]:
-    #     merge_str = f"{to_spaces(t1)}{to_spaces(t2)}"
-    #     merges[merge_str.encode('utf-8')] = len(merges) + 1
+    for word in config["model"]["vocab"]:
+        tt_word = []
+        # Undo the monkeying they do that maps tiktoken byte level things into
+        # proxy unicode values.
+        for c in word:
+            if c != " ":
+                c = chr(unicode_to_bytes[c])
+            tt_word.append(c.encode("latin-1"))
+        merges[b"".join(tt_word)] = len(merges)
     return merges
 
 
