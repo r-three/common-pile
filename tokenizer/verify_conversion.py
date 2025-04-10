@@ -40,10 +40,17 @@ assert llama_convert._pat_str == llama_tt.model._pat_str, "Pattern Strings don't
 
 
 ds = datasets.load_dataset("allenai/c4", "en", split="validation", streaming=True)
+# ds = datasets.load_dataset("allenai/c4", "de", split="validation", streaming=True)
+# ds = datasets.load_dataset("allenai/c4", "es", split="validation", streaming=True)
+# ds = datasets.load_dataset("allenai/c4", "zh", split="validation", streaming=True)
+# ds = datasets.load_dataset("omarkamali/emoji-map", split="train", streaming=True)
 
 for i, example in tqdm(enumerate(ds)):
-    hf_ts = llama_hf._tokenizer.encode(example["text"], add_special_tokens=False).ids
-    tt_ts = llama_tt.encode(example["text"], bos=False, eos=False)
-    ct_ts = llama_convert.encode(example["text"])
+    text = example["text"]
+    # Uncomment if using the emoji dataset.
+    # text = f"{example['emoji']} {example['category']} {example['description_eng_Latn']}"
+    hf_ts = llama_hf._tokenizer.encode(text, add_special_tokens=False).ids
+    tt_ts = llama_tt.encode(text, bos=False, eos=False)
+    ct_ts = llama_convert.encode(text)
     assert hf_ts == tt_ts, f"Example: {i} hf: {hf_ts} tt: {tt_ts}"
     assert ct_ts == tt_ts, f"Example: {i} tt: {tt_ts} ct: {ct_ts}"
