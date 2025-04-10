@@ -129,7 +129,7 @@ def convert_hf_config_to_tiktoken(name: str, config) -> tiktoken.Encoding:
 
     # ToDo add warnings about unsupported tokenizer setttings.
 
-    pat_str = extract_pat_str(config)
+    pat_str = extract_pattern_string(config)
     special_tokens = extract_special_tokens(config)
     merges = extract_merges(config)
 
