@@ -21,12 +21,15 @@ parser.add_argument(
     "--dataset",
     help="A huggingface dataset to train on.",
 )
+parser.add_argument(
+    "--streaming", action="store_true", help="Should we stream the hf dataset?"
+)
 parser.add_argument("--data_pattern", help="A glob of jsonl.gz files to train on.")
 parser.add_argument(
     "--subset", default="default", help="The subset of the dataset to us."
 )
 parser.add_argument(
-    "--vocab_size", default=32_000, type=int, help="The size of the vocab to use."
+    "--vocab_size", default=64_000, type=int, help="The size of the vocab to use."
 )
 parser.add_argument(
     "--batch_size",
@@ -55,9 +58,6 @@ parser.add_argument(
     type=float,
     default=-1,
     help="The size to limit the training dataset (in GB). Use -1 for whole dataset.",
-)
-parser.add_argument(
-    "--streaming", action="store_true", help="Should we stream the dataset?"
 )
 
 

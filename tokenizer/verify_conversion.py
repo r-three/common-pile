@@ -39,8 +39,8 @@ assert (
 assert llama_convert._pat_str == llama_tt.model._pat_str, "Pattern Strings don't match."
 
 
-ds = datasets.load_dataset("allenai/c4", "en", split="validation", streaming=True)
-# ds = datasets.load_dataset("allenai/c4", "de", split="validation", streaming=True)
+# ds = datasets.load_dataset("allenai/c4", "en", split="validation", streaming=True)
+ds = datasets.load_dataset("allenai/c4", "de", split="validation", streaming=True)
 # ds = datasets.load_dataset("allenai/c4", "es", split="validation", streaming=True)
 # ds = datasets.load_dataset("allenai/c4", "zh", split="validation", streaming=True)
 # ds = datasets.load_dataset("omarkamali/emoji-map", split="train", streaming=True)
