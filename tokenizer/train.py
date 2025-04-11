@@ -4,6 +4,7 @@ import argparse
 import dataclasses
 import glob
 import json
+from typing import Iterator, List
 
 import datasets
 import smart_open
