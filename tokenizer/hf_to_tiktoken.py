@@ -4,6 +4,7 @@ Once you have converted to a tiktoken.Encoding, you can save it with the
 tiktoken.load.dump_tiktoken_bpe function.
 """
 
+import argparse
 import json
 import os
 import tempfile
@@ -139,3 +140,15 @@ def convert_hf_config_to_tiktoken(name: str, config) -> tiktoken.Encoding:
         mergeable_ranks=merges,
         special_tokens=special_tokens,
     )
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Convert HF Tokenizers into TikToken tokenizers."
+    )
+    parser.add_argument("--hf", help="Path to the HuggingFace tokenizer.")
+    parser.add_argument("--tt", help="Where to save the TikToken tokenizer.")
+
+    hf = tokenizers.Tokenizers.from_file(args.hf)
+    tt = convert_hf_to_tiktoken("this-is-not-saved-so-it-doesn't-matter", hf)
+    tiktoken.load.dump_tiktoken_bpe(tt._mergable_ranks, args.tt)

@@ -50,7 +50,7 @@ parser.add_argument(
     help="Should we use a regex to pre-split some text.",
 )
 parser.add_argument(
-    "--nosplit_digits",
+    "--split_digits",
     action="store_true",
     help="Should we split numbers into individual digits, i.e., 1234 -> 1 2 3 4",
 )
@@ -59,6 +59,11 @@ parser.add_argument(
     type=float,
     default=-1,
     help="The size to limit the training dataset (in GB). Use -1 for whole dataset.",
+)
+parser.add_argument(
+    "--normalize",
+    action="store_true",
+    help="Should we apply NFKC Unicode normalization before tokenization?",
 )
 
 
@@ -153,6 +158,7 @@ def train_bpe(
     vocab_size: int = 32_000,
     pattern_string: str | None = None,
     split_digits: bool = True,
+    normalize: bool = False,
 ):
     """Train a BPE model using HuggingFace Tokenizers."""
     from tokenizers import (
@@ -174,7 +180,8 @@ def train_bpe(
             byte_fallback=True,
         )
     )
-    tokenizer.normalizer = normalizers.NFKC()
+    if normalize:
+        tokenizer.normalizer = normalizers.NFKC()
     # We don't use the gpt2 regex built into the ByteLevel pretokenizer, if we
     # want that we use the explicit split pretokenzier with regex.
     pretokenizers = [
@@ -218,6 +225,7 @@ def train_unigram(
     max_sentence_length: int = 50_000,
     pattern_string: str | None = None,
     split_digits: bool = True,
+    normalize: bool = False,
 ):
     """Train a Unigram model with SentencePiece."""
     import sentencepiece as spm
@@ -245,7 +253,7 @@ def train_unigram(
         # not have a bunch of spaces in a row.
         user_defined_symbols=["\n", "\r", "\r\n"] + [" " * 2**b for b in range(0, 4)],
         byte_fallback=True,
-        normalization_rule_name="nfkc",
+        normalization_rule_name="nfkc" if normalize else "identity",
         # For Code.
         allow_whitespace_only_pieces=True,
         remove_extra_whitespaces=False,
@@ -296,7 +304,7 @@ def main():
         logger.warning(
             "tiktoken+digits regex used and splitting digits requested, this is redundant, skipping explicit digit splitting pretokenizer."
         )
-        args.nosplit_digits = True
+        args.split_digits = False
     # Convert nice names into ugly regex strings.
     pattern_string = PATTERN_STRINGS.get(args.pattern_string, None)
 
@@ -308,7 +316,8 @@ def main():
         args.output_path,
         args.vocab_size,
         pattern_string=pattern_string,
-        split_digits=not args.nosplit_digits,
+        split_digits=args.split_digits,
+        normalize=args.normalize,
     )
 
 
