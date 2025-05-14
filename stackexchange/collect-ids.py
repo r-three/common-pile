@@ -7,7 +7,7 @@ import json
 import smart_open
 from tqdm import tqdm
 
-from licensed_pile import utils
+from common_pile import utils
 
 parser = argparse.ArgumentParser(description="Collect all ids from dolma files.")
 parser.add_argument("--input", required=True, help="The input dir.")

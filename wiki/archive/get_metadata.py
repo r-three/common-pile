@@ -19,8 +19,8 @@ import shutil
 
 import internetarchive
 
-from licensed_pile import logs
-from licensed_pile.licenses import PermissiveLicenses
+from common_pile import logs
+from common_pile.licenses import PermissiveLicenses
 
 parser = argparse.ArgumentParser(
     description="Download metadata for wiki dumps from the IA."

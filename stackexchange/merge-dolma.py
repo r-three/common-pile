@@ -8,8 +8,8 @@ import os
 import smart_open
 from tqdm import tqdm
 
-from licensed_pile import utils
-from licensed_pile.write import to_dolma
+from common_pile import utils
+from common_pile.write import to_dolma
 
 parser = argparse.ArgumentParser(description="Collect all ids from dolma files.")
 parser.add_argument("--input", required=True, help="The input dir.")

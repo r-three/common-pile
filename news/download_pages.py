@@ -10,7 +10,7 @@ import time
 
 import utils
 
-from licensed_pile import logs, scrape
+from common_pile import logs, scrape
 
 parser = argparse.ArgumentParser(description="Download pages from a news site.")
 parser.add_argument(

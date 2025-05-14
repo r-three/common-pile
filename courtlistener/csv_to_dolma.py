@@ -9,9 +9,9 @@ import os
 import sys
 from datetime import datetime
 
-from licensed_pile.licenses import PermissiveLicenses
-from licensed_pile.logs import configure_logging
-from licensed_pile.write import to_dolma
+from common_pile.licenses import PermissiveLicenses
+from common_pile.logs import configure_logging
+from common_pile.write import to_dolma
 
 SOURCE_NAME = "CourtListenerOpinion"
 

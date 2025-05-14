@@ -5,7 +5,7 @@ import shutil
 
 from huggingface_hub import snapshot_download
 
-from licensed_pile.logs import configure_logging, get_logger
+from common_pile.logs import configure_logging, get_logger
 
 
 def parse_args():

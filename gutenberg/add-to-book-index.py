@@ -9,7 +9,7 @@ import urllib.parse
 from rdflib import Graph
 from utils import file_type, parse_id
 
-from licensed_pile import logs
+from common_pile import logs
 
 # These books are in PG, but their metadata is messed up. We force their addition
 # to the index here.

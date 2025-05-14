@@ -10,7 +10,7 @@ from tempfile import TemporaryDirectory
 
 import smart_open
 
-from licensed_pile import utils, write
+from common_pile import utils, write
 
 
 class IdToShardParallel(write.ShardParallelProcessor):

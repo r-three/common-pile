@@ -25,10 +25,10 @@ from utils import (
     parse_date,
 )
 
-from licensed_pile import logs
-from licensed_pile.licenses import PermissiveLicenses
-from licensed_pile.utils import removeprefix
-from licensed_pile.write import to_dolma
+from common_pile import logs
+from common_pile.licenses import PermissiveLicenses
+from common_pile.utils import removeprefix
+from common_pile.write import to_dolma
 
 
 def parse_args():

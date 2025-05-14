@@ -7,7 +7,7 @@ import urllib.parse
 
 import pyunpack
 
-from licensed_pile import logs, scrape
+from common_pile import logs, scrape
 
 parser = argparse.ArgumentParser(
     description="Download and Extract official Wiki dumps."

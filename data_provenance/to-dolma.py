@@ -19,9 +19,9 @@ import pandas as pd
 from constants import HF_MAPPING
 from tqdm import tqdm
 
-from licensed_pile.licenses import PermissiveLicenses
-from licensed_pile.logs import configure_logging, get_logger
-from licensed_pile.write import to_dolma
+from common_pile.licenses import PermissiveLicenses
+from common_pile.logs import configure_logging, get_logger
+from common_pile.write import to_dolma
 
 LICENSE_MAPPER = {
     "CDLA Permissive 1.0": PermissiveLicenses.CDLA_P,

@@ -15,9 +15,9 @@ from typing import Dict, Optional, Sequence, Set, Tuple
 from bulk_download import BulkDownloader
 from charset_normalizer import from_bytes
 
-from licensed_pile import logs
-from licensed_pile.licenses import PermissiveLicenses
-from licensed_pile.write import to_dolma
+from common_pile import logs
+from common_pile.licenses import PermissiveLicenses
+from common_pile.write import to_dolma
 
 SOURCE_NAME = "arxiv"
 

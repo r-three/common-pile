@@ -9,7 +9,7 @@ from tempfile import TemporaryDirectory
 
 import pylatexenc.latex2text
 
-from licensed_pile.write import ShardParallelProcessor
+from common_pile.write import ShardParallelProcessor
 
 parser = argparse.ArgumentParser(
     description="Preprocess raw arxiv in the dolma format."

@@ -11,7 +11,7 @@ from queue import Queue
 import smart_open
 from dolma.core.parallel import BaseParallelProcessor
 
-from licensed_pile import logs, utils
+from common_pile import logs, utils
 
 parser = argparse.ArgumentParser(
     description="Preprocess Dolma Data for SentencePiece tokenizer training."

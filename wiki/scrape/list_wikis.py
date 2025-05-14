@@ -12,7 +12,7 @@ from typing import List
 import tenacity
 from utils import enumerate_pages, get_page, get_soup, get_wiki_name, make_wiki_url
 
-from licensed_pile import logs
+from common_pile import logs
 
 parser = argparse.ArgumentParser(description="Convert a list of wikinames to urls.")
 parser.add_argument(

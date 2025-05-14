@@ -1,4 +1,4 @@
-"""Install the licensed-pile package."""
+"""Install the common-pile package."""
 
 
 import ast
@@ -47,14 +47,14 @@ with open(Path(__file__).parent / "README.md", encoding="utf-8") as f:
 
 
 setup(
-    name="licensed_pile",
-    version=get_version("licensed_pile/__init__.py"),
-    description="Data Processing for the Licensed Pile",
+    name="common_pile",
+    version=get_version("common_pile/__init__.py"),
+    description="Data Processing for the Common Pile",
     long_description=LONG_DESCRIPTION,
     long_description_content_type="text/markdown",
     author="Brian Lester",
     author_email="",
-    url="https://github.com/r-three/licensed-pile",
+    url="https://github.com/r-three/common-pile",
     packages=find_packages(),
     python_requires=">=3.8",
     license="MIT",
@@ -66,8 +66,8 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "size-stats-dolma = licensed_pile.scripts.stats:main",
-            "remove-none-dolma = licensed_pile.scripts.remove_none:main",
+            "size-stats-dolma = common_pile.scripts.stats:main",
+            "remove-none-dolma = common_pile.scripts.remove_none:main",
         ]
     },
 )

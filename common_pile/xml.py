@@ -4,7 +4,7 @@ from typing import List
 
 import lxml.etree as ET
 
-from licensed_pile import logs
+from common_pile import logs
 
 
 def iterate_xml(path: str, tag: str):
