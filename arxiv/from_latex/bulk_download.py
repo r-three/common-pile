@@ -12,8 +12,8 @@ import tarfile
 import smart_open
 import tqdm
 
-import licensed_pile.xml as xml
-from licensed_pile import logs
+import common_pile.xml as xml
+from common_pile import logs
 
 BASE_URL = "s3://arxiv"
 MANIFEST = f"{BASE_URL}/src/arXiv_src_manifest.xml"

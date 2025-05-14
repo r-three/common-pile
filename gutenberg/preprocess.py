@@ -15,7 +15,7 @@ from tempfile import TemporaryDirectory
 
 import tqdm
 
-from licensed_pile.write import ShardParallelProcessor
+from common_pile.write import ShardParallelProcessor
 
 parser = argparse.ArgumentParser(description="Preprocess raw books in dolma format.")
 parser.add_argument(

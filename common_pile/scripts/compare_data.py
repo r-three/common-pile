@@ -10,7 +10,7 @@ from enum import Enum
 import smart_open
 import streamlit as st
 
-from licensed_pile import utils
+from common_pile import utils
 
 st.set_page_config(page_title="Compare", layout="wide")
 st.title("Compare different versions of dolma formatted data.")

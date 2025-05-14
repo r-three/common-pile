@@ -9,7 +9,7 @@ import urllib.request
 import tqdm
 from google.cloud import storage
 
-from licensed_pile import logs
+from common_pile import logs
 
 # These are books that are hard to get from PG, so we download them from pg19.
 # See the README for more information on what these books are.

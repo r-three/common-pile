@@ -11,7 +11,7 @@ import wiki
 template_counts = collections.Counter()
 for i, f in enumerate(
     glob.glob(
-        "/media/brian/External-SSD/licensed_pile/wiki/data/wiki/dump/raw/documents/*_wikipedia.com.jsonl.gz"
+        "/media/brian/External-SSD/common_pile/wiki/data/wiki/dump/raw/documents/*_wikipedia.com.jsonl.gz"
     )
 ):
     print(f"Extracting math templates from {f}")

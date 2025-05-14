@@ -10,7 +10,7 @@ from tenacity import retry, stop_after_attempt, wait_random_exponential
 # start with Mozilla/5.0) and also tells that we are a bot and includes a link
 # for context on why we are scraping. We hope this fosters good will with site
 # owners.
-USER_AGENT = "Mozilla/5.0 (compatible; Licensed-Pile-bot/0.1; +http://www.github.com/r-three/licensed-pile)"
+USER_AGENT = "Mozilla/5.0 (compatible; Common-Pile-bot/0.1; +http://www.github.com/r-three/common-pile)"
 
 DEFAULT_HEADERS = {"User-Agent": USER_AGENT}
 
@@ -21,7 +21,7 @@ def get_page(
     params: Optional[Dict[str, str]] = None,
     headers: Optional[Dict[str, str]] = None,
 ):
-    """GET page with retries, uses our licensed-pile default user-agent string."""
+    """GET page with retries, uses our common-pile default user-agent string."""
     params = params if params is not None else {}
     headers = headers if headers is not None else {}
     # Unpack the defaults first so the user provided ones can override them.

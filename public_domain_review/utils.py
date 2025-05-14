@@ -7,8 +7,8 @@ from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
 
-from licensed_pile import logs
-from licensed_pile.scrape import get_page
+from common_pile import logs
+from common_pile.scrape import get_page
 
 BASE_URL = "https://publicdomainreview.org/"
 SOURCE_NAME = "public-domain-review"

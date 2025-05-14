@@ -12,7 +12,7 @@ import tempfile
 import tiktoken
 import tokenizers
 
-from licensed_pile import logs
+from common_pile import logs
 
 
 def extract_pattern_string(config):

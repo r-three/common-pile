@@ -8,8 +8,8 @@ from typing import Dict
 
 from utils import get_page, get_soup, get_wiki_name
 
-from licensed_pile import logs
-from licensed_pile.utils import removesuffix
+from common_pile import logs
+from common_pile.utils import removesuffix
 
 parser = argparse.ArgumentParser(description="Find all namespaces in a mediawiki wiki.")
 parser.add_argument("--wiki", required=True, help="The Url for the wiki in question.")

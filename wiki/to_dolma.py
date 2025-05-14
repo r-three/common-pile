@@ -7,11 +7,13 @@ import glob
 import os
 import urllib.parse
 
-from licensed_pile.licenses import PermissiveLicenses
-from licensed_pile.logs import configure_logging, get_logger
-from licensed_pile.utils import dolma_output, removeprefix, removesuffix
-from licensed_pile.write import to_dolma
-from licensed_pile.xml import iterate_xmls
+from utils import get_wiki_name, make_wiki_url
+
+from common_pile.licenses import PermissiveLicenses
+from common_pile.logs import configure_logging, get_logger
+from common_pile.utils import dolma_output, removeprefix, removesuffix
+from common_pile.write import to_dolma
+from common_pile.xml import iterate_xmls
 
 parser = argparse.ArgumentParser(description="Convert the xml export to dolma.")
 parser.add_argument("--wiki", required=True, help="The wiki url we are processing.")

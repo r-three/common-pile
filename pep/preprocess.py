@@ -7,8 +7,8 @@ from datetime import datetime
 
 import pypandoc
 
-from licensed_pile import logs, utils
-from licensed_pile.write import ShardParallelProcessor
+from common_pile import logs, utils
+from common_pile.write import ShardParallelProcessor
 
 parser = argparse.ArgumentParser(description="Preprocess raw peps in the dolma format.")
 parser.add_argument(

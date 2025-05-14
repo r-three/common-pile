@@ -10,7 +10,7 @@ import multiprocessing as mp
 import smart_open
 import tqdm
 
-from licensed_pile import logs, utils
+from common_pile import logs, utils
 
 parser = argparse.ArgumentParser(
     description="Find documents that are most likely licensed laundered transcripts."
