@@ -18,7 +18,7 @@ from typing import List
 
 from utils import enumerate_pages, get_page, get_wiki_name
 
-from licensed_pile import logs
+from common_pile import logs
 
 parser = argparse.ArgumentParser(description="Export mediawikis as XML")
 parser.add_argument("--wiki", required=True, help="The wiki url we are exporting.")
@@ -84,7 +84,7 @@ def main(args):
     # Save shards of exported pages to
     #   data/${wiki_name}/export/${shard_idx}-pages.xml
     # These shards can be processed as if they are one large xml file with
-    #   licensed_pile.xml.iterate_xmls(glob.iglob(...), tag)
+    #   common_pile.xml.iterate_xmls(glob.iglob(...), tag)
     # Note: These exports seem to an xml namespace so all tags are actually
     #   "{http://mediawiki.org/xml/export-0.11/}TAGNAME"
     # with literal "{"'s.

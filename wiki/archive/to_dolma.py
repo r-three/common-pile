@@ -15,11 +15,11 @@ import pandas as pd
 import pytz
 import utils
 
-from licensed_pile import logs
-from licensed_pile.licenses import PermissiveLicenses
-from licensed_pile.utils import dolma_output
-from licensed_pile.write import to_dolma
-from licensed_pile.xml import iterate_xmls
+from common_pile import logs
+from common_pile.licenses import PermissiveLicenses
+from common_pile.utils import dolma_output
+from common_pile.write import to_dolma
+from common_pile.xml import iterate_xmls
 
 parser = argparse.ArgumentParser(
     description="Convert Downloaded Wiki dumps from the internet archive to dolma."

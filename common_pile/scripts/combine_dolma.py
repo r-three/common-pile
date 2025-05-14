@@ -15,9 +15,9 @@ from typing import Dict, List
 import contextual_logger
 import smart_open
 
-from licensed_pile import utils
-from licensed_pile.logs import configure_logging, get_logger
-from licensed_pile.write import shard_name
+from common_pile import utils
+from common_pile.logs import configure_logging, get_logger
+from common_pile.write import shard_name
 
 parser = argparse.ArgumentParser(
     description="Combine many dolma files into one. "

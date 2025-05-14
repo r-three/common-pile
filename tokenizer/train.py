@@ -9,7 +9,7 @@ from typing import Iterator, List
 import datasets
 import smart_open
 
-from licensed_pile import logs, utils
+from common_pile import logs, utils
 
 parser = argparse.ArgumentParser(description="Train a common-pile tokenizer.")
 parser.add_argument(

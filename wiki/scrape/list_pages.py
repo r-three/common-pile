@@ -9,8 +9,8 @@ from typing import List
 from requests.models import PreparedRequest
 from utils import get_page, get_soup, get_wiki_name
 
-from licensed_pile import logs
-from licensed_pile.utils import removeprefix, removesuffix
+from common_pile import logs
+from common_pile.utils import removeprefix, removesuffix
 
 parser = argparse.ArgumentParser(
     description="Find all pages under a namespace for a mediawiki."

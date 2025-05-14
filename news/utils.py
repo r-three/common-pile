@@ -7,7 +7,7 @@ from typing import Sequence
 from bs4 import BeautifulSoup, NavigableString
 from usp.tree import sitemap_tree_for_homepage
 
-from licensed_pile import logs
+from common_pile import logs
 
 FORMATTED_STRING_TAGS = ("em", "a", "i", "strong", "span")
 

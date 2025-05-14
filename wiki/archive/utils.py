@@ -10,7 +10,7 @@ from typing import List, Optional, Protocol, Sequence, Set, Tuple, TypeVar
 
 import tenacity
 
-from licensed_pile import licenses, logs, scrape
+from common_pile import licenses, logs, scrape
 
 ENGLISH = frozenset({"en", "en-ca", "eng", "en-gb", "English", "en_hj"})
 LOGGER = logs.get_logger()

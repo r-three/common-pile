@@ -160,6 +160,8 @@ cython_debug/
 #.idea/
 .python-version
 **/licensed_pile_log.txt
+**/common_pile_log.txt
+**/common-pile-log.txt
 
 # Mac
 .DS_Store

@@ -16,7 +16,7 @@ import smart_open
 import tqdm
 from dolma.core.parallel import BaseParallelProcessor
 
-from licensed_pile.logs import configure_logging, get_logger
+from common_pile.logs import configure_logging, get_logger
 
 
 def shard_name(filename: str, shard: str, padding: int = 5):

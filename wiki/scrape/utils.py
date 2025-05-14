@@ -8,7 +8,7 @@ from typing import Dict, List, Optional
 import requests
 from bs4 import BeautifulSoup
 
-from licensed_pile import scrape
+from common_pile import scrape
 
 
 def get_page(*args, **kwargs):

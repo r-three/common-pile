@@ -1,4 +1,4 @@
-"""Shared Logging setup for Licensed Pile."""
+"""Shared Logging setup for Common Pile."""
 
 import functools
 import logging
@@ -44,12 +44,12 @@ def get_file_handler(log_file: str) -> logging.Handler:
 # datadog or watch tower.
 DEFAULT_HANDLERS = (
     get_stream_handler,
-    functools.partial(get_file_handler, log_file="licensed_pile_log.txt"),
+    functools.partial(get_file_handler, log_file="common_pile_log.txt"),
 )
 
 
 def configure_logging(
-    name: str = "licensed-pile",
+    name: str = "common-pile",
     level: str = "INFO",
     get_formatter_fn: GetFormatter = get_json_formatter,
     handler_fns: Sequence[GetHandler] = DEFAULT_HANDLERS,
@@ -69,5 +69,5 @@ def configure_logging(
     return logger
 
 
-def get_logger(name: str = "licensed-pile") -> logging.Logger:
+def get_logger(name: str = "common-pile") -> logging.Logger:
     return logging.getLogger(name)

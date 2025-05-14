@@ -11,7 +11,7 @@ import internetarchive
 import pyunpack
 import utils
 
-from licensed_pile import logs
+from common_pile import logs
 
 parser = argparse.ArgumentParser(
     description="Download wiki dumps from the internet archive."

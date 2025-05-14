@@ -6,7 +6,7 @@ import os
 
 import utils
 
-from licensed_pile import logs, scrape
+from common_pile import logs, scrape
 
 parser = argparse.ArgumentParser(description="Find all pages on a news site.")
 parser.add_argument("--url", required=True, help="Base URL")

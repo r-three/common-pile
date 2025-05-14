@@ -23,10 +23,10 @@ import tqdm
 from lxml import etree
 from markdown_it import MarkdownIt
 
-import licensed_pile.xml as xml
-from licensed_pile import logs
-from licensed_pile.licenses import PermissiveLicenses
-from licensed_pile.write import to_dolma
+import common_pile.xml as xml
+from common_pile import logs
+from common_pile.licenses import PermissiveLicenses
+from common_pile.write import to_dolma
 
 parser = argparse.ArgumentParser(description="Parse a stack exchange dump.")
 parser.add_argument("--input", help="Path to the dump, data/dump/${site}")

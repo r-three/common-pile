@@ -10,7 +10,7 @@ import tqdm
 from rdflib import Graph
 from utils import file_type, parse_id
 
-from licensed_pile import logs
+from common_pile import logs
 
 # These books are not good data for Language Modeling, they are boilerplate
 # descriptions for data formats for recorded music and how PG books were
