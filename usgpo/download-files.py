@@ -6,11 +6,12 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import jsonlines
 import trafilatura
 from bs4 import BeautifulSoup
-from licensed_pile import logs
-from licensed_pile.licenses import PermissiveLicenses
-from licensed_pile.write import to_dolma
 from tqdm.auto import tqdm
 from utils import api_query
+
+from common_pile import logs
+from common_pile.licenses import PermissiveLicenses
+from common_pile.write import to_dolma
 
 SOURCE_NAME = "usgpo"
 
