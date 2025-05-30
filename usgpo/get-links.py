@@ -4,9 +4,10 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import jsonlines
-from common_pile import logs
 from tqdm.auto import tqdm
 from utils import api_query
+
+from common_pile import logs
 
 
 def parse_args():

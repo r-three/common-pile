@@ -2,6 +2,8 @@
 import argparse
 import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from tqdm.auto import tqdm
+from utils import api_query
 
 import jsonlines
 import trafilatura
@@ -9,8 +11,7 @@ from bs4 import BeautifulSoup
 from common_pile import logs
 from common_pile.licenses import PermissiveLicenses
 from common_pile.write import to_dolma
-from tqdm.auto import tqdm
-from utils import api_query
+
 
 SOURCE_NAME = "usgpo"
 
