@@ -7,8 +7,8 @@ import functools
 import json
 import os
 
-from licensed_pile import licenses, logs
-from licensed_pile.write import to_dolma
+from common_pile import licenses, logs
+from common_pile.write import to_dolma
 
 SOURCE_NAME = "foodista"
 LICENSE_MAP = {"CC-BY-3": licenses.PermissiveLicenses.CC_BY_3}

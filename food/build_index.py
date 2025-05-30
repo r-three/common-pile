@@ -9,7 +9,7 @@ from typing import List
 
 import usp.tree
 
-from licensed_pile import logs, scrape, utils
+from common_pile import logs, scrape, utils
 
 parser = argparse.ArgumentParser(
     description="Find all pages to download based on the sitemap."

@@ -7,8 +7,8 @@ import operator as op
 import os
 from datetime import datetime
 
-from licensed_pile.licenses import PermissiveLicenses
-from licensed_pile.write import to_dolma
+from common_pile.licenses import PermissiveLicenses
+from common_pile.write import to_dolma
 
 parser = argparse.ArgumentParser(description="Collect PG Books into Dolma format.")
 parser.add_argument(

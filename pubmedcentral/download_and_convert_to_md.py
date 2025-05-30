@@ -12,8 +12,8 @@ import xml.etree.ElementTree as ET
 
 from tqdm import tqdm
 
-from licensed_pile import logs
-from licensed_pile.scrape import get_page
+from common_pile import logs
+from common_pile.scrape import get_page
 
 parser = argparse.ArgumentParser(description="Convert xml documents to markdown.")
 parser.add_argument("--filelist", help="The path to the filelist.txt file.")

@@ -12,7 +12,7 @@ import multiprocessing.dummy as mp
 import os
 import time
 
-from licensed_pile import logs, scrape
+from common_pile import logs, scrape
 
 parser = argparse.ArgumentParser(description="Download pages based on the index.")
 parser.add_argument(

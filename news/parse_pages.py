@@ -10,8 +10,8 @@ from datetime import datetime
 import utils
 from charset_normalizer import from_bytes
 
-from licensed_pile import licenses, logs
-from licensed_pile.write import to_dolma
+from common_pile import licenses, logs
+from common_pile.write import to_dolma
 
 parser = argparse.ArgumentParser(description="Parse pages downloaded from a News Sites")
 parser.add_argument(

@@ -1,9 +1,14 @@
-# Licensed Pile
+# The Common Pile
 
 Repo to hold code and track issues for the collection of permissively licensed data
 
+## Installation
 
-# Tips
+The majority of packages required for data creation can be installed with `pip install -r requirements.txt`. You all need to run `pip install -e .` to get access to the `common_pile` shared utility library.
+
+If you are on a system that don't support automatic installation of pandoc with `pypandoc_binary`, change it to `pypandoc` in the `requirements.txt` and and install pandoc manually.
+
+## Tips
 
 You can look at Dolma formatted data via commandline tools like so.
 

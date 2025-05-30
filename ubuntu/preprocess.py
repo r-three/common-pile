@@ -7,8 +7,8 @@ import os
 import re
 from tempfile import TemporaryDirectory
 
-from licensed_pile.logs import configure_logging
-from licensed_pile.write import ShardParallelProcessor
+from common_pile.logs import configure_logging
+from common_pile.write import ShardParallelProcessor
 
 # By configuring the logger as a module level logger with the name
 # dolma.ProcessorClassName, our logger configuration is used (although dolma

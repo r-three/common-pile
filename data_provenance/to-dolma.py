@@ -6,22 +6,24 @@ preparing for dolma, in this file.
 
 import argparse
 import functools
+import glob
 import gzip
 import itertools
 import json
 import os
+import re
 from datetime import datetime
 
 import jsonlines
 import pandas as pd
 from constants import HF_MAPPING
+from tqdm import tqdm
 
-from licensed_pile.licenses import PermissiveLicenses
-from licensed_pile.logs import configure_logging, get_logger
-from licensed_pile.write import to_dolma
+from common_pile.licenses import PermissiveLicenses
+from common_pile.logs import configure_logging, get_logger
+from common_pile.write import to_dolma
 
 LICENSE_MAPPER = {
-    "MPL 2.0": PermissiveLicenses.MPL,
     "CDLA Permissive 1.0": PermissiveLicenses.CDLA_P,
     "MIT License": PermissiveLicenses.MIT,
     "CC BY 4.0": PermissiveLicenses.CC_BY,
@@ -30,7 +32,6 @@ LICENSE_MAPPER = {
     "BSD 3-Clause License": PermissiveLicenses.BSD_3,
     "Apache License 2.0": PermissiveLicenses.APACHE_2,
     "ISC License": PermissiveLicenses.ISC,
-    "EPL 1.0": PermissiveLicenses.EPL,
     "CC BY-SA": PermissiveLicenses.CC_BY_SA,
     "CC BY 3.0": PermissiveLicenses.CC_BY_3,
     "CC BY-SA 3.0": PermissiveLicenses.CC_BY_SA_3,
@@ -66,6 +67,21 @@ parser.add_argument(
 SOURCE_NAME = "Data Provenance Initiative"
 
 
+def unique_dpi_dataset_names(folder_path):
+    unique_doc_ids = set()
+
+    jsonl_paths = os.path.join(folder_path, "**/*.jsonl.gz")
+    jsonl_files = glob.glob(jsonl_paths, recursive=True)
+
+    for file_path in tqdm(jsonl_files, desc="Processing files"):
+        with gzip.open(file_path, "rt") as f:
+            for line in f:
+                data = json.loads(line)
+                doc_id = data["metadata"]["dataset_id"]
+                unique_doc_ids.add(doc_id)
+    return unique_doc_ids
+
+
 def listdir_nohidden(path):
     """Returns all non-hidden files within a directory, raises ValueError if the path is invalid."""
     if not os.path.exists(path) or not os.path.isdir(path):
@@ -93,6 +109,9 @@ def extract_licenses(license_list, gh_license):
 def file_to_dolma(path: str, include_df: str, source_name: str = SOURCE_NAME):
     logger = get_logger()
     logger.info(f"Converting {path} to the dolma format.")
+
+    valid_ids = set(include_df["Dataset ID"])
+
     dset_to_licenses = {
         row["Dataset ID"]: extract_licenses(row["Licenses"], row["GitHub License"])
         for _, row in include_df.iterrows()
@@ -113,10 +132,17 @@ def file_to_dolma(path: str, include_df: str, source_name: str = SOURCE_NAME):
 
     results = []
     for i, ex in enumerate(dset_collection):
-        license_names = dset_to_licenses[ex["dataset"]]
-        langs = dset_to_langs[ex["dataset"]]
-        url = dset_to_urls[ex["dataset"]]
-        license_urls = dset_to_license_urls[ex["dataset"]]
+        dataset_id = ex["dataset"]
+
+        assert (
+            dataset_id in valid_ids
+        ), f"Dataset ID '{dataset_id}' not found in include.csv"
+
+        license_names = dset_to_licenses[dataset_id]
+        langs = dset_to_langs[dataset_id]
+        url = dset_to_urls[dataset_id]
+        license_urls = dset_to_license_urls[dataset_id]
+
         input_text = ex["inputs"]
         target_text = ex.get("labels", ex.get("targets", ""))
         # If target_text isn't found, the strip will remove the extra newline
@@ -132,15 +158,18 @@ def file_to_dolma(path: str, include_df: str, source_name: str = SOURCE_NAME):
                     "license_url": license_urls,
                     "language": langs,
                     "url": url,
-                    "dataset_id": ex["dataset"],
+                    "dataset_id": dataset_id,
                     "response": target_text,
                 },
             }
         )
+
     return results
 
 
 def main(args):
+    logger = get_logger()
+
     os.makedirs(args.outdir, exist_ok=True)
 
     include_df = pd.read_csv(args.include).fillna("")
@@ -150,6 +179,12 @@ def main(args):
         *(file_to_dolma(path, include_df=include_df) for path in paths)
     )
     to_dolma(examples, args.outdir, args.filename, args.shard_size)
+
+    valid_dpi_ids = set(include_df["Dataset ID"])
+    unique_dpi_ids = unique_dpi_dataset_names(args.outdir)
+    unseen_dpi_ids = valid_dpi_ids - unique_dpi_ids
+    logger.info(f"Unseen Datasets: {len(unseen_dpi_ids)} | {unseen_dpi_ids}")
+    logger.info(f"Total Unique Datasets: {len(unique_dpi_ids)}")
 
 
 if __name__ == "__main__":
