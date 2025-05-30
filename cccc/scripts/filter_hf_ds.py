@@ -4,8 +4,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from urllib.parse import urlparse
 
-from licensed_pile import logs
-from licensed_pile.write import ShardParallelProcessor
+from common_pile import logs
+from common_pile.write import ShardParallelProcessor
 
 logger = logs.get_logger("CC")
 
