@@ -4,9 +4,8 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import jsonlines
-from tqdm.auto import tqdm
-
 from licensed_pile import logs
+from tqdm.auto import tqdm
 from utils import api_query
 
 
