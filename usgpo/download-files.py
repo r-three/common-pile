@@ -1,3 +1,4 @@
+"""Downloads plaintext files from the USGPO GovInfo API"""
 import argparse
 import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -60,11 +61,11 @@ def parse_html(html):
 def construct_record(api_key, file):
     logger = logs.get_logger("usgpo")
     try:
-        links = file.get("links")
-        if links is None:
+        all_links = file.get("links")
+        if all_links is None:
             return None
 
-        file_url = links.get("txtLink")
+        file_url = all_links.get("txtLink")
         # Occassionally there will be multiple txtLinks pointing to the same URL. Just take the first.
         if isinstance(file_url, list):
             file_url = file_url[0]
@@ -80,15 +81,18 @@ def construct_record(api_key, file):
 
         return {
             "id": file["package_id"],
-            "title": file["title"],
-            "date": file["date"],
-            "author": file["author"],
-            "publisher": file["publisher"],
-            "category": file["category"],
+            "created": file["date"],
             "text": text,
             "source": SOURCE_NAME,
             "added": datetime.datetime.utcnow().isoformat(),
-            "metadata": {"license": str(PermissiveLicenses.PD), "url": file_url},
+            "metadata": {
+                "title": file["title"],
+                "author": file["author"],
+                "publisher": file["publisher"],
+                "category": file["category"],
+                "license": str(PermissiveLicenses.PD),
+                "url": file_url,
+            },
         }
 
     except Exception as e:

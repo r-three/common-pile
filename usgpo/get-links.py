@@ -23,22 +23,24 @@ def parse_args():
     parser.add_argument(
         "--collections",
         nargs="+",
-        default=[
-            "BILLS",
-            "BUDGET",
-            "CDIR",
-            "CFR",
-            "CPD",
-            "CRI",
-            "CZIC",
-            "GAOREPORTS",
-            "GPO",
-            "HJOURNAL",
-            "HOB",
-            "PAI",
-            "PLAW",
-            "USCODE",
-        ],
+        default=tuple(
+            [
+                "BILLS",
+                "BUDGET",
+                "CDIR",
+                "CFR",
+                "CPD",
+                "CRI",
+                "CZIC",
+                "GAOREPORTS",
+                "GPO",
+                "HJOURNAL",
+                "HOB",
+                "PAI",
+                "PLAW",
+                "USCODE",
+            ]
+        ),
     )
     args = parser.parse_args()
     return args
@@ -48,6 +50,7 @@ def get_packages(api_key, collections, start_date):
     logger = logs.get_logger("usgpo")
 
     url = f"https://api.govinfo.gov/published/{start_date}"
+    # offset mark is initially "*" to denote no offset
     offset_mark = "*"
     packages = []
     pbar = tqdm()
