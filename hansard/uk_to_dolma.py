@@ -7,6 +7,7 @@ from typing import Iterator
 import lxml
 import lxml.etree as ET
 import regex
+
 from common_pile.licenses import PermissiveLicenses
 from common_pile.write import to_dolma
 
