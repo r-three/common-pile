@@ -1,22 +1,22 @@
-import os
-import requests
 import argparse
+import base64
+import glob
+import os
+import re
 import urllib
 from urllib.parse import urljoin, urlparse
-import base64
-import re
-import glob
-import magic
 
+import magic
 import pandas as pd
-from tqdm import tqdm
+import requests
 from bs4 import BeautifulSoup
+from tqdm import tqdm
 
 
 def extract_links(html, base_url):
     soup = BeautifulSoup(html, "html.parser")
     links = set()
-  
+
     # Step 1: <a href=...>
     for a in soup.find_all("a", href=True):
         href = a["href"]
@@ -47,9 +47,11 @@ def extract_links(html, base_url):
                 links.add(urljoin(base_url, decoded))
         except Exception:
             pass  # skip if not valid base64
-    
+
     # Filter out some common false positive patterns
-    return list(set([l for l in links if "pdf" in l.lower() and "flyer" not in l.lower()]))
+    return list(
+        set([l for l in links if "pdf" in l.lower() and "flyer" not in l.lower()])
+    )
 
 
 def is_html(filepath):
@@ -57,10 +59,10 @@ def is_html(filepath):
     return mime.from_file(filepath) == "text/html"
 
 
-parser = argparse.ArgumentParser(description='Download books from DOAB')
-parser.add_argument('metadata', type=str, help='Path to the metadata file')
-parser.add_argument('input_glob', type=str, help='Path to already downloaded files')
-parser.add_argument('output', type=str, help='Path to the output directory')
+parser = argparse.ArgumentParser(description="Download books from DOAB")
+parser.add_argument("metadata", type=str, help="Path to the metadata file")
+parser.add_argument("input_glob", type=str, help="Path to already downloaded files")
+parser.add_argument("output", type=str, help="Path to the output directory")
 args = parser.parse_args()
 
 # Load the metadata file
@@ -87,23 +89,31 @@ for fpath in pbar:
         try:
             parsed = urllib.parse.urlsplit(url)
             encoded_path = urllib.parse.quote(parsed.path)
-            encoded_query = urllib.parse.quote(parsed.query, safe='=&')
-            encoded_url = urllib.parse.urlunsplit((parsed.scheme, parsed.netloc, encoded_path, encoded_query, parsed.fragment))
+            encoded_query = urllib.parse.quote(parsed.query, safe="=&")
+            encoded_url = urllib.parse.urlunsplit(
+                (
+                    parsed.scheme,
+                    parsed.netloc,
+                    encoded_path,
+                    encoded_query,
+                    parsed.fragment,
+                )
+            )
             response = requests.get(encoded_url, timeout=30)
         except Exception as e:
-            print(f'Failed to download {url}: {e}')
+            print(f"Failed to download {url}: {e}")
             continue
 
         if response.status_code != 200:
-            print(f'Failed to download {url}')
+            print(f"Failed to download {url}")
             continue
 
         output_path = os.path.join(args.output, id[:2], id + ".pdf")
         if not os.path.exists(os.path.dirname(output_path)):
             os.makedirs(os.path.dirname(output_path))
 
-        with open(output_path, 'wb') as f:
+        with open(output_path, "wb") as f:
             f.write(response.content)
 
         n_bytes += response.content.__sizeof__()
-        pbar.set_description(f'Downloaded {n_bytes / 1e6:.2f} MB')
+        pbar.set_description(f"Downloaded {n_bytes / 1e6:.2f} MB")

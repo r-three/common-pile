@@ -4,16 +4,13 @@ import glob
 import json
 import logging
 import os
-import sys
 import re
+import sys
 
 import pandas as pd
-from tqdm import tqdm
-
 from licensed_pile.licenses import PermissiveLicenses
 from licensed_pile.write import to_dolma
-
-
+from tqdm import tqdm
 
 logging.basicConfig(
     level=logging.INFO,
@@ -24,15 +21,9 @@ logging.basicConfig(
 SOURCE_NAME = "doab"
 
 parser = argparse.ArgumentParser(description="Convert data to dolma.")
-parser.add_argument(
-    "--metadata", type=str, help="Path to metadata file"
-)
-parser.add_argument(
-    "--input-files", nargs="+", help="Input files"
-)
-parser.add_argument(
-    "--output-dir", type=str, help="Path to output directory"
-)
+parser.add_argument("--metadata", type=str, help="Path to metadata file")
+parser.add_argument("--input-files", nargs="+", help="Input files")
+parser.add_argument("--output-dir", type=str, help="Path to output directory")
 parser.add_argument(
     "--filename", default="doab.json.gz", help="The base filename for the BHL data"
 )
@@ -59,7 +50,7 @@ def str_to_license(s):
 def get_records():
     metadata = pd.read_csv(args.metadata)
     metadata = metadata.set_index("id")
-    
+
     for file in args.input_files:
         basename = os.path.basename(file)
         id = os.path.splitext(basename)[0]
@@ -68,13 +59,17 @@ def get_records():
         license = str_to_license(metadata_record["BITSTREAM License"])
         if license is None:
             continue
-        
+
         with open(file, "r") as f:
             lines = f.readlines()
-        
-        lines = [l for l in lines if len(l) > 0 and not l.startswith("-") and not l.startswith("|")]
+
+        lines = [
+            l
+            for l in lines
+            if len(l) > 0 and not l.startswith("-") and not l.startswith("|")
+        ]
         text = "".join(lines)
-        
+
         created = metadata_record["dc.date.available"]
         url = metadata_record["BITSTREAM Download URL"]
         author = metadata_record["dc.contributor.author"]
@@ -82,7 +77,10 @@ def get_records():
         isbn = metadata_record["BITSTREAM ISBN"]
         publisher_name = metadata_record["oapen.relation.isPublishedBy_publisher.name"]
 
-        if publisher_name in ["MDPI - Multidisciplinary Digital Publishing Institute", "IntechOpen"]:
+        if publisher_name in [
+            "MDPI - Multidisciplinary Digital Publishing Institute",
+            "IntechOpen",
+        ]:
             sections = re.split("\n# ", text)
             for section_idx, section in enumerate(sections):
                 if re.match("^#*\s*\**Reference", section):
@@ -103,10 +101,10 @@ def get_records():
                         "title": "" if pd.isna(title) else title,
                         "publisher": "" if pd.isna(publisher_name) else publisher_name,
                         "isbn": "" if pd.isna(isbn) else isbn,
-                        "section_idx": section_idx
+                        "section_idx": section_idx,
                     },
                 }
-     
+
         else:
             yield {
                 "id": id,
@@ -122,10 +120,10 @@ def get_records():
                     "title": "" if pd.isna(title) else title,
                     "publisher": "" if pd.isna(publisher_name) else publisher_name,
                     "isbn": "" if pd.isna(isbn) else isbn,
-                    "section_idx": 0
+                    "section_idx": 0,
                 },
             }
-            
+
 
 def main(args):
     # Use iterators so we don't have to load the whole dataset in memory.
