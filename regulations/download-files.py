@@ -6,9 +6,8 @@ import json
 import os
 
 import requests
+from common_pile import logs
 from tqdm.auto import tqdm
-
-from licensed_pile import logs
 
 
 def parse_args():

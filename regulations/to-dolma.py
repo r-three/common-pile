@@ -5,9 +5,9 @@ import itertools
 import json
 import os
 
-from licensed_pile import logs
-from licensed_pile.licenses import PermissiveLicenses
-from licensed_pile.write import to_dolma
+from common_pile import logs
+from common_pile.licenses import PermissiveLicenses
+from common_pile.write import to_dolma
 
 SOURCE_NAME = "regulations"
 
