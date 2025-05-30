@@ -1,4 +1,4 @@
-# Biodiversity Heritage Library
+# OERCommons
 
 A collection of openly licensed educational materials (e.g., syllabi, lecture notes, problem sets, etc.) from [OERCommons](https://oercommons.org), an online platform for hosting open educational resources (OER).
 
