@@ -1,19 +1,17 @@
 import argparse
+import ast
+import csv
 import datetime
 import glob
 import json
 import logging
 import os
-import csv
-import sys
-import ast
 import re
+import sys
 
 import trafilatura
-
 from licensed_pile.licenses import PermissiveLicenses
 from licensed_pile.write import to_dolma
-
 
 csv.field_size_limit(sys.maxsize)
 
@@ -28,7 +26,9 @@ SOURCE_NAME = "pressbooks"
 
 parser = argparse.ArgumentParser(description="Convert data to dolma.")
 parser.add_argument(
-    "--filename", default="pressbooks.json.gz", help="The base filename for the BHL data"
+    "--filename",
+    default="pressbooks.json.gz",
+    help="The base filename for the BHL data",
 )
 parser.add_argument(
     "--shard_size", type=int, default=1, help="Size, in GB, for each shard."
@@ -36,10 +36,10 @@ parser.add_argument(
 
 
 LICENSE_MAP = {
-        "CC BY": PermissiveLicenses.CC_BY,
-        "CC BY-SA": PermissiveLicenses.CC_BY_SA,
-        "CC0": PermissiveLicenses.CC0,
-        "Public Domain": PermissiveLicenses.PD,
+    "CC BY": PermissiveLicenses.CC_BY,
+    "CC BY-SA": PermissiveLicenses.CC_BY_SA,
+    "CC0": PermissiveLicenses.CC0,
+    "Public Domain": PermissiveLicenses.PD,
 }
 
 
@@ -48,7 +48,18 @@ def get_records():
         reader = csv.reader(f)
         header = next(reader)
         for row in reader:
-            title, author, subject, institution, language, license, last_updated, book_url, page_url, page_content = row
+            (
+                title,
+                author,
+                subject,
+                institution,
+                language,
+                license,
+                last_updated,
+                book_url,
+                page_url,
+                page_content,
+            ) = row
 
             if license not in LICENSE_MAP:
                 continue
@@ -73,6 +84,7 @@ def get_records():
                     "subject": subject,
                 },
             }
+
 
 def main(args):
     # Use iterators so we don't have to load the whole dataset in memory.

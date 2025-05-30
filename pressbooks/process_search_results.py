@@ -1,17 +1,29 @@
-import sys
 import csv
-import requests
+import sys
 
+import requests
 from bs4 import BeautifulSoup
 from tqdm import tqdm
-
 
 csv.field_size_limit(sys.maxsize)
 
 
-with open("pressbooks_search_results.csv", "r") as f_in, open("pressbooks_links.csv", "w") as f_out:
+with open("pressbooks_search_results.csv", "r") as f_in, open(
+    "pressbooks_links.csv", "w"
+) as f_out:
     writer = csv.writer(f_out)
-    writer.writerow(["title", "author", "subject", "institution", "language", "license", "last_updated", "book_url"])
+    writer.writerow(
+        [
+            "title",
+            "author",
+            "subject",
+            "institution",
+            "language",
+            "license",
+            "last_updated",
+            "book_url",
+        ]
+    )
 
     reader = csv.reader(f_in)
     header = next(reader)
@@ -27,7 +39,7 @@ with open("pressbooks_search_results.csv", "r") as f_in, open("pressbooks_links.
             continue
         title = link.text.strip()
         url = link["href"]
-        
+
         author_tag = soup.find("p", {"data-cy": "book-authors"})
         author = "" if author_tag is None else author_tag.find("span").text.strip()
 
@@ -35,20 +47,28 @@ with open("pressbooks_search_results.csv", "r") as f_in, open("pressbooks_links.
         subject = "" if subject_tag is None else subject_tag.find("span").text.strip()
 
         last_updated_tag = soup.find("p", {"data-cy": "book-last-updated"})
-        last_updated = "" if last_updated_tag is None else last_updated_tag.find("span").text.strip()
+        last_updated = (
+            ""
+            if last_updated_tag is None
+            else last_updated_tag.find("span").text.strip()
+        )
 
         institution_tag = soup.find("p", {"data-cy": "book-institutions"})
-        institution = "" if institution_tag is None else institution_tag.find("span").text.strip()
+        institution = (
+            "" if institution_tag is None else institution_tag.find("span").text.strip()
+        )
 
         language_tag = soup.find("p", {"data-cy": "book-language"})
-        language = "" if language_tag is None else language_tag.find("span").text.strip()
+        language = (
+            "" if language_tag is None else language_tag.find("span").text.strip()
+        )
 
         license_tag = soup.find("span", {"data-cy": "book-copyright-license"})
         if license_tag is None:
             print(f"Failed to find license tag for row {i}")
             continue
         license = "" if license_tag is None else license_tag.text.strip()
-        
+
         try:
             response = requests.get(url, timeout=10)
         except Exception as e:
@@ -60,7 +80,18 @@ with open("pressbooks_search_results.csv", "r") as f_in, open("pressbooks_links.
             book_url_tag = response_soup.find("a", class_="call-to-action", href=True)
             if book_url_tag:
                 book_url = book_url_tag["href"]
-                writer.writerow([title, author, subject, institution, language, license, last_updated, book_url])
+                writer.writerow(
+                    [
+                        title,
+                        author,
+                        subject,
+                        institution,
+                        language,
+                        license,
+                        last_updated,
+                        book_url,
+                    ]
+                )
             else:
                 print(f"Failed to find book url tag for {url}")
                 continue
