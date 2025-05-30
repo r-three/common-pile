@@ -1,20 +1,18 @@
 import argparse
+import ast
+import csv
 import datetime
 import glob
 import json
 import logging
 import os
-import csv
-import sys
-import ast
 import re
+import sys
 
-from bs4 import BeautifulSoup
 import trafilatura
-
+from bs4 import BeautifulSoup
 from licensed_pile.licenses import PermissiveLicenses
 from licensed_pile.write import to_dolma
-
 
 csv.field_size_limit(sys.maxsize)
 
@@ -53,6 +51,7 @@ def get_license(name, version=None):
         return PermissiveLicenses.PD
     return None
 
+
 def get_records():
     with open("libretext_content.csv", "r") as f:
         reader = csv.reader(f)
@@ -65,7 +64,11 @@ def get_records():
                 continue
             raw_metadata = page_tags_div.text.strip()
             metadata_list = ast.literal_eval(raw_metadata)
-            metadata_dict = {item.split(":")[0]: item.split(":")[1] for item in metadata_list if ":" in item}
+            metadata_dict = {
+                item.split(":")[0]: item.split(":")[1]
+                for item in metadata_list
+                if ":" in item
+            }
 
             license_short = metadata_dict.get("license")
             license_version = metadata_dict.get("licenseversion")
@@ -75,7 +78,7 @@ def get_records():
 
             author_tag = soup.find("li", class_="mt-author-information")
             author = author_tag.text if author_tag else None
-            
+
             title_tag = soup.find("meta", property="og:title")
             title = title_tag["content"] if title_tag else None
 
@@ -83,8 +86,10 @@ def get_records():
             site = site_tag["content"] if site_tag else None
 
             published_time_tag = soup.find("meta", property="article:published_time")
-            published_time = published_time_tag["content"] if published_time_tag else None
-            
+            published_time = (
+                published_time_tag["content"] if published_time_tag else None
+            )
+
             for div in soup.find_all("div", class_="Headertext"):
                 div.clear()
 
@@ -93,7 +98,7 @@ def get_records():
                 continue
             text = re.sub("- Page ID\s*", "", text, count=1)
             text = re.sub("- \d+\s*", "", text, count=1)
-    
+
             yield {
                 "id": section_url,
                 "text": text,
