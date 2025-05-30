@@ -7,9 +7,8 @@ from typing import Iterator
 import lxml
 import lxml.etree as ET
 import regex
-
-from licensed_pile.licenses import PermissiveLicenses
-from licensed_pile.write import to_dolma
+from common_pile.licenses import PermissiveLicenses
+from common_pile.write import to_dolma
 
 parser = argparse.ArgumentParser(description="Collect UK-Hansard into Dolma format")
 parser.add_argument(
