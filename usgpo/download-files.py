@@ -7,11 +7,11 @@ import jsonlines
 import trafilatura
 from bs4 import BeautifulSoup
 from tqdm.auto import tqdm
-from utils import api_query
 
 from licensed_pile import logs
 from licensed_pile.licenses import PermissiveLicenses
 from licensed_pile.write import to_dolma
+from utils import api_query
 
 SOURCE_NAME = "usgpo"
 

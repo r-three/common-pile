@@ -5,9 +5,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import jsonlines
 from tqdm.auto import tqdm
-from utils import api_query
 
 from licensed_pile import logs
+from utils import api_query
 
 
 def parse_args():
