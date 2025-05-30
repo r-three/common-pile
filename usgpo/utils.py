@@ -1,7 +1,8 @@
 import time
 
 import requests
-from licensed_pile import logs
+
+from common_pile import logs
 
 
 def api_query(endpoint, headers, params):
