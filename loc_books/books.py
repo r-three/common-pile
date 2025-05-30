@@ -7,11 +7,6 @@ from time import time
 import click
 import pandas as pd
 import requests
-
-from common_pile import logs
-from common_pile.licenses import PermissiveLicenses
-from common_pile.write import to_dolma
-
 from furl import furl
 from pyrate_limiter import Duration, Limiter, RequestRate
 from requests_ratelimiter import LimiterSession
@@ -24,6 +19,9 @@ from tenacity import (
 )
 from tqdm import tqdm
 
+from common_pile import logs
+from common_pile.licenses import PermissiveLicenses
+from common_pile.write import to_dolma
 
 data_path = Path(__file__).resolve().parent / "data"
 

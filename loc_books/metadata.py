@@ -13,7 +13,7 @@ from requests_ratelimiter import LimiterSession
 from titlecase import titlecase
 from tqdm import tqdm
 
-from licensed_pile import logs
+from common_pile import logs
 
 data_path = Path(__file__).resolve().parent / "data"
 metadata_downloads_path = data_path / "downloads/metadata"
