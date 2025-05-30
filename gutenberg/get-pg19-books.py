@@ -9,13 +9,15 @@ import urllib.request
 import tqdm
 from google.cloud import storage
 
+from common_pile import logs
+
 # These are books that are hard to get from PG, so we download them from pg19.
 # See the README for more information on what these books are.
 BOOKS = (28520, 30360, 57479, 57486, 38200, 3189, 26568, 51155, 38718)
 
 parser = argparse.ArgumentParser(description="Download specific books from PG19")
 parser.add_argument(
-    "books", nargs="+", default=BOOKS, help="Ids for books to download from PG19."
+    "--books", nargs="+", default=BOOKS, help="Ids for books to download from PG19."
 )
 parser.add_argument(
     "--output_dir",
@@ -52,11 +54,12 @@ def main(args):
     bucket = "deepmind-gutenberg"
     split = "train"
     to_add = []
+    logger = logs.get_logger("gutenberg")
     for book in tqdm.tqdm(args.books):
         output_file = os.path.join(args.output_dir, f"{book}.txt")
         if os.path.exists(output_file) and not args.overwrite:
             continue
-        print(f"Downloading book {book} to {output_file}")
+        logger.info(f"Downloading book {book} to {output_file}")
         with open(output_file, "w") as wf:
             try:
                 wf.write(download_book(client, book) + "\n")
@@ -67,7 +70,7 @@ def main(args):
                     }
                 )
             except Exception as e:
-                print(e)
+                logger.error(e)
                 os.remove(output_file)
                 exit()
 
@@ -76,17 +79,16 @@ def main(args):
         og_index = json.load(f)
     og_length = len(og_index)
     og_index = {x["id"]: x for x in og_index}
-    assert len(og_index) == og_length
 
     # If we have the metadata but no text (for example, they don't have a
     # plaintext link) add the pg19 link to the index.
     to_append = []
     for x in to_add:
         if x["id"] in og_index:
-            print(f"Updating file location for book {x['id']}")
+            logger.info(f"Updating file location for book {x['id']}")
             og_index[x["id"]]["file"] = x["file"]
         else:
-            print(f"Adding metadata for book {x['id']}")
+            logger.info(f"Adding metadata for book {x['id']}")
             to_append.append(x)
 
     # TODO: Add safety with some sort of shadow page and file rename?
@@ -97,4 +99,5 @@ def main(args):
 
 if __name__ == "__main__":
     args = parser.parse_args()
+    logs.configure_logging("gutenberg")
     main(args)

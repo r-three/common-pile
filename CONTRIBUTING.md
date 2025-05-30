@@ -2,15 +2,15 @@
 
 ## Discord channel
 
-Coordination of this project is done primarily in the #licensed-pile channel in the [Eleuther AI Discord](https://discord.gg/eleutherai).
+Coordination of this project is done primarily in the #common-pile channel in the [Eleuther AI Discord](https://discord.gg/eleutherai).
 
 ## Finding Data Sources
 
-The goal of this project is to collect high-quality and diverse public domain or permissively licensed text. We track potential data sources in the repo's [Issues](https://github.com/r-three/licensed-pile/issues). If you find a new source of public domain or permissively licensed text that is not currently listed, feel free to add an Issue.
+The goal of this project is to collect high-quality and diverse public domain or permissively licensed text. We track potential data sources in the repo's [Issues](https://github.com/r-three/common-pile/issues). If you find a new source of public domain or permissively licensed text that is not currently listed, feel free to add an Issue.
 
 ### Allowable Licenses
 
-The current list of the permissive licenses allowed by this project is below and can also be found in `licensed-pile/licensed_pile/licenses.py`:
+The current list of the permissive licenses allowed by this project is below and can also be found in `common-pile/common_pile/licenses.py`:
 
 - [Public Domain](https://en.wikipedia.org/wiki/Public_domain_in_the_United_States)
 - [Creative Commons Zero](https://creativecommons.org/publicdomain/zero/1.0/)
@@ -23,7 +23,7 @@ The current list of the permissive licenses allowed by this project is below and
 - [MIT License](https://opensource.org/license/mit/)
 - [BSD License](https://opensource.org/license/bsd-2-clause/)
 
-This list contains some of the common permissive licenses that cover many large data sources, but we intend to expand this list as we continue to collect data. If you come across a source with a license that you believe should be on this list, feel free to comment in our [Allowable License Meta-Issue](https://github.com/r-three/licensed-pile/issues/34). 
+This list contains some of the common permissive licenses that cover many large data sources, but we intend to expand this list as we continue to collect data. If you come across a source with a license that you believe should be on this list, feel free to comment in our [Allowable License Meta-Issue](https://github.com/r-three/common-pile/issues/34).
 
 ### Finding License Information
 
@@ -47,31 +47,31 @@ License information can sometimes be difficult to find for certain text sources 
 
 5. An "about" page can include licensing information for the website as a whole.
 
-## Contributing Data Collection Code 
+## Contributing Data Collection Code
 
-Once you have selected a source from the list of [Issues](https://github.com/r-three/licensed-pile/issues), add a comment that you plan to work on it and an adim will assign the issue to you. Then, you can follow these guidelines for how to get started with contributing to the repo:
+Once you have selected a source from the list of [Issues](https://github.com/r-three/common-pile/issues), add a comment that you plan to work on it and an adim will assign the issue to you. Then, you can follow these guidelines for how to get started with contributing to the repo:
 
 1. Clone the repo
 
 2. Run `pip install -r requirements.txt`
-    
-3. Create a subdirectory for your data source (e.g., the `licensed-pile/gutenberg` directory for the Project Gutenberg data source).
+
+3. Create a subdirectory for your data source (e.g., the `common-pile/gutenberg` directory for the Project Gutenberg data source).
 
 4. Identify the best way to collect the raw data
 
 > Many sources provide a bulk data download for downloading all of their data at once. If this option is not available, check if the source provides a developer API for downloading data programmatically. If neither of these are provided then consider scraping the data from the webpage directly as long as scraping is allowed in the source's Terms of Service.
 
-4. Write a script to download the raw data and store this in `licensed-pile/data/{SOURCE}/raw`
+4. Write a script to download the raw data and store this in `common-pile/data/{SOURCE}/raw`
 
-> The convention used in this repository is that scripts are run from the top-level `licensed-pile/` directory using `python -m {SOURCE}/{SCRIPT_NAME}`. Thus, your script should write to the relative path `./data/{SOURCE}/raw`.
+> The convention used in this repository is that scripts are run from the top-level `common-pile/` directory using `python -m {SOURCE}/{SCRIPT_NAME}`. Thus, your script should write to the relative path `./data/{SOURCE}/raw`.
 
 5. If necessary, write code to filter the downloaded items down to only those with appropriate licenses.
 
-6. Write code that outputs the resulting data to `licensed-pile/data/{SOURCE}/v0` 
+6. Write code that outputs the resulting data to `common-pile/data/{SOURCE}/v0`
 
-> The data format used in this project is [Dolma](https://github.com/allenai/dolma). To write out the resulting data as a Dolma dataset, convert each record in the dataset to a python dictionary and use the utilities in `licensed-pile/licensed_pile/write.py` to convert the list of dictionaries to a Dolma dataset. In cases where the dataset is very large, it is better to define a record generator rather than a list and pass the generator to the Dolma utility functions.
+> The data format used in this project is [Dolma](https://github.com/allenai/dolma). To write out the resulting data as a Dolma dataset, convert each record in the dataset to a python dictionary and use the utilities in `common-pile/common_pile/write.py` to convert the list of dictionaries to a Dolma dataset. In cases where the dataset is very large, it is better to define a record generator rather than a list and pass the generator to the Dolma utility functions.
 
-> Each record should minimally have the following keys:  
+> Each record should minimally have the following keys:
 ```json
 {
     "id": <unique record identifier>,
@@ -93,7 +93,7 @@ For some sources, significant compute may be required to collect all of the data
 ## Examples
 
 For some examples of completed data sources check out any of the following:
-- `licensed-pile/gutenberg`
-- `licensed-pile/bhl`
-- `licensed-pile/stackexchange`
-- `licensed-pile/ubuntu`
+- `common-pile/gutenberg`
+- `common-pile/bhl`
+- `common-pile/stackexchange`
+- `common-pile/ubuntu`

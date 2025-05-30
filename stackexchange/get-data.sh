@@ -2,7 +2,10 @@
 
 set -e
 
-./get-dumps.sh
-./preprocess-sites.sh
+data_dir=${1:-"data"}
+data_dir=${data_dir%/}
+
+./get-dumps.sh ${data_dir}
+./preprocess-sites.sh ${data_dir}
 # process stack overflow
-python preprocess.py --input data/dump/stackoverflow.com --output data/stack-exchange/v0/stackoverflow.com --shelve
+python preprocess.py --input ${data_dir}/dump/stackoverflow.com --output ${data_dir}/stackexchange/v0/stackoverflow.com --shelve

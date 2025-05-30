@@ -15,7 +15,7 @@ from tempfile import TemporaryDirectory
 
 import tqdm
 
-from licensed_pile.write import ShardParallelProcessor
+from common_pile.write import ShardParallelProcessor
 
 parser = argparse.ArgumentParser(description="Preprocess raw books in dolma format.")
 parser.add_argument(
@@ -72,7 +72,7 @@ def strip_footer(text: str, footer=FOOTER) -> str:
 class ProjectGutenbergParallel(ShardParallelProcessor):
     @classmethod
     def process_example(cls, example, **kwargs):
-        example["text"] = strip_footer(strip_header(example["text"]))
+        example["text"] = strip_footer(strip_header(example["text"])).strip()
         return example
 
 
