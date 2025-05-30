@@ -11,8 +11,9 @@ from collections import defaultdict
 
 import requests
 from bs4 import BeautifulSoup
-from common_pile import logs
 from tqdm.auto import tqdm
+
+from common_pile import logs
 
 
 def parse_args():

@@ -9,8 +9,9 @@ import sys
 from collections import defaultdict
 
 import parsing
-from common_pile import logs
 from tqdm.auto import tqdm
+
+from common_pile import logs
 
 csv.field_size_limit(sys.maxsize)
 
