@@ -8,9 +8,10 @@ import re
 import sys
 
 import pandas as pd
-from licensed_pile.licenses import PermissiveLicenses
-from licensed_pile.write import to_dolma
 from tqdm import tqdm
+
+from common_pile.licenses import PermissiveLicenses
+from common_pile.write import to_dolma
 
 logging.basicConfig(
     level=logging.INFO,
