@@ -1,9 +1,14 @@
-# Licensed Pile
+# The Common Pile
 
 Repo to hold code and track issues for the collection of permissively licensed data
 
+## Installation
 
-# Tips
+The majority of packages required for data creation can be installed with `pip install -r requirements.txt`. You all need to run `pip install -e .` to get access to the `common_pile` shared utility library.
+
+If you are on a system that don't support automatic installation of pandoc with `pypandoc_binary`, change it to `pypandoc` in the `requirements.txt` and and install pandoc manually.
+
+## Tips
 
 You can look at Dolma formatted data via commandline tools like so.
 
@@ -21,6 +26,22 @@ Look at the text for item with the id of 12 (note that position in file is not c
 
 Note: You can also use `gunzip -c ${file}.jsonl.gz | jq -s ${command}` which is slightly faster (reduces the amount of  data flowwing through pipes) but if you forget the `-c` flag you end up uncompressing the file and deleting the compressed version, i.e. you need to run `gzip ${file}.jsonl` to fix it.
 
+### Capped-parallelism in bash script
+Sometimes we want to download/process multiple files in parallel up to a limited number of jobs in bash script.
+Below is a example code snippet (used in [courtlistener/get_data.sh](courtlistener/get_data.sh)).
+Note that `jobs -r` counts all jobs running in the current shell.
+
+````
+max_jobs = 8
+for file in "${files[@]}"; do
+    download_and_process "file" &
+
+    # Limit the number of parallel jobs
+    if (( $(jobs -r | wc -l) >= max_jobs )); then
+        wait -n
+    fi
+done
+````
 ## Development
 
 We use git pre-commit hooks to format code and keep style consistent.

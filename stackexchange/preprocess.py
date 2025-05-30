@@ -2,36 +2,36 @@
 
 import argparse
 import collections
+import copyreg
 import dataclasses
 import datetime
 import functools
 import itertools
-import logging
 import multiprocessing as mp
 import operator as op
 import os
+import pickle
+import re
 import shelve
 import urllib.parse
 from dataclasses import dataclass
+from io import StringIO
 from typing import Dict, List, Sequence
 
 import bs4
 import tqdm
+from lxml import etree
 from markdown_it import MarkdownIt
 
-import licensed_pile.xml as xml
-from licensed_pile.licenses import PermissiveLicenses
-from licensed_pile.write import to_dolma
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="StackExchange Processing: [%(asctime)s] %(levelname)s - %(message)s",
-)
+import common_pile.xml as xml
+from common_pile import logs
+from common_pile.licenses import PermissiveLicenses
+from common_pile.write import to_dolma
 
 parser = argparse.ArgumentParser(description="Parse a stack exchange dump.")
 parser.add_argument("--input", help="Path to the dump, data/dump/${site}")
 parser.add_argument(
-    "--output", help="Path to the output, data/stack-exchange/v0/${site}/documents"
+    "--output", help="Path to the output, data/stackexchange/v0/${site}/documents"
 )
 parser.add_argument(
     "--processes",
@@ -42,6 +42,11 @@ parser.add_argument(
     "--shelve",
     action="store_true",
     help="Save lookup tables as shelves so we don't need to keep them all in memory.",
+)
+parser.add_argument(
+    "--cache",
+    action="store_true",
+    help="Should we save the parsed lookup tables for re-use between runs?",
 )
 parser.add_argument(
     "--skip_comments",
@@ -65,6 +70,30 @@ LICENSES = {
     "CC BY-SA 3.0": PermissiveLicenses.CC_BY_SA_3,
     "CC BY-SA 4.0": PermissiveLicenses.CC_BY_SA,
 }
+
+
+def element_unpickler(data):
+    return etree.fromstring(data)
+
+
+def element_pickler(element):
+    data = etree.tostring(element)
+    return element_unpickler, (data,)
+
+
+def elementtree_unpickler(data):
+    data = StringIO(data)
+    return etree.parse(data)
+
+
+def elementtree_pickler(tree):
+    data = StringIO()
+    tree.write(data)
+    return elementtree_unpickler, (data.getvalue(),)
+
+
+copyreg.pickle(etree._Element, element_pickler, element_unpickler)
+copyreg.pickle(etree._ElementTree, elementtree_pickler, elementtree_unpickler)
 
 
 @dataclass
@@ -94,6 +123,10 @@ class Question(Post):
     comments: List[Comment]
     accepted_answer: int
     answers: List[Answer] = dataclasses.field(default_factory=list)
+
+
+def cache_path(path: str, cache_type: str):
+    return f"cache-{os.path.basename(path)}-{cache_type}.p"
 
 
 def get_attr(xml_obj, key):
@@ -301,22 +334,35 @@ def vote_sort(answers: Sequence[Answer]) -> List[Answer]:
     return sorted(answers, key=functools.cmp_to_key(_cmp_answers))
 
 
+def find_file(directory: str, file_name: str) -> str:
+    """Some dumps use lowercase files names :/"""
+    for f in (file_name, file_name.lower()):
+        if os.path.exists(path := os.path.join(directory, f)):
+            return path
+    logger = logs.configure_logging("stackexchange")
+    logger.error(f"Filed to find {file_name} in {directory}")
+    raise ValueError(f"Failed to find {file_name} in {directory}")
+
+
 def main(args):
+    logger = logs.configure_logging("stackexchange")
     # Note: The Stack Exchage data doesn't lend itself to being shared into the
     # dolma format before the preprocessing is done, therefore we manually use
     # multiprocessing as we go to generate examples in parallel which are
     # eventually stored in the dolma format.
-    site = os.path.basename(args.input)
+    # Make sure the ending the input dir with a `/` doesn't results in an empty
+    # string as the site value.
+    site = os.path.basename(re.sub(r"/$", "", args.input))
     os.makedirs(args.output, exist_ok=True)
 
     date_sort = functools.partial(sorted, key=op.attrgetter("date"))
     # Comments are always sorted by date
     sort_comments = date_sort
     if args.sort == "time":
-        logging.info("Answers will be sorted based on the date.")
+        logger.info("Answers will be sorted based on the date.")
         sort_answers = date_sort
     else:
-        logging.info("Aanswers will be sorted based on votes (accepted answer first).")
+        logger.info("Answers will be sorted based on votes (accepted answer first).")
         sort_answers = vote_sort
 
     # TODO: Does setting the start method to `spawn` help reduce memory usage?
@@ -326,120 +372,174 @@ def main(args):
     # pool will be "finalized" (deleted) before all the data is processed and
     # the program will hang.
     with mp.Pool(processes=args.processes) as pool:
-        logging.info("Building Lookup from user id -> user names")
-        user_xml = xml.iterate_xml(os.path.join(args.input, "Users.xml"), "row")
-        # This table is fairly small so we don't need to create a shelve for it.
-        author_display = collections.defaultdict(set)
-        for user_id, user_names in pool.imap_unordered(
-            functools.partial(process_user, site=site), user_xml, chunksize=100
-        ):
-            if user_id is None:
-                continue
-            author_display[user_id].update(user_names)
-
-        logging.info("Building Lookup from post id -> authors")
-        history_xml = xml.iterate_xml(
-            os.path.join(args.input, "PostHistory.xml"), "row"
-        )
-        # It would probably be better/faster to use a database to store these
-        # intermediate lookups instead of a shelve (which requires multiple
-        # pickle serialization/deserialization) but I didn't want to implement
-        # a database based key-value store that supports list values, set values
-        # and scalar values.
-        if args.shelve:
-            post_authors = shelve.open(os.path.join(args.output, "authors.shelve"))
+        ## user id -> user names
+        if os.path.exists(cache_path(args.input, "user_id")) and args.cache:
+            logger.info("Loading Lookup from user id -> user names from cache.")
+            with open(cache_path(args.input, "user_id"), "rb") as f:
+                author_display = pickle.load(f)
         else:
-            post_authors = {}
-        for post_id, user_id in pool.imap_unordered(
-            process_revision, history_xml, chunksize=100
-        ):
-            if post_id is None:
-                continue
-            authors = post_authors.get(post_id, set())
-            authors.update(author_display[user_id])
-            # Get and assign so that values are written back to the shelve.
-            post_authors[post_id] = authors
+            logger.info("Building Lookup from user id -> user names")
+            user_xml = xml.iterate_xml(find_file(args.input, "Users.xml"), "row")
+            # This table is fairly small so we don't need to create a shelve for it.
+            author_display = collections.defaultdict(set)
+            for user_id, user_names in pool.imap_unordered(
+                functools.partial(process_user, site=site), user_xml, chunksize=100
+            ):
+                if user_id is None:
+                    continue
+                author_display[user_id].update(user_names)
+            if args.cache:
+                logger.info("Caching Lookup from user id -> user names.")
+                with open(cache_path(args.input, "user_id"), "wb") as wf:
+                    pickle.dump(author_display, wf)
 
-        # Even if we are going to skip including the comments in the output, we
-        # still create the comment lookup date. Accesses to it later have
-        # default values of empty lists so an empty look up table will result
-        # in no comments being included. Even though we make the lookup table,
-        # we do skip filling it with processed comments if they are going to be
-        # skipped later.
-        if args.shelve:
-            comments = shelve.open(os.path.join(args.output, "comments.shelve"))
+        ## post id -> authors
+        if os.path.exists(cache_path(args.input, "post_id")) and args.cache:
+            logger.info("Loading Lookup from post id -> authors from cache.")
+            with open(cache_path(args.input, "post_id"), "rb") as f:
+                post_authors = pickle.load(f)
         else:
-            comments = {}
-        if args.include_comments:
-            logging.info("Building Lookup from post/answer id -> comments")
-            comment_xml = xml.iterate_xml(
-                os.path.join(args.input, "Comments.xml"), "row"
+            logger.info("Building Lookup from post id -> authors")
+            history_xml = xml.iterate_xml(
+                find_file(args.input, "PostHistory.xml"), "row"
             )
-            for post_id, user_id, text, date, license in pool.imap_unordered(
-                process_comment, comment_xml, chunksize=100
+            # It would probably be better/faster to use a database to store these
+            # intermediate lookups instead of a shelve (which requires multiple
+            # pickle serialization/deserialization) but I didn't want to implement
+            # a database based key-value store that supports list values, set values
+            # and scalar values.
+            if args.shelve:
+                post_authors = shelve.open(os.path.join(args.output, "authors.shelve"))
+            else:
+                post_authors = {}
+            for post_id, user_id in pool.imap_unordered(
+                process_revision, history_xml, chunksize=100
             ):
                 if post_id is None:
                     continue
-                comment = comments.get(post_id, [])
-                comment.append(
-                    Comment(
-                        text=text,
-                        author=author_display[user_id],
-                        date=date,
-                        license=license,
-                    )
-                )
+                authors = post_authors.get(post_id, set())
+                authors.update(author_display[user_id])
                 # Get and assign so that values are written back to the shelve.
-                comments[post_id] = comment
-            # Sort comments based on creation date, then when we add them to the text
-            # we know that they will be in the correct order, even if they are out
-            # of order in the dump/from multiprocessing.
-            # Explicit loop instead of a comprehension because it might be a shelve :(
-            for cid, cs in comments.items():
-                comments[cid] = sort_comments(cs)
+                post_authors[post_id] = authors
+            if args.cache:
+                logger.info("Caching Lookup from post id -> authors.")
+                with open(cache_path(args.input, "post_id"), "wb") as wf:
+                    pickle.dump(post_authors, wf)
+
+        ## post/answer id -> comments
+        if os.path.exists(cache_path(args.input, "comments")) and args.cache:
+            logger.info("Loading Lookup from post/answer id -> comments from cache.")
+            with open(cache_path(args.input, "comments"), "rb") as f:
+                comments = pickle.load(f)
         else:
-            logging.info("Comments will not be included in the text output.")
+            # Even if we are going to skip including the comments in the output, we
+            # still create the comment lookup date. Accesses to it later have
+            # default values of empty lists so an empty look up table will result
+            # in no comments being included. Even though we make the lookup table,
+            # we do skip filling it with processed comments if they are going to be
+            # skipped later.
+            if args.shelve:
+                comments = shelve.open(os.path.join(args.output, "comments.shelve"))
+            else:
+                comments = {}
+            if args.include_comments:
+                logger.info("Building Lookup from post/answer id -> comments")
+                comment_xml = xml.iterate_xml(
+                    find_file(args.input, "Comments.xml"), "row"
+                )
+                for post_id, user_id, text, date, license in pool.imap_unordered(
+                    process_comment, comment_xml, chunksize=100
+                ):
+                    if post_id is None:
+                        continue
+                    comment = comments.get(post_id, [])
+                    comment.append(
+                        Comment(
+                            text=text,
+                            author=author_display[user_id],
+                            date=date,
+                            license=license,
+                        )
+                    )
+                    # Get and assign so that values are written back to the shelve.
+                    comments[post_id] = comment
+                # Sort comments based on creation date, then when we add them to the text
+                # we know that they will be in the correct order, even if they are out
+                # of order in the dump/from multiprocessing.
+                # Explicit loop instead of a comprehension because it might be a shelve :(
+                for cid, cs in comments.items():
+                    comments[cid] = sort_comments(cs)
+            else:
+                logger.info("Comments will not be included in the text output.")
+            if args.cache:
+                logger.info("Caching Lookup from post/answer id -> comments.")
+                with open(cache_path(args.input, "comments"), "wb") as wf:
+                    pickle.dump(comments, wf)
 
-        if args.shelve:
-            parsed_dump = shelve.open(os.path.join(args.output, "questions.shelve"))
+        ## questions
+        if os.path.exists(cache_path(args.input, "questions")) and args.cache:
+            logger.info("Loading questions from cache.")
+            with open(cache_path(args.input, "questions"), "rb") as f:
+                parsed_dump = pickle.load(f)
         else:
-            parsed_dump = {}
+            if args.shelve:
+                parsed_dump = shelve.open(os.path.join(args.output, "questions.shelve"))
+            else:
+                parsed_dump = {}
 
-        # Questions are the "document" level for this dataset, therefore we do
-        # no need to sort them.
-        logging.info("Parsing Questions")
-        post_xml = xml.iterate_xml(os.path.join(args.input, "Posts.xml"), "row")
-        for post_id, text, date, license, accepted_id in pool.imap_unordered(
-            process_question, post_xml, chunksize=100
-        ):
-            if post_id is None:
-                continue
-            parsed_dump[post_id] = Question(
-                text=text,
-                id=post_id,
-                authors=post_authors[post_id],
-                # Comments are sorted in chronological order.
-                comments=comments.get(post_id, []),
-                date=date,
-                license=license,
-                accepted_answer=accepted_id,
-            )
+            # Questions are the "document" level for this dataset, therefore we do
+            # no need to sort them.
+            logger.info("Parsing Questions")
+            post_xml = xml.iterate_xml(find_file(args.input, "Posts.xml"), "row")
+            for post_id, text, date, license, accepted_id in pool.imap_unordered(
+                process_question, post_xml, chunksize=100
+            ):
+                if post_id is None:
+                    continue
+                if post_id not in post_authors:
+                    logger.warning(
+                        f"Failed to find authors associated with post: {post_id}"
+                    )
+                parsed_dump[post_id] = Question(
+                    text=text,
+                    id=post_id,
+                    authors=post_authors.get(post_id, {"Unknown"}),
+                    # Comments are sorted in chronological order.
+                    comments=comments.get(post_id, []),
+                    date=date,
+                    license=license,
+                    accepted_answer=accepted_id,
+                )
+            if args.cache:
+                logger.info("Caching questions.")
+                with open(cache_path(args.input, "questions"), "wb") as wf:
+                    pickle.dump(parsed_dump, wf)
 
-        logging.info("Parsing Answers")
+        logger.info("Parsing Answers")
         # Reinitialize the iterator over the Posts as it was consumed when
         # looking for questions. We do this as a second pass so we know that
         # there will always be a question we can attach this answer to.
-        post_xml = xml.iterate_xml(os.path.join(args.input, "Posts.xml"), "row")
+        post_xml = xml.iterate_xml(find_file(args.input, "Posts.xml"), "row")
         for question_id, answer_id, answer, date, score, license in pool.imap_unordered(
             process_answer, post_xml, chunksize=100
         ):
             if question_id is None:
                 continue
+            if answer_id not in post_authors:
+                logger.warning(
+                    f"Failed to find authors assocaited with answer: {answer_id}"
+                )
+            if question_id not in parsed_dump:
+                logger.warning(
+                    f"Failed to find question {question_id} assocaited with answer: {answer_id}",
+                    extra={"file": args.input},
+                )
+                continue
             question = parsed_dump[question_id]
             question.answers.append(
                 Answer(
                     text=answer,
-                    authors=post_authors[answer_id],
+                    authors=post_authors.get(answer_id, {"Unknown"}),
                     # Comments are sorted in chronological order.
                     comments=comments.get(answer_id, []),
                     date=date,
@@ -460,7 +560,7 @@ def main(args):
             parsed_dump[qid] = q
 
         # Use iterators so we don't need to have the full dataset loaded at once.
-        logging.info("Formatting Questions as Dolma Documents")
+        logger.info("Formatting Questions as Dolma Documents")
         # Even on rather large datasets, such as askubuntu.com, and shelves it
         # was faster to do the comment/answer sorting and run format dolma in
         # the main process. I assume the cost to serialize and decerialize the
@@ -482,4 +582,5 @@ def main(args):
 
 if __name__ == "__main__":
     args = parser.parse_args()
+    logs.configure_logging("stackexchange")
     main(args)
