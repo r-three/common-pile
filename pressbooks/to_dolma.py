@@ -10,8 +10,9 @@ import re
 import sys
 
 import trafilatura
-from licensed_pile.licenses import PermissiveLicenses
-from licensed_pile.write import to_dolma
+
+from common_pile.licenses import PermissiveLicenses
+from common_pile.write import to_dolma
 
 csv.field_size_limit(sys.maxsize)
 
