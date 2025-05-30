@@ -4,9 +4,8 @@ import glob
 import json
 
 import tqdm
-from smart_open import smart_open
-
 import wiki
+from smart_open import smart_open
 
 template_counts = collections.Counter()
 for i, f in enumerate(
