@@ -1,4 +1,4 @@
-"""Download Regulations.gov documents from indexes containing document URLs"""
+"""Download Regulations.gov documents"""
 
 import argparse
 import itertools
@@ -12,7 +12,7 @@ from licensed_pile import logs
 
 
 def parse_args():
-    parser = argparse.ArgumentParser("Regulations.gov index builder")
+    parser = argparse.ArgumentParser(description="Download Regulations.gov documents")
     parser.add_argument(
         "--input-dir", required=True, help="Path to directory containing indexes"
     )
@@ -26,22 +26,24 @@ def parse_args():
     parser.add_argument(
         "--agencies",
         nargs="+",
-        default=[
-            "bis",
-            "dot",
-            "epa",
-            "faa",
-            "fda",
-            "fema",
-            "ferc",
-            "fmcsa",
-            "fra",
-            "nhtsa",
-            "osha",
-            "phmsa",
-            "sec",
-            "uscg",
-        ],
+        default=tuple(
+            [
+                "bis",
+                "dot",
+                "epa",
+                "faa",
+                "fda",
+                "fema",
+                "ferc",
+                "fmcsa",
+                "fra",
+                "nhtsa",
+                "osha",
+                "phmsa",
+                "sec",
+                "uscg",
+            ]
+        ),
         help="Agencies to process",
     )
     parser.add_argument(
@@ -74,11 +76,10 @@ def download_file(url, filename):
 
 def main(args):
     logger = logs.get_logger("regulations")
-    for year in args.years:
-        for agency in args.agencies:
-            os.makedirs(os.path.join(args.output_dir, year, agency), exist_ok=True)
 
+    args.file_types = set(args.file_types)
     for year, agency in itertools.product(args.years, args.agencies):
+        os.makedirs(os.path.join(args.output_dir, year, agency), exist_ok=True)
         input_file = os.path.join(args.input_dir, year, f"{agency}.json")
         output_dir = os.path.join(args.output_dir, year, agency)
 
@@ -97,6 +98,8 @@ def main(args):
             "Already Exists": 0,
             "Wrong File Type": 0,
         }
+
+        # Iterate through index---each key is a document ID, and each value is a list of metadata dictionaries containing lists of content files
         pbar = tqdm(index.items())
         for doc_id, metadatas in pbar:
             for metadata in metadatas:
@@ -105,15 +108,23 @@ def main(args):
                         output_dir, f"{doc_id}{file['File Type']}"
                     )
                     if os.path.exists(output_file):
+                        logger.debug(f"File {output_file} already exists")
                         pbar_stats["Already Exists"] += 1
                         continue
                     if file["File Type"] not in args.file_types:
+                        logger.debug(
+                            f"Skipping {output_file} -- wrong file type: {file['File Type']}"
+                        )
                         pbar_stats["Wrong File Type"] += 1
                         continue
                     ret = download_file(file["URL"], output_file)
                     if ret == 200:
+                        logger.debug(f"Downloaded {output_file}")
                         pbar_stats["Downloaded"] += 1
                     else:
+                        logger.error(
+                            f"Failed to download {output_file} -- status code: {ret}"
+                        )
                         pbar_stats["Errors"] += 1
                     pbar.set_postfix(pbar_stats)
 

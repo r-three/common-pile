@@ -9,15 +9,14 @@ import sys
 from collections import defaultdict
 
 import parsing
+from common_pile import logs
 from tqdm.auto import tqdm
-
-from licensed_pile import logs
 
 csv.field_size_limit(sys.maxsize)
 
 
 def parse_args():
-    parser = argparse.ArgumentParser("Regulations.gov index builder")
+    parser = argparse.ArgumentParser(description="Regulations.gov index builder")
     parser.add_argument("--input-dir", required=True, help="Path to raw data")
     parser.add_argument("--output-dir", required=True, help="Path to output directory")
     parser.add_argument(
@@ -78,7 +77,7 @@ def main(args):
         index = defaultdict(list)
         num_skipped = 0
         num_parsed = 0
-        with open(input_file, "r") as f:
+        with open(input_file, "r", newline="") as f:
             reader = csv.DictReader(f, delimiter=",")
             pbar = tqdm(reader)
             for record in pbar:

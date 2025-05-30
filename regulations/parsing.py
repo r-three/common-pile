@@ -1,9 +1,5 @@
 import os
-from datetime import datetime
 from typing import Dict, List, Optional
-
-import pandas as pd
-from pydantic import BaseModel
 
 
 def parse_record(record: Dict[str, str]):
@@ -36,7 +32,6 @@ def parse_record(record: Dict[str, str]):
             "Title",
             "Content Files",
         ],
-        # "Public Submission": ["Comment on Document ID", "Document Type", "Posted Date", "Comment", "Attachment Files"],
         "Supporting & Related Material": [
             "Document ID",
             "Document Type",
@@ -49,7 +44,6 @@ def parse_record(record: Dict[str, str]):
         "Notice": {},
         "Rule": {},
         "Proposed Rule": {},
-        # "Public Submission": {"Comment on Document ID": "Document ID"},
         "Supporting & Related Material": {},
     }
 
@@ -94,99 +88,3 @@ def parse_files(files: Optional[str]):
 
 def parse_topics(topics: Optional[str]):
     return topics.split(",") if topics is not None else []
-
-
-def parse_notice(record: Dict[str, str]):
-    parsed_record = {
-        k: v
-        for k, v in record.items()
-        if k in ["Document ID", "Posted Date", "Title", "Content Files"]
-    }
-    parsed_record["Content Files"] = parse_files(parsed_records["Content Files"])
-    return parsed_record
-
-
-def parse_rule(record: Dict[str, str]):
-    parsed_record = {
-        k: v
-        for k, v in record.items()
-        if k in ["Document ID", "Posted Date", "Title", "Content Files"]
-    }
-    return Rule(
-        document_id=record["Document ID"],
-        posted_date=record["Posted Date"],
-        title=record["Title"],
-        topics=parse_topics(record["Topics"]),
-        content_files=parse_files(record["Content Files"]),
-    )
-
-
-def parse_proposed_rule(record: pd.Series):
-    return ProposedRule(
-        document_id=record["Document ID"],
-        posted_date=record["Posted Date"],
-        title=record["Title"],
-        content_files=parse_files(record["Content Files"]),
-    )
-
-
-def parse_public_submission(record: pd.Series):
-    return PublicSubmission(
-        document_id=record["Comment on Document ID"],
-        posted_date=record["Posted Date"],
-        text=record["Comment"],
-        attachment_files=parse_files(record["Attachment Files"]),
-    )
-
-
-def parse_supporting_material(record: pd.Series):
-    return SupportingAndRelatedMaterial(
-        document_id=record["Document ID"],
-        posted_date=record["Posted Date"],
-        content_files=parse_files(record["Content Files"]),
-    )
-
-
-class File(BaseModel):
-    url: str
-    filetype: str
-
-
-class Notice(BaseModel):
-    document_id: str
-    posted_date: datetime
-    title: str
-    content_files: List[File]
-
-
-class Rule(BaseModel):
-    document_id: str
-    posted_date: datetime
-    title: str
-    topics: List[str]
-    content_files: List[File]
-
-
-class ProposedRule(BaseModel):
-    document_id: str
-    posted_date: datetime
-    title: str
-    content_files: List[File]
-
-
-class PublicSubmission(BaseModel):
-    document_id: str
-    posted_date: datetime
-    text: str
-    attachment_files: List[File]
-
-
-class SupportingAndRelatedMaterial(BaseModel):
-    document_id: str
-    posted_date: datetime
-    content_files: List[File]
-
-
-class Other(BaseModel):
-    document_id: str
-    content_files: List[File]

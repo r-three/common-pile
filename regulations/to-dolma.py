@@ -1,3 +1,4 @@
+"""Convert Regulations.gov data to Dolma format."""
 import argparse
 import datetime
 import itertools
@@ -69,9 +70,11 @@ def parse_args():
 
 
 def generate_records(args):
+    logger = logs.get_logger("regulations")
     for year, agency in itertools.product(args.years, args.agencies):
         index_path = os.path.join(args.index_dir, year, f"{agency}.json")
         if not os.path.exists(index_path):
+            logger.error(f"Missing data for {agency} in {year} -- no index file")
             continue
         with open(index_path, "r") as f:
             index = json.load(f)
@@ -89,6 +92,7 @@ def generate_records(args):
                         with open(file_path, "r", encoding="windows-1252") as f:
                             text = f.read()
                     except UnicodeDecodeError:
+                        logger.error(f"Failed to decode file {file_path}")
                         continue
 
                 url = None
@@ -98,14 +102,17 @@ def generate_records(args):
 
                 record = {
                     "id": doc_id,
-                    "document_type": metadata.get("Document Type"),
-                    "posted_date": metadata.get("Posted Date"),
-                    "title": metadata.get("Title"),
+                    "created": metadata.get("Posted Date"),
                     "text": text,
-                    "agency": agency,
                     "added": datetime.datetime.utcnow().isoformat(),
                     "source": SOURCE_NAME,
-                    "metadata": {"license": str(PermissiveLicenses.PD), "url": url},
+                    "metadata": {
+                        "document_type": metadata.get("Document Type"),
+                        "title": metadata.get("Title"),
+                        "agency": agency,
+                        "license": str(PermissiveLicenses.PD),
+                        "url": url,
+                    },
                 }
 
                 yield record
@@ -117,5 +124,5 @@ def main(args):
 
 if __name__ == "__main__":
     args = parse_args()
-    logs.configure_logging("usgpo")
+    logs.configure_logging("regulations")
     main(args)
