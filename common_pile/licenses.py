@@ -48,6 +48,7 @@ class PermissiveLicenses(StringEnum):
 
     # Not in the Blue Oak Council list, but open source compliant.
     CDLA_P = "Community Data License Agreement - Permissive 1.0 - https://cdla.dev/"
+    OPL = "Open Parliament Licence - https://www.parliament.uk/site-information/copyright-parliament/open-parliament-licence/"
 
     # TODO: Fill out this function to match in more cases.
     # Note: This kind of function will always be messy and probably require
