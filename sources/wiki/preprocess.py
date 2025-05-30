@@ -9,8 +9,8 @@ from tempfile import TemporaryDirectory
 
 import requests
 import tqdm
-
 import wiki
+
 from common_pile import logs, utils
 from common_pile.write import ShardParallelProcessor
 
