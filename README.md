@@ -1,52 +1,30 @@
 # The Common Pile
 
-Repo to hold code and track issues for the collection of permissively licensed data
+This repository tracks the code used to collect, process, and prepare the datasets for the Common Pile.
+The code used for the preparation of each source in the Common Pile can be found in the `sources/` subdirectory.
+Source-agnostic utility code and scripts are provided in the `common_pile` package.
+If you are looking for the data itself or our trained models, please see [our Hugging Face organization](https://huggingface.co/common-pile/).
 
 ## Installation
 
-The majority of packages required for data creation can be installed with `pip install -r requirements.txt`. You all need to run `pip install -e .` to get access to the `common_pile` shared utility library.
+The majority of packages required for dataset creation can be installed with `pip install -r requirements.txt`.
+To make use of the shared functionality in the `common_pile` pckage, run `pip install -e .`.
+If you are on a system that doesn't support automatic installation of pandoc with `pypandoc_binary`, change it to `pypandoc` in the `requirements.txt` and and install pandoc manually.
 
-If you are on a system that don't support automatic installation of pandoc with `pypandoc_binary`, change it to `pypandoc` in the `requirements.txt` and and install pandoc manually.
+## Contributing
+
+If you'd like to contribute a new source to the Common Pile, please [start an issue](https://github.com/r-three/common-pile/issues/new) to share details of the source.
+Generally, we expect each source to include code that 1) downloads the data, 2) processes it appropriately to retain primarily plain text, and 3) write out the results in the Dolma format (gzipped jsonl).
+You can find utilities to help with each of these steps in the `common_pile` library.
+Alternatively, you can look at our existing sources for ideas as to how to prepare a source.
+We use git pre-commit hooks to format code and keep style consistent.
+You can install the pre-commit libraries with `pip install pre-commit` and insert the pre-commit hooks with `pre-commit install` from the repository root.
 
 ## Tips
 
-You can look at Dolma formatted data via commandline tools like so.
+The [scripts subdirectory](https://github.com/r-three/common-pile/tree/main/common_pile/scripts) has various scripts that can be helpful for inspecting or computing statistics over data.
+Alternatively, the Dolma-formatted files can be inspected with [`jq`](https://jqlang.org/) by running
 
 ```
 cat ${file}.jsonl.gz | gunzip | jq -s ${commmand}
 ```
-
-`js -s` is used to process the input as jsonl (valid json per line) instead of expecting the whole input to be valid json.
-
-Then you can use jq syntax to look for specific things, e.g.:
-
-Look at the text for item 1115 `cat ${file}.jsonl.gz | gunzip | jq -s '.[1115].text'`
-
-Look at the text for item with the id of 12 (note that position in file is not correlated with id) `cat ${file}.jsonl.gz | gunzip | jq -s '.[] | select(.id == "12").text'`
-
-Note: You can also use `gunzip -c ${file}.jsonl.gz | jq -s ${command}` which is slightly faster (reduces the amount of  data flowwing through pipes) but if you forget the `-c` flag you end up uncompressing the file and deleting the compressed version, i.e. you need to run `gzip ${file}.jsonl` to fix it.
-
-### Capped-parallelism in bash script
-Sometimes we want to download/process multiple files in parallel up to a limited number of jobs in bash script.
-Below is a example code snippet (used in [courtlistener/get_data.sh](courtlistener/get_data.sh)).
-Note that `jobs -r` counts all jobs running in the current shell.
-
-````
-max_jobs = 8
-for file in "${files[@]}"; do
-    download_and_process "file" &
-
-    # Limit the number of parallel jobs
-    if (( $(jobs -r | wc -l) >= max_jobs )); then
-        wait -n
-    fi
-done
-````
-## Development
-
-We use git pre-commit hooks to format code and keep style consistent.
-
-* Install the pre-commit library with `pip install pre-commit`.
-* Install the pre-commit hooks with `pre-commit install` from the repository root.
-
-Now when a `git commit` is run, the hooks will run. If one of the hooks reformats a file, the commit will be blocked. Then you need to inspect the changes and readd them with `git add`. Then you can re-run your commit command and the commit will actually be added.
