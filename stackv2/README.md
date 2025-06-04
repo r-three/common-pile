@@ -5,13 +5,3 @@ Code from GitHub introduced in [StarCoder 2 and The Stack v2: The Next Generatio
 ## Data Download and Processing
 
 Run `python stackv2/to_dolma.py --output_dir output_dir` to download and process the data.
-
-## Data Stats
-
-TODO
-
-## Example
-
-```json
-TODO
-```
