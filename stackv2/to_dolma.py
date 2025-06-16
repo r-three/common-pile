@@ -7,8 +7,8 @@ import multiprocessing as mp
 import polars as pl
 
 from pathlib import Path
-from licensed_pile.logs import configure_logging
-from licensed_pile.write import to_dolma
+from commmon_pile.logs import configure_logging
+from commmon_pile.write import to_dolma
 
 SOURCE_NAME = "stackv2"
 logger = configure_logging("stackv2")
