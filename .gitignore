@@ -161,7 +161,11 @@ cython_debug/
 .python-version
 **/licensed_pile_log.txt
 
+# Mac
+.DS_Store
+
+**/common_pile_log.txt
+**/common-pile-log.txt
+
 node_modules
 package-lock.json
-.vscode
-.DS_Store
