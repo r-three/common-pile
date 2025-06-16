@@ -167,5 +167,11 @@ cython_debug/
 **/common_pile_log.txt
 **/common-pile-log.txt
 
+# Mac
+.DS_Store
+
+**/common_pile_log.txt
+**/common-pile-log.txt
+
 node_modules
 package-lock.json
