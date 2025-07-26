@@ -1,0 +1,59 @@
+{
+    "streams": [
+      {
+        "name": "libretexts",
+        "documents": [
+          "/mnt/data2/libretexts/v0/documents/*.gz"
+        ],
+        "output": {
+          "path": "/mnt/data2/libretexts/v1/documents",
+          "max_size_in_bytes": 1000000000
+        },
+        "attributes": [
+          "c4_v2",                           
+          "char_length_v1",
+          "ft_lang_id_en_doc_v2",
+          "random_number_v1",
+          "jigsaw_hatespeech_sentence_v2",
+          "jigsaw_nsfw_sencence_v2",
+          "pii_regex_with_counts_fast_v2",
+          "global_dedupe"
+        ],
+        "filter": {
+            "exclude": [
+                "$.attributes[?(@.char_length_v1__char_length_v1__length[0][2] <= 700)]",
+                "$.attributes[?(@.ft_lang_id_en_doc_v2__ft_lang_id_en_doc_v2__en[0][2] <= 0.5)]",
+                "$@.attributes[?(@.bff_duplicate_paragraph_spans && @.bff_duplicate_paragraph_spans[0] && @.bff_duplicate_paragraph_spans[0][2] >= 0.9)]"
+            ]
+        },
+        "span_replacement": [
+          {
+            "span": "$.attributes.jigsaw_hatespeech_sentence_v2__jigsaw_hatespeech_sentence_v2____label__toxic",
+            "min_score": 0.1,
+            "replacement": ""
+          },
+          {
+            "span": "$.attributes.jigsaw_nsfw_sencence_v2__jigsaw_nsfw_sencence_v2____label__nsfw",
+            "min_score": 0.1,
+            "replacement": ""
+          },
+          {
+            "span": "$.attributes.pii_regex_with_counts_fast_v2__pii_regex_with_counts_fast_v2__EMAIL_ADDRESS",
+            "min_score": 0.1,
+            "replacement": "<EMAIL_ADDRESS>"
+          },
+          {
+            "span": "$.attributes.pii_regex_with_counts_fast_v2__pii_regex_with_counts_fast_v2__PHONE_NUMBER",
+            "min_score": 0.1,
+            "replacement": "<PHONE_NUMBER>"
+          },
+          {
+            "span": "$.attributes.pii_regex_with_counts_fast_v2__pii_regex_with_counts_fast_v2__IP_ADDRESS",
+            "min_score": 0.1,
+            "replacement": "<IP_ADDRESS>"
+          }
+        ]
+      }
+    ],
+    "processes": 1
+}

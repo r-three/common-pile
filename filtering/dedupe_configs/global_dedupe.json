@@ -1,0 +1,58 @@
+{
+    "documents": [
+        "/mnt/data2/CAP-Dolma/v2/documents/*",
+        "/mnt/data2/USPTO/v4/documents/*",
+        "/mnt/data2/arxiv-abstracts-dolma/v2/documents/*",
+        "/mnt/data2/arxiv-papers/v2/documents/*",
+        "/mnt/data2/biodiversity-heritage-library/v4/documents/*",
+        "/mnt/data2/doab/v1/documents/*",
+        "/mnt/data2/dolma-cccc-filtered/v2/documents/*",
+        "/mnt/data2/dpi-common-pile/v0/documents/*",
+        "/mnt/data2/foodista-dolma/v2/documents/*",
+        "/mnt/data2/gharchive-dolma/v1/documents/*",
+        "/mnt/data2/libretexts/v1/documents/*",
+        "/mnt/data2/licensed_pubmed/v2/documents/*",
+        "/mnt/data2/loc_books_dolma/v3/documents/*",
+        "/mnt/data2/news-dolma/v2/documents/*",
+        "/mnt/data2/oercommons/v1/documents/*",
+        "/mnt/data2/peS2o/v2/documents/*",
+        "/mnt/data2/peps-dolma/v2/documents/*",
+        "/mnt/data2/pressbooks/v1/documents/*",
+        "/mnt/data2/project_gutenberg-dolma/v2/documents/*",
+        "/mnt/data2/public-domain-review/v2/documents/*",
+        "/mnt/data2/public_library_1929_dolma/v4/documents/*",
+        "/mnt/data2/regulations/v4/documents/*",
+        "/mnt/data2/stack-edu/v1/*/documents/*",
+        "/mnt/data2/stackexchange-dolma/v1/documents/*",
+        "/mnt/data2/stackv2_html/v1/documents/*",
+        "/mnt/data2/ubuntu-chat-dolma/v2/documents/*",
+        "/mnt/data2/uk_hansard/v2/documents/*",
+        "/mnt/data2/usgpo/v3/documents/*",
+        "/mnt/data2/wikimedia/v3/documents/*",
+        "/mnt/data2/wikiteam/v4/documents/*",
+        "/mnt/data2/youtube-commons/v2/documents/*"
+    ],
+    "dedupe": {
+        "name": "global_dedupe",
+        "paragraphs": {
+            "attribute_name": "bff_duplicate_paragraph_spans",
+            "by_ngram": {
+                "ngram_length": 20,
+                "stride": 1,
+                "overlap_threshold": 0.9,
+                "skip_short_paragraphs": true
+            },
+            "paragraph_separator": "████████"
+        }
+    },
+    "bloom_filter": {
+        "file": "/mnt/data2/global_dedupe/global_deduper_bloom_filter.bin",
+        "read_only": false,
+        "estimated_doc_count": "400_000_000_000",
+        "desired_false_positive_rate": "1e-02"
+    },
+    "work_dir": {
+        "input": "/mnt/data2/global_dedupe/input",
+        "output": "/mnt/data2/global_dedupe/output"
+    }
+}

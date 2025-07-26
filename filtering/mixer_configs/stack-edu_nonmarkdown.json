@@ -1,0 +1,42 @@
+{
+    "streams": [
+      {
+        "name": "stack-edu",
+        "documents": [
+          "/mnt/data2/stack-edu/c/v0/documents/*.gz",
+          "/mnt/data2/stack-edu/cpp/v0/documents/*.gz",
+          "/mnt/data2/stack-edu/csharp/v0/documents/*.gz",
+          "/mnt/data2/stack-edu/go/v0/documents/*.gz",
+          "/mnt/data2/stack-edu/java/v0/documents/*.gz",
+          "/mnt/data2/stack-edu/php/v0/documents/*.gz",
+          "/mnt/data2/stack-edu/python/v0/documents/*.gz",
+          "/mnt/data2/stack-edu/ruby/v0/documents/*.gz",
+          "/mnt/data2/stack-edu/rust/v0/documents/*.gz",
+          "/mnt/data2/stack-edu/shell/v0/documents/*.gz",
+          "/mnt/data2/stack-edu/sql/v0/documents/*.gz",
+          "/mnt/data2/stack-edu/swift/v0/documents/*.gz",
+          "/mnt/data2/stack-edu/typescript/v0/documents/*.gz"
+        ],
+        "output": {
+          "path": "/mnt/data2/stack-edu/v1/non_markdown/documents",
+          "max_size_in_bytes": 1000000000
+        },
+        "attributes": [
+          "code_redpajama_taggers_v1",
+          "global_dedupe"
+        ],
+        "filter": {
+            "exclude": [
+                "$.attributes[?(@.code_redpajama_taggers_v1__code_redpajama_taggers_v1__max_line_length_doc[0][2] > 1000)]",
+                "$.attributes[?(@.code_redpajama_taggers_v1__code_redpajama_taggers_v1__avg_line_length_doc[0][2] > 100)]",
+                "$.attributes[?(@.code_redpajama_taggers_v1__code_redpajama_taggers_v1__alnum_prop_doc[0][2] < 0.25)]",
+                "$.attributes[?(@.code_redpajama_taggers_v1__code_redpajama_taggers_v1__alpha_token_prop_doc[0][2] < 1.5)]",
+                "$@.attributes[?(@.bff_duplicate_paragraph_spans && @.bff_duplicate_paragraph_spans[0] && @.bff_duplicate_paragraph_spans[0][2] >= 0.9)]"
+            ]
+        },
+        "span_replacement": [
+        ]
+      }
+    ],
+    "processes": 1
+}

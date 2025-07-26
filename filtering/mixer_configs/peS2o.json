@@ -1,0 +1,40 @@
+{
+    "streams": [
+      {
+        "name": "peS20",
+        "documents": [
+          "/mnt/data2/peS2o/v0/documents/*.gz"
+        ],
+        "output": {
+          "path": "/mnt/data2/peS2o/v1/documents",
+          "max_size_in_bytes": 1000000000
+        },
+        "attributes": [
+          "c4_v2",                           
+          "gopher_v2",
+          "whitespace_tokenizer_v1",
+          "char_length_v1",
+          "ft_lang_id_en_doc_v2",
+          "jigsaw_hatespeech_sentence_v2",
+          "jigsaw_nsfw_sencence_v2",
+          "pii_regex_with_counts_fast_v2",
+          "random_number_v1",
+          "perplexity_tagger",
+          "global_dedupe"
+        ],
+        "filter": {
+            "exclude": [
+                "$@.attributes[?(@.bff_duplicate_paragraph_spans && @.bff_duplicate_paragraph_spans[0] && @.bff_duplicate_paragraph_spans[0][2] >= 0.9)]"
+            ]
+          },
+        "span_replacement": [
+          {
+            "span": "$.attributes.pii_regex_with_counts_fast_v2__pii_regex_with_counts_fast_v2__EMAIL_ADDRESS",
+            "min_score": 0.1,
+            "replacement": "<EMAIL_ADDRESS>"
+          }
+        ]
+      }
+    ],
+    "processes": 1
+}

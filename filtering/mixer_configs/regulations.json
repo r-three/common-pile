@@ -1,0 +1,64 @@
+{
+    "streams": [
+      {
+        "name": "regulations",
+        "documents": [
+          "/mnt/data/regulations/v0/documents/*.gz"
+        ],
+        "output": {
+          "path": "/mnt/data/regulations/v1/documents",
+          "max_size_in_bytes": 1000000000
+        },
+        "attributes": [
+          "c4_v2",                           
+          "gopher_v2",
+          "whitespace_tokenizer_v1",
+          "char_length_v1",
+          "ft_lang_id_en_doc_v2",
+          "jigsaw_hatespeech_sentence_v2",
+          "jigsaw_nsfw_sencence_v2",
+          "pii_regex_with_counts_fast_v2",
+          "random_number_v1",
+          "perplexity_tagger",
+          "regulations_line_tagger"
+          "regulations_regex_tagger",
+          "global_dedupe"
+        ],
+        "filter": {
+            "exclude": [
+                "$.attributes[?(@.char_length_v1__char_length_v1__length[0][2] <= 100)]",
+                "$.attributes[?(@.whitespace_tokenizer_v1__whitespace_tokenizer_v1__length[0][2] <= 20)]",
+                "$@.attributes[?(@.bff_duplicate_paragraph_spans && @.bff_duplicate_paragraph_spans[0] && @.bff_duplicate_paragraph_spans[0][2] >= 0.9)]"
+            ]
+        },
+        "span_replacement": [
+          {
+            "span": "$.attributes.pii_regex_with_counts_fast_v2__pii_regex_with_counts_fast_v2__EMAIL_ADDRESS",
+            "min_score": 0.1,
+            "replacement": "<EMAIL_ADDRESS>"
+          },
+          {
+            "span": "$.attributes.pii_regex_with_counts_fast_v2__pii_regex_with_counts_fast_v2__PHONE_NUMBER",
+            "min_score": 0.1,
+            "replacement": "<PHONE_NUMBER>"
+          },
+          {
+            "span": "$.attributes.pii_regex_with_counts_fast_v2__pii_regex_with_counts_fast_v2__IP_ADDRESS",
+            "min_score": 0.1,
+            "replacement": "<IP_ADDRESS>"
+          },
+          {
+            "span": "$.attributes.regulations_line_tagger__regulations_line_tagger__line",
+            "min_score": 0.1,
+            "replacement": ""
+          },
+          {
+            "span": "$.attributes.regulations_regex_tagger__regulations_regex_tagger__regex",
+            "min_score": 0.1,
+            "replacement": ""
+          }
+        ]
+      }
+    ],
+    "processes": 1
+}

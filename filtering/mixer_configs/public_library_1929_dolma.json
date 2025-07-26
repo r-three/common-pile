@@ -1,0 +1,86 @@
+{
+    "streams": [
+      {
+        "name": "public_library_1929_dolma",
+        "documents": [
+          "/mnt/data/public_library_1929_dolma/v0/documents/*.gz"
+        ],
+        "output": {
+          "path": "/mnt/data/public_library_1929_dolma/v1/documents",
+          "max_size_in_bytes": 1000000000
+        },
+        "attributes": [
+          "c4_v2",                           
+          "gopher_v2",
+          "whitespace_tokenizer_v1",
+          "char_length_v1",
+          "ft_lang_id_en_doc_v2",
+          "jigsaw_hatespeech_sentence_v2",
+          "jigsaw_nsfw_sencence_v2",
+          "pii_regex_with_counts_fast_v2",
+          "random_number_v1",
+          "perplexity_tagger",
+          "public_library_1929_dolma_regex_tagger",
+          "public_library_1929_dolma_line_tagger",
+          "bff_duplicate_documents",
+          "double_space_tagger",
+          "paragraph_chunk_tagger",
+          "global_dedupe"
+        ],
+        "filter": {
+            "exclude": [
+                "$.attributes[?(@.perplexity_tagger__perplexity_tagger__perplexity[0][2] <= -20)]",
+                "$@.attributes[?(@.bff_duplicate_paragraph_spans && @.bff_duplicate_paragraph_spans[0] && @.bff_duplicate_paragraph_spans[0][2] >= 0.9)]"
+            ]
+        },
+        "span_replacement": [
+          {
+            "span": "$.attributes.jigsaw_hatespeech_sentence_v2__jigsaw_hatespeech_sentence_v2____label__toxic",
+            "min_score": 0.1,
+            "replacement": ""
+          },
+          {
+            "span": "$.attributes.jigsaw_nsfw_sencence_v2__jigsaw_nsfw_sencence_v2____label__nsfw",
+            "min_score": 0.1,
+            "replacement": ""
+          },
+          {
+            "span": "$.attributes.public_library_1929_dolma_regex_tagger__public_library_1929_dolma_regex_tagger__regex",
+            "min_score": 0.1,
+            "replacement": ""
+          },
+          {
+            "span": "$.attributes.public_library_1929_dolma_line_tagger__public_library_1929_dolma_line_tagger__line",
+            "min_score": 0.1,
+            "replacement": ""
+          },
+          {
+            "span": "$.attributes.double_space_tagger__double_space_tagger__regex",
+            "min_score": 0.1,
+            "replacement": " "
+          }
+          {
+            "span": "$.attributes.paragraph_chunk_tagger__paragraph_chunk_tagger__paragraph_chunk",
+            "max_score": 0.1,
+            "replacement": ""
+          },
+          {
+            "span": "$.attributes.paragraph_chunk_tagger__paragraph_chunk_tagger__terminal_newline",
+            "min_score": 0.1,
+            "replacement": ""
+          },
+          {
+            "span": "$.attributes.paragraph_chunk_tagger__paragraph_chunk_tagger__terminal_newline_with_space",
+            "min_score": 0.1,
+            "replacement": " "
+          },
+          {
+            "span": "$.attributes.paragraph_chunk_tagger__paragraph_chunk_tagger__paragraph_terminal_newline",
+            "min_score": 0.1,
+            "replacement": "\n\n"
+          }
+        ]
+      }
+    ],
+    "processes": 1
+}
