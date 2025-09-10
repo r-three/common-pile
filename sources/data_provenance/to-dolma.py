@@ -134,9 +134,9 @@ def file_to_dolma(path: str, include_df: str, source_name: str = SOURCE_NAME):
     for i, ex in enumerate(dset_collection):
         dataset_id = ex["dataset"]
 
-        assert (
-            dataset_id in valid_ids
-        ), f"Dataset ID '{dataset_id}' not found in include.csv"
+        if dataset_id not in valid_ids:
+            f"Dataset ID '{dataset_id}' not found in include.csv. Skipping..."
+            continue
 
         license_names = dset_to_licenses[dataset_id]
         langs = dset_to_langs[dataset_id]
