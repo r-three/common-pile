@@ -8,8 +8,8 @@ If you are looking for the data itself or our trained models, please see [our Hu
 ## Installation
 
 The majority of packages required for dataset creation can be installed with `pip install -r requirements.txt`.
-To make use of the shared functionality in the `common_pile` pckage, run `pip install -e .`.
-If you are on a system that doesn't support automatic installation of pandoc with `pypandoc_binary`, change it to `pypandoc` in the `requirements.txt` and and install pandoc manually.
+To make use of the shared functionality in the `common_pile` package, run `pip install -e .`.
+If you are on a system that doesn't support automatic installation of pandoc with `pypandoc_binary`, change it to `pypandoc` in the `requirements.txt` and install pandoc manually.
 
 ## Contributing
 
@@ -26,5 +26,5 @@ The [scripts subdirectory](https://github.com/r-three/common-pile/tree/main/comm
 Alternatively, the Dolma-formatted files can be inspected with [`jq`](https://jqlang.org/) by running
 
 ```
-cat ${file}.jsonl.gz | gunzip | jq -s ${commmand}
+cat ${file}.jsonl.gz | gunzip | jq -s ${command}
 ```

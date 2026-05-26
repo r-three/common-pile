@@ -82,7 +82,51 @@ def skip_file(filename: str, to_skip: Set[str]) -> bool:
       Sometimes people use \input{filename} or \input{filename.tex}
       to include other files in latex.
     """
-    return filename in to_skip or os.path.splitext(filename)[0] in to_skip
+    skipped = {f.lower() for f in to_skip}
+    return (
+        filename.lower() in skipped
+        or os.path.splitext(filename)[0].lower() in skipped
+    )
+
+
+def is_commented_out(contents: str, position: int) -> bool:
+    r"""Check whether position is after an unescaped `%` on the same line."""
+    line_start = contents.rfind("\n", 0, position) + 1
+    prefix = contents[line_start:position]
+    escaped = False
+    for char in prefix:
+        if char == "\\":
+            escaped = not escaped
+            continue
+        if char == "%" and not escaped:
+            return True
+        escaped = False
+    return False
+
+
+def get_tex_member(tar, filename: str):
+    """Find a TeX member, allowing omitted extensions and case variants."""
+    filename = filename.strip()
+    stem, extension = os.path.splitext(filename)
+    if extension:
+        candidates = [filename]
+        if extension.lower() == ".tex":
+            candidates.append(f"{stem}.tex")
+    else:
+        candidates = [f"{filename}.tex"]
+
+    for candidate in candidates:
+        try:
+            return tar.getmember(candidate)
+        except KeyError:
+            pass
+
+    lowercase_candidates = {candidate.lower() for candidate in candidates}
+    for member in tar.getmembers():
+        if member.name.lower() in lowercase_candidates:
+            return member
+
+    raise KeyError(f"No TeX member found for {filename}")
 
 
 def read_file(tar, file_info, article_id: str):
@@ -107,7 +151,10 @@ def interpolate_document(
     logger = logs.get_logger("arxiv")
 
     # Capture the whole command so we know the bounds and can remove it.
-    for m in re.finditer(r"(?P<cmd>\\input{(?P<filename>.*?)})", contents):
+    input_pattern = r"(?P<cmd>\\(?:input|include)\s*\{(?P<filename>.*?)\})"
+    for m in re.finditer(input_pattern, contents):
+        if is_commented_out(contents, m.start()):
+            continue
         # Add everything before the \input command.
         full_contents.append(contents[offset : m.start()])
         offset = m.end()
@@ -117,15 +164,14 @@ def interpolate_document(
         # skip this as it seems complex. Unsure how many documents include the
         # \import or \subimport command
         try:
-            input_file = tar.getmember(
-                f"{os.path.splitext(m.group('filename'))[0]}.tex"
-            )
+            input_file = get_tex_member(tar, m.group("filename"))
             input_contents = read_file(tar, input_file, article_id)
             logger.debug(f"Interpolating {m.group('filename')} into {article_id}")
             full_contents.append(input_contents)
             # Track which files we have interpolated into other documents to avoid
             # using them as top-level documents.
             skip.add(m.group("filename"))
+            skip.add(input_file.name)
         except Exception as e:
             logger.warning(
                 f"Failed to interpolate {m.group('filename')} while processing [{article_id}]: {e}"
@@ -160,11 +206,11 @@ def load_article_src(article_path: str, article_id: str) -> str:
                         continue
                     # If the file is a .tex document and it isn't in a directory.
                     if (
-                        os.path.splitext(info.name)[1] == ".tex"
+                        os.path.splitext(info.name)[1].lower() == ".tex"
                         and os.path.dirname(info.name) == ""
                     ):
                         logger.debug(
-                            f"Creating a document from {article_id}/{info.name}t"
+                            f"Creating a document from {article_id}/{info.name}"
                         )
                         contents = read_file(tar, info, article_id)
                         # Only output files that include \begin{document}. If
@@ -179,9 +225,11 @@ def load_article_src(article_path: str, article_id: str) -> str:
             logger.debug(f"Creating a document from single file for {article_id}")
             with gzip.open(article_path) as f:
                 contents = f.read()
+            if isinstance(contents, bytes):
+                contents = str(from_bytes(contents).best())
             # If the file isn't a tarball, then it won't have any extra files
             # that are `\input`ed.
-            yield content, None
+            yield contents, None
     except Exception as e:
         logger.warning(
             f"Failed to load article [{article_id}] at `{article_path}`: {e}"
@@ -194,7 +242,7 @@ def format_dolma(article, text: str, source: str = SOURCE_NAME):
         "id": article["id"],
         "text": text,
         "source": "arxiv",
-        "added": datetime.datetime.utcnow().isoformat(),
+        "added": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "created": article["update_date"],
         "metadata": {
             "license": str(LICENSES.get(article["license"], article["license"])),
@@ -212,7 +260,7 @@ def process_article(
     # The bulk downloader is smart enough to only download dirs when it needs
     # it so we can just call `.download` on all articles and know that it
     # won't keep re-downloading things.
-    # The start and end fields of the shards use the same verions of ids as
+    # The start and end fields of the shards use the same versions of ids as
     # filenames, that is, without the `/`
     bulk_downloader.download(id_to_filename(article["id"]))
     article_path = os.path.join(
